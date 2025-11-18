@@ -1,52 +1,31 @@
 % njuthesis 参数设置文件 v1.4.3 2025-05-21
 
-% 一些提醒：
-%   1. \njusetup 内部千万不要有空行
-%   2. 使用英文半角逗号(,)分隔选项
-%   3. 等于号(=)两侧的空格会被忽略
-%       3.1. 为避免歧义，请用花括号({})包裹内容
-%   4. 本科生无需填写的项目已被特别标注
-%   5. 可以尽情删除本注释
+
 
 % info 类用于录入个人信息
 %   带*号的为对应英文字段
 \njusetup[info]{
-    title = {第一行标题\\第二行标题\\第三行标题},
-    % 中文题目
-    % 直接填写标题就是自动换行
-    % 可以使用换行控制符(\\)手动指定换行位置
+    title = {支持混合隔离级别的\\分布式KV数据库原型\\的设计与实现},
     %
-    title* = {My Title in English},
-    % 英文题目
+    title* = {Design and Implementation of a Mixing-isolation-Level Distributed KV database Prototype},
     %
-    author = {姓名},
-    % 作者姓名
+    author = {张继华},
     %
-    author* = {Ming Xing},
-    % 作者英文姓名
-    % 一般使用拼音
+    author* = {Zhang Jihua},
     %
-    keywords = {我,就是,充数的,关键词},
-    % 中文关键词列表
-    % 使用英文半角逗号(,)分隔
+    keywords = {分布式,就是,充数的,关键词},
     %
     keywords* = {Dummy,Keywords,Here,{It Is}},
-    % 英文关键词
-    % 使用英文半角逗号(,)分隔
     %
-    grade = {2018},
+    grade = {2024},
     % 年级
     %
-    student-id = {181850195},
-    % 学号或工号
-    % 研究生请斟酌大小写字母格式
-    % 本模板并不会自动更正大小写
+    student-id = {522024320201},
     %
-    department = {化学化工学院},
-    department* = {School of Chemistry and Chemical Engineering},
-    % 院系
+    department = {软件学院},
+    department* = {Software Institute},
     %
-    major = {化学},
+    major = {软件工程},
     major* = {Chemistry},
     % 专业
     %
@@ -131,7 +110,7 @@
     % 默认为顺序编码制（numeric）
     % 可选著者-出版年制（author-year）
     %
-    resource = {njuthesis-sample.bib},
+    resource = {zhangjihua-master-thesis.bib},
     % 参考文献数据源
     % 需要带扩展名的完整文件名
     % 可使用逗号分隔多个文件
