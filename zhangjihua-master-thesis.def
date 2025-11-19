@@ -7,7 +7,7 @@
 \njusetup[info]{
     title = {支持混合隔离级别的\\分布式KV数据库原型\\的设计与实现},
     %
-    title* = {Design and Implementation of a Mixing-isolation-Level Distributed KV database Prototype},
+    title* = {Design and Implementation of a Mixing-isolation-level Distributed KV database Prototype},
     %
     author = {张继华},
     %
@@ -25,37 +25,27 @@
     department = {软件学院},
     department* = {Software Institute},
     %
-    major = {软件工程},
-    major* = {Chemistry},
+    major = {电子信息(软件工程领域)},
+    major* = {Electronic and Information Engineering(Software Engineering)},
     % 专业
     %
     % major = {封面专业,摘要专业},
     % 研究生专业型学位可能遇到两处内容不一致的情况
     %
-    supervisor = {导师姓名,教授},
-    supervisor*= {Professor My Supervisor},
-    % 导师全称
-    % 使用英文半角逗号(,)分隔中文姓名和职称
-    %
-    % supervisor-ii = {第二导师姓名,副教授},
-    % supervisor-ii* = {Associate Professor My Second Supervisor},
-    % 第二导师全称
-    % 如果确实没有第二导师，不填写即可
-    %
-    submit-date = {2022-05-20},
-    % 提交日期
-    % 格式为 yyyy-mm-dd
-    % 不填就是编译当天日期
-    %
+    supervisor = {葛季栋,副教授},
+    supervisor*= {Associate Professor Ge Jidong},
+    % supervisor-ii = {魏恒峰,助理研究员},
+    supervisor-ii* = {Assistant Researcher Wei Hengfeng},
+    submit-date = {2026-03-20},
     %
     % 以下均为研究生项
     %
-    % degree = {工程硕士},
-    % degree* = {Master of Engineering},
+    degree = {工程硕士},
+    degree* = {Master of Engineering},
     % 覆盖默认学位名称
     %
-    field = {物理化学},
-    field* = {Physical Chemistry},
+    field = {软件工程},
+    field* = {Software Engineering},
     % 研究领域
     %
     chairman = {某某某~教授},
@@ -84,7 +74,7 @@
     % 格式为 yyyy-mm-dd
     % 不填就是编译当天日期
     %
-    email = {xyz@smail.nju.edu.cn},
+    email = {jh.zhang@smail.nju.edu.cn},
     % 电子邮箱地址
     % 只用于出版授权书
     %
@@ -165,7 +155,7 @@
 
 % 目录自身是否显示在目录条目中
 \njusetup{
-    % tableofcontents/toc-entry = false,
+    % tableofcontents/toc-entry = true,
     % listoffigures/toc-entry   = false,
     % listoftables/toc-entry    = false
 }
