@@ -25,8 +25,8 @@
     department = {软件学院},
     department* = {Software Institute},
     %
-    major = {电子信息(软件工程领域)},
-    major* = {Electronic and Information Engineering(Software Engineering)},
+    major = {工程硕士(软件工程领域)},
+    major* = {Master of Engineering (Software Engineering)},
     % 专业
     %
     % major = {封面专业,摘要专业},
