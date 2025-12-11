@@ -13,9 +13,9 @@
     %
     author* = {Zhang Jihua},
     %
-    keywords = {分布式,数据库,数据库事务,混合隔离级别},
+    keywords = {形式化验证,分布式数据库,事务,混合隔离级别,原型系统},
     %
-    keywords* = {Distributed, Database, Database Transaction, {Mixed Isolation Level}},
+    keywords* = {{Formal Verification},{Distributed Database},{Transaction},{Mixed Isolation Levels},{Prototype System}},
     %
     grade = {2024},
     % 年级

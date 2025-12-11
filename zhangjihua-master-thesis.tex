@@ -44,6 +44,8 @@
     fontset = win % |mac|macoffice|fandol|none
   ]{njuthesis}
 
+\newcommand{\TLAPlus}{TLA\textsuperscript{+}}
+
 \input{zhangjihua-master-thesis.def}
 
 % 自行载入所需宏包
@@ -74,11 +76,49 @@
 \raggedbottom
 
 \begin{abstract}
-  中文摘要
+分布式数据库是现代互联网产品迈向分布式和云原生架构的重要基础设施。
+传统的关系型数据库难以满足分布式或云原生架构下的多种需求，分布式数据库应运而生。
+然而，当前的分布式数据库在在事务处理能力上存在诸多局限：
+有的分布式数据库完全缺乏对多行事务的支持，亦或者在执行事务时受到严格的分区限制，
+例如强制要求事务涉及的所有键必须位于同一分片上，这极大地限制了其在复杂业务场景中的应用。
+此外，在使用这些系统时，开发者还面临着数据一致性与系统性能之间的艰难权衡：
+单一的强隔离级别（如串行化或快照隔离）虽然能保证数据的严格正确性，但在高并发场景下往往会导致严重的性能瓶颈；
+而单一的弱隔离级别虽然吞吐量高，却无法满足核心业务对一致性的严苛要求。
+
+针对上述问题，本文设计并实现了一个支持混合隔离级别的分布式 Key-Value 数据库原型。
+首先，本文提出了一种改进的并发控制协议，允许事务根据业务需求灵活选择隔离级别，并支持跨分片事务的原子执行。
+为了从理论上确保该协议在混合场景下的正确性，本文采用形式化验证工具 \TLAPlus 对协议进行了严格建模，
+通过模型检查验证了关键的安全属性，证明了在混合隔离级别配置下，事务的调度和处理逻辑的正确性。
+其次，基于验证通过的协议模型，本文设计并构建了一个分布式数据库验证平台。
+该平台实现了分布式事务调度、多版本并发控制（MVCC）存储引擎以及网络通信模块，
+能够真实模拟分布式环境下的事务处理流程。
+
+最后，本文在此平台上进行了多组基准测试，验证了不同隔离级别算法的执行效率。
+实验结果表明，该原型系统不仅能够正确执行混合事务逻辑，且在混合隔离级别配置下，系统相比单一强隔离级别在吞吐量和平均延迟上均有显著优化，
+验证了混合隔离策略在提升分布式数据库系统效能方面的有效性。
 \end{abstract}
 
 \begin{abstract*}
-  English abstract
+Distributed databases are a crucial infrastructure for modern internet applications transitioning toward distributed and cloud-native architectures. 
+Traditional relational databases struggle to meet the diverse requirements imposed by such architectures, leading to the emergence of distributed databases. 
+However, current distributed databases still face significant limitations in transaction processing capabilities. Some completely lack support for multi-row transactions, 
+while others impose strict partitioning constraints—such as requiring all keys involved in a transaction to reside within the same shard—severely limiting their applicability in complex business scenarios.
+Furthermore, developers using these systems are often forced into a difficult trade-off between data consistency and system performance. 
+A single strong isolation level (e.g., serializability or snapshot isolation) ensures strict correctness but frequently results in severe performance bottlenecks under high concurrency. 
+Conversely, a single weak isolation level achieves high throughput but fails to meet the stringent consistency requirements of core business logic.
+
+To address these challenges, this thesis designs and implements a prototype distributed key-value database that supports mixed isolation levels. 
+First, we propose an enhanced concurrency control protocol that allows transactions to flexibly select isolation levels based on application needs and enables atomic execution of cross-shard transactions. 
+To formally guarantee the correctness of this protocol in mixed-isolation scenarios, we model it rigorously using the \TLAPlus formal specification language 
+and verify critical safety properties through model checking, demonstrating its correctness under mixed isolation configurations.
+Second, based on the verified protocol model, we design and build a distributed database validation platform. 
+This platform implements distributed transaction scheduling, a multi-version concurrency control (MVCC) storage engine, 
+and a network communication module, enabling realistic simulation of transaction processing in distributed environments.
+
+Finally, We conduct a series of benchmark experiments on this platform to evaluate the execution efficiency of different isolation level algorithms. 
+Experimental results show that the prototype system not only correctly executes mixed transaction logic but also achieves significant improvements in throughput
+and average latency under hybrid isolation configurations compared to systems using a single strong isolation level. 
+These results validate the effectiveness of hybrid isolation strategies in enhancing the performance and scalability of distributed database systems.
 \end{abstract*}
 
 % 生成目录
@@ -105,8 +145,6 @@
 % 然后在这里用 \include 导入，例如
 %   \include{chapters/introduction}
 %   \include{chapters/environments}
-
-\chapter{引言}
 
 \include{section/introduction}
 
