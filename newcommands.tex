@@ -1,0 +1,25 @@
+\newcommand{\TLAPlus}{TLA\textsuperscript{+}}
+
+\usepackage{xparse}
+
+% chapter2
+% 全集使用 \mathcal 花体
+\newcommand{\Log}{$\mathcal{L}$}
+\newcommand{\Keys}{$\mathcal{K}$}
+
+% 单一元素使用斜体
+\newcommand{\Txc}[1][]{$T_{#1}$}
+\newcommand{\Op}[1][]{$O_{#1}$}
+\newcommand{\Snapshot}{$S$}
+
+% 操作符
+\newcommand{\OpStart}{$\operatorname{start}$}
+\newcommand{\OpCommit}{$\operatorname{commit}$}
+\newcommand{\OpRead}[1][]{$\operatorname{read}(#1)$}
+\NewDocumentCommand{\OpWrite}{o o}{%
+  \IfNoValueTF{#1}{%
+    \IfNoValueTF{#2}{$\operatorname{write}()$}{$\operatorname{write}(#2)$}%
+  }{%
+    \IfNoValueTF{#2}{$\operatorname{write}(#1)$}{$\operatorname{write}(#1,#2)$}%
+  }%
+}

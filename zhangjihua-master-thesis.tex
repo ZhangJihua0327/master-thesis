@@ -17,11 +17,12 @@
     fontset = win % |mac|macoffice|fandol|none
   ]{njuthesis}
 
-\newcommand{\TLAPlus}{TLA\textsuperscript{+}}
+\input{newcommands}
 
 \input{zhangjihua-master-thesis.def}
 
 % 自行载入所需宏包
+\usepackage{makecell} % 表格单元格内换行
 % \usepackage{subcaption} % 嵌套小幅图像，比 subfig 和 subfigure 更新更好
 % \usepackage{siunitx} % 标准单位符号
 % \usepackage{physics} % 物理百宝箱
@@ -111,6 +112,14 @@ These results validate the effectiveness of hybrid isolation strategies in enhan
 %   \item[DFT] 密度泛函理论 (Density functional theory)
 %   \item[DMRG] 密度矩阵重正化群 (Density-Matrix Reformation-Group)
 % \end{notation}
+\begin{notation}[12cm]
+  \item[\TLAPlus] 时序逻辑行动 (Temporal Logic of Actions)
+  \item[MVCC] 多版本并发控制 (Multi-Version Concurrency Control)
+  \item[RC] 读已提交隔离级别 (Read Committed)
+  \item[SI] 快照隔离级别 (Snapshot Isolation)
+  \item[SSI] 串行化快照隔离 (Serializable Snapshot Isolation)
+  \item[2PC] 两阶段提交协议 (Two-Phase Commit)
+\end{notation}
 
 % 建议将论文内容拆分为多个文件
 % 即新建一个 chapters 文件夹
@@ -121,7 +130,7 @@ These results validate the effectiveness of hybrid isolation strategies in enhan
 
 \include{chapter/introduction}
 
-
+\include{chapter/specification}
 % 总结与展望
 \include{chapter/conclusion}
 
