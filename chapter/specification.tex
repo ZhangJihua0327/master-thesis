@@ -81,24 +81,24 @@ S &: \mathcal{K} \rightharpoonup \mathcal{V},  S(k) = \bot \text{ if } k \notin 
 这些关系是\Log 笛卡尔积 \Log \times \Log 的子集。我们重点考虑两个关系$\text{VIS}, \text{AR} \subseteq \mathcal{L} \times \mathcal{L}$。它们是描述事务隔离级别的关键。
 
 可见性关系(Visibility Relation)$\text{VIS} \subseteq \mathcal{L} \times \mathcal{L}$定义了一个事务的执行结果对另一个事务是否可见。
-直观地说,如果$(T_1, T_2) \in \text{VIS}$,也就是$T_1  \xrightarrow{VIS} T_2$,则表示事务$T_1$的所有写操作对事务$T_2$是可见的,
+直观地说,如果$(T_1, T_2) \in \text{VIS}$,也就是$T_1  \xrightarrow{\text{VIS}} T_2$,则表示事务$T_1$的所有写操作对事务$T_2$是可见的,
 也就是说,$T_2$在执行读操作时,能够读取到$T_1$写入的值。
-$\text{VIS}$是一个偏序关系,且是无环的,即不存在$T_1 \xrightarrow{VIS} T_2 \xrightarrow{VIS} T_1$的情况。
+$\text{VIS}$是一个偏序关系,且是无环的,即不存在$T_1 \xrightarrow{\text{VIS}} T_2 \xrightarrow{\text{VIS}} T_1$的情况。
 可见性关系决定了事务读取数据时所看到的快照状态,它是理解事务隔离级别的核心概念之一。
 从另外的角度讲,不可见意味着两个事务是并发的。
 
 仲裁关系(Arbitration Relation)$\text{AR} \subseteq \mathcal{L} \times \mathcal{L}$定义了事务之间的写操作顺序。
-当$(T_1, T_2) \in \text{AR}$时,也就是$T_1  \xrightarrow{AR} T_2$,表示事务$T_1$的写操作在逻辑上先于事务$T_2$的写操作,
+当$(T_1, T_2) \in \text{AR}$时,也就是$T_1  \xrightarrow{\text{AR}} T_2$,表示事务$T_1$的写操作在逻辑上先于事务$T_2$的写操作,
 或者说,事务$T_2$的写入结果覆盖了事务$T_1$对相同键的写入结果。
-$\text{AR}$是一个全序关系,也就是说,对于任意两个事务$T_1$和$T_2$,要么$T_1 \xrightarrow{AR} T_2$,要么$T_2 \xrightarrow{AR} T_1$。
+$\text{AR}$是一个全序关系,也就是说,对于任意两个事务$T_1$和$T_2$,要么$T_1 \xrightarrow{\text{AR}} T_2$,要么$T_2 \xrightarrow{\text{AR}} T_1$。
 仲裁关系确定了并发写操作的最终顺序,解决了写冲突的问题。
 
 
 在进一步讨论这两个关系之前，我们需要明确一个重要的性质：$\text{VIS} \subseteq \text{AR}$，即可见性关系是仲裁关系的子集。
 这个性质并非偶然，而是保证数据库系统正确性的必要条件。
 
-直观地理解,如果事务$T_1$的写入对事务$T_2$可见(即$T_1 \xrightarrow{VIS} T_2$),
-那么在逻辑上,$T_1$的写操作必然先于$T_2$的写操作被系统接受(即$T_1 \xrightarrow{AR} T_2$)。
+直观地理解,如果事务$T_1$的写入对事务$T_2$可见(即$T_1 \xrightarrow{\text{VIS}} T_2$),
+那么在逻辑上,$T_1$的写操作必然先于$T_2$的写操作被系统接受(即$T_1 \xrightarrow{\text{AR}} T_2$)。
 这是因为,$T_2$能够读取到$T_1$的写入结果,说明$T_1$已经成功提交,
 并且其写入的值没有被后续的其他事务覆盖。
 因此,在全局的写操作顺序中,$T_1$必然排在$T_2$之前。
@@ -109,9 +109,9 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 对于没有$\text{VIS}$关系的并发事务，$\text{AR}$需要"仲裁"出一个确定的顺序，以解决写冲突。
 
 在实际的数据库系统实现中,$\text{AR}$通常通过时间戳(Timestamps)机制来实现。
-如果$T_1 \xrightarrow{VIS} T_2$,意味着$T_2$在执行时已经观察到了$T_1$的更新,
+如果$T_1 \xrightarrow{\text{VIS}} T_2$,意味着$T_2$在执行时已经观察到了$T_1$的更新,
 或者$T_2$是在$T_1$提交之后才开始执行的。
-因此,$T_2$获取的时间戳必然晚于$T_1$的时间戳,从而保证$T_1 \xrightarrow{AR} T_2$。
+因此,$T_2$获取的时间戳必然晚于$T_1$的时间戳,从而保证$T_1 \xrightarrow{\text{AR}} T_2$。
 
 这个性质$\text{VIS} \subseteq \text{AR}$的重要意义在于：
 \begin{itemize}
@@ -127,7 +127,7 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 例如，在可串行化（Serializable）隔离级别下，$\text{VIS}$和$\text{AR}$关系需要满足严格的约束，保证事务的执行结果等价于某个串行执行顺序；
 而在较弱的隔离级别下，这些约束可以适当放松，从而允许更多的并发执行，提高系统性能。
 
-此外,我们约定集合$\operatorname{VIS^{-1}}(T)$表示对\Txc 所有可见的事务的集合。
+此外,我们约定集合$\operatorname{VIS^{-1}}(T)$表示对\Txc 所有可见的事务的集合。其他的倒数关系我们也做类似的约定。
 
 基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）是一个三元组$\mathcal{X} = (\mathcal{L}, \text{VIS}, \text{AR})$。
 
@@ -155,7 +155,7 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
     无冲突公理确保如果两个事务没有写冲突。如果两个事务是并发执行的，那么两个事务不能同时写入同一个对象。也就是说，两个事务之间不存在写冲突。
     这条公理用于防止某些事务对数据的更新被直接覆盖。
     \item \textbf{TOTALVIS (完全可见性，Total Visibility)}：
-    TOTALVIS 强调 $\text{VIS}$关系必须是一个全序关系，即对于任意两个事务$T_1$和$T_2$，要么$T_1 \xrightarrow{VIS} T_2$，要么$T_2 \xrightarrow{VIS} T_1$。
+    TOTALVIS 强调 $\text{VIS}$关系必须是一个全序关系，即对于任意两个事务$T_1$和$T_2$，要么$T_1 \xrightarrow{\text{VIS}} T_2$，要么$T_2 \xrightarrow{\text{VIS}} T_1$。
     这意味着所有事务都在一条单一的时间线上，每一个事务都能看到它之前的所有事务。这是一条最强的公理。
 \end{itemize}
 其中前两条公理是对关系$\text{VIS}$的限制和强化，后两条公理主要聚焦对写冲突的解决方案。
@@ -175,7 +175,7 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 
 \section{隔离级别}
 现在我们已经有了对一致性的公理的定义，接下来，我们将基于公理，讨论各个隔离级别的特点。
-这里，我们可以直接给出表格，从弱一致性级别到强一致性级别，强调每个隔离级别需要满足的公理。
+这里，我们可以直接给出表格，从弱一致性级别到强一致性级别，强调每个隔离级别需要满足的公理和防止的异常。
 \begin{table}[htbp]
   \centering
   \caption{一致性模型以及其所满足的公理}
@@ -219,3 +219,42 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
   \caption{隔离级别间的偏序关系}
   \label{fig:isolevels}
 \end{figure}
+
+
+
+从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 可以看出，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
+表~\ref{tab:consistency-models} 总结了每个隔离级别所满足的公理，以及它们能够防止或仍然允许的异常。
+
+\noindent\textbf{Read Atomic (RA)} 是最弱的一致性级别，只满足 $\mathsf{Int}$ 和 $\mathsf{Ext}$ 两个公理。
+它只保证事务的更新以原子方式对其他事务可见，即要么看到一个事务的全部写入，要么完全看不到该事务。
+除此之外，RA 不对事务之间的可见性关系施加额外约束，因此几乎所有其他异常都有可能发生。
+例如图~3(a) 中的因果违背（Causality Violation），$T_2$ 能够看到 $T_1$ 的写入，$T_3$ 能够看到 $T_2$ 的写入，但 $T_3$ 却看不到 $T_1$ 对同一对象的更新，打破了直观上的因果链。
+
+\noindent\textbf{Causal Consistency (CC)} 在 RA 的基础上增加了 $\mathsf{TransVis}$ 公理，要求可见性关系 VIS 必须具有传递性。
+也就是说，如果 $T_3$ 看到了 $T_2$，而 $T_2$ 又看到了 $T_1$，那么 $T_3$ 必须也能看到 $T_1$。
+因此 CC 能够消除图~3(a) 中的因果违背异常。
+但由于 CC 并不禁止对同一对象的并发写，图~3(c) 中那种两个事务基于相同初始快照各自更新余额、最终导致其中一个更新被覆盖的丢失更新（Lost Update）仍然是被允许的。
+
+\noindent\textbf{Parallel Snapshot Isolation (PSI)} 进一步在 CC 的基础上增加了 $\mathsf{NoConflict}$ 公理。
+该公理要求，对同一对象进行写入的两个事务不能彼此并发而互不可见，它们之间必须通过 VIS 确定一个先后顺序。
+直观地说，并发写冲突必须被仲裁，不能悄无声息地丢掉某个更新。
+因此，在 PSI 下图~3(c) 所示的丢失更新异常会被排除。
+不过，PSI 仍然允许不同事务在不同节点上看到不一致的历史前缀，从而产生图~3(d) 中的长分叉（Long Fork）：$T_3$ 只看到 $T_1$，$T_4$ 只看到 $T_2$，它们对 $T_1$ 与 $T_2$ 先后关系的判断彼此矛盾。
+
+\noindent\textbf{Prefix Consistency (PC)} 则从另一个维度增强 CC。
+它采用 $\mathsf{Prefix}$ 公理来约束可见历史，该公理蕴含了 $\mathsf{TransVis}$，要求如果某个事务 $T_1$ 看到了事务 $T_2$，那么在仲裁顺序 AR 中排在 $T_2$ 之前的所有事务都必须对 $T_1$ 可见。
+换句话说，每个事务所看到的历史必须是全局 AR 顺序的一段前缀，而不能只看到其中的“中间几段”。
+因此，图~3(d) 中那种不同事务分别看到互不兼容历史片段的长分叉异常在 PC 下会被禁止。
+但由于 PC 并不禁止在同一快照上对不同对象进行并发写入，经典的写偏斜（Write Skew）异常在 PC 中依然可能发生。
+
+\noindent\textbf{Snapshot Isolation (SI)} 可以看作 PSI 与 PC 的合流点。
+它一方面继承了 $\mathsf{Prefix}$，要求所有事务在同一条 AR 序列的某个前缀上执行；另一方面又继承了 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突。
+因此，SI 同时防止了丢失更新和长分叉两类异常。
+然而，由于它仍然允许事务在同一个快照上对不同对象进行更新，图~3(e) 所示的写偏斜异常依然会出现：两个事务都在检查约束成立的同一快照上各自修改不同账户，最终破坏了全局约束。
+
+\noindent\textbf{Serialisability (SER)} 通过 $\mathsf{TotalVis}$ 公理将 VIS 强化为全序关系。
+对于任意两个事务 $T_1$ 和 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，不再允许它们在抽象执行层面上真正并发。
+从结果上看，所有事务的执行效果等价于按照某个串行顺序依次执行。
+因此，SER 排除了前述所有异常，包括写偏斜，是图~\ref{fig:isolevels} 中最强的一致性级别。
+
+
