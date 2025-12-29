@@ -1,11 +1,24 @@
 \chapter{一致性建模和形式化描述}
 
+本章旨在为复制型分布式数据库的一致性模型建立一套统一的形式化描述框架。
+首先，本章阐述了对复制型数据库进行一致性建模的必要性，分析了分布式环境下网络延迟和故障对事务执行结果的影响。
+其次，本章定义了事务、操作、日志和快照等基本概念，并引入了可见性关系 VIS 和仲裁关系 AR 两个核心二元关系，以此为基础构建 $(\text{VIS}, \text{AR})$ 规约框架。
+然后，本章提出了六条一致性公理，包括内部一致性、外部一致性、传递可见性、前缀一致性、无冲突和完全可见性，并给出了它们的形式化表达。
+最后，本章基于这些公理定义了六个隔离级别，从弱到强依次为 Read Atomic、Causal Consistency、Parallel Snapshot Isolation、Prefix Consistency、Snapshot Isolation 和 Serialisability，
+并分析了它们之间的偏序关系以及各自能够防止或允许的异常类型。
+
 \section{为什么需要一致性建模和形式化描述}
-事务的执行结果希望有原子性质（Atomicity）和隔离性（ISOlation）的保证，希望它像一个独立的、不可分割的工作单位一样执行，同时执行结果不会被其他事务所干扰。
-最简单的解决方案是，让数据库在执行事务时进行锁定，即在事务执行期间，其他事务不能修改被锁定的数据。
-然而，这样做会带来严重的性能问题，导致数据库无法处理高并发请求，这样的数据库是几乎不可用的。
-所以，为了实现并发（Concurrency），数据库需要进行一些妥协，接受一些异常（Anomalies），从而支持多个事务的并发执行。
-根据接受异常的程度，数据库的隔离级别可以分为可串行化（Serializable）、Repeatable Read（可重复读）、Read Committed（读已提交）和 Read Uncommitted（读未提交）。
+我们希望事务的执行结果具有原子性（Atomicity）和隔离性（Isolation）的保证，
+使其像一个独立的、不可分割的工作单位一样执行，
+且执行结果不会被其他事务干扰。
+最简单的解决方案是，让数据库在执行事务时进行锁定，
+即在事务执行期间，其他事务不能修改被锁定的数据。
+然而，这样做会带来严重的性能问题，
+导致数据库无法处理高并发请求，这样的数据库几乎是不可用的。
+所以，为了实现并发（Concurrency），
+数据库需要进行一些妥协，接受一些异常（Anomalies），从而支持多个事务的并发执行。
+根据接受异常的程度，
+数据库的隔离级别可以分为可串行化（Serializable）、可重复读（Repeatable Read）、读已提交（Read Committed）和读未提交（Read Uncommitted）。
 
 分布式数据库作为一种分布式系统，其各个节点通常分布在不同的物理节点上，通过网络进行通信。
 网络通信的延迟和故障往往是不可避免的，这导致分布式数据库除了考虑如单点数据库在不同隔离级别下的异常外，还需要考虑网络延迟和故障带来的异常。
@@ -19,42 +32,63 @@
 \end{aligned}
 \end{equation}
 其中\(x\)和\(y\)是两个变量，\(u\)、\(v\)、\(w\)是读操作的结果，是本地变量。
-假设三个事务是在时间维度上是串行执行的，也就是说，\(\operatorname{txn_1}\)提交后\(\operatorname{txn_2}\)再执行，\(\operatorname{txn_2}\)提交后\(\operatorname{txn_3}\)最后执行。
+假设三个事务在时间维度上串行执行，也就是说，\(\operatorname{txn_1}\)提交后\(\operatorname{txn_2}\)再执行，\(\operatorname{txn_2}\)提交后\(\operatorname{txn_3}\)最后执行。
 如果事务发生在同一个节点,或者说,没有网络延迟和故障,那么在可串行化隔离级别下,\(u\)、\(v\)、\(w\)分别是\(\text{post}\)、\(\text{post}\)和\(\text{comment}\)。
-现实情况往往比想想更复杂，如果\(\operatorname{txn_1}\)因为网络故障丢失，在\(\operatorname{txn_3}\)执行的节点执行\(\operatorname{txn_3}\)时，未到达该节点，
-但是在\(\operatorname{txn_2}\)的执行节点执行\(\operatorname{txn_2}\)之前到达该节点，
+现实情况往往比想象更复杂，
+如果\(\operatorname{txn_1}\)因为网络故障而延迟，
+在\(\operatorname{txn_3}\)执行的节点上，\(\operatorname{txn_1}\)的更新尚未到达，
+但在\(\operatorname{txn_2}\)的执行节点上，\(\operatorname{txn_1}\)已经到达，
 那么可能导致事务的执行结果为\(u=\text{post}, v=\text{null}, w=\text{comment}\)。
-在另外一种情境下，\(\operatorname{txn_1}\)在\(\operatorname{txn_2}\)后达到\(\operatorname{txn_3}\)的节点，那么\(\operatorname{txn_3}\)的执行结果为\(v=\text{null}, w=\text{comment}\)。
+在另一种情境下，
+如果\(\operatorname{txn_1}\)在\(\operatorname{txn_2}\)之后到达\(\operatorname{txn_3}\)所在的节点，
+那么\(\operatorname{txn_3}\)的执行结果可能为\(v=\text{null}, w=\text{comment}\)。
 
 因此，与复制数据库交互的程序的语义取决于其一致性模型（consistency model）。一致性模型定义了数据库不同的隔离级别，在这些隔离级别下可以接受哪些异常，并因此限制了在此隔离级别下的数据库性能表现。
 近些年，针对复制型数据库的一致性模型的研究取得了很大的进展，诸多学者提出了许多方案，这些方案在性能和一致性之间做着不同的取舍，但是都基于其自身设计的数据库的模型定义。
 脱离具体数据库定义，使用形式化语言对复制数据库的一致性模型进行统一的描述和分析，可以更好地理解其工作原理和性能特点，是研究复制型分布式数据库至关重要的一步。
 
-对一致性模型的描述本质上是对两个在时间维度和网络延迟下，两个事务之间关系的形式化描述。
-在分布式数据库系统上，数据无法像单点数据库一样对数据上锁，如何处理并发冲突，决定事务是否可以正确提交？
-如何描述它们在时间上的先后关系，包括事务开始时间和提交时间的先后关系？
-如何描述它们在网络延迟下的关系，先提交的事务在后提交的事务后到达某个节点，应当如何处理？
+对一致性模型的描述，
+本质上是对在时间维度和网络延迟影响下两个事务之间关系的形式化描述。
+在分布式数据库系统中，
+数据无法像单点数据库一样进行全局加锁。
+那么，如何处理并发冲突，决定事务是否可以正确提交？
+如何描述事务在时间上的先后关系，
+包括事务开始时间和提交时间的先后关系？
+如何描述事务在网络延迟下的关系，
+当先提交的事务反而后到达某个节点时，应当如何处理？
 这些问题是我们进行一致性模型形式化描述需要考虑的关键。
 
 
 \section{基本建模}
-以全局视角看，考虑到两个事务在提交时间维度上有必然存在的先后关系，我们用符号\Log （Log）表示全局事务的执行序列，
-它是一系列事务（Transaction，以\Txc 或\Txc[x]表示）的执行序列。
-\Log 还需要强调隔离级别（ISOlation Level），有大致从高到低$\{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}$六个级别，我们在后文中会详细介绍。
+以全局视角看，
+考虑到事务在提交时间维度上存在先后关系，
+我们用符号 \Log（Log）表示全局事务的执行日志，
+它是一系列事务（Transaction，记为 \Txc 或 \Txc[x]）的有序集合。
+\Log 还需要标注隔离级别（Isolation Level），
+本文涉及从高到低$\{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}$六个级别，
+我们将在后文中详细介绍。
 一个事务 \Txc 则是一系列操作（Operation）的执行序列。
-我们的研究目标是键值数据库，并且不考虑复杂的谓词操作，具体的操作可以被简单的抽象为读操作和写操作。
+我们的研究目标是键值数据库，
+不考虑复杂的谓词操作，
+具体操作可简单抽象为读操作和写操作。
 一个事务\Txc 以\OpStart 开始，以\OpCommit 结束，其中穿插着若干个\OpRead 和 \OpWrite 操作。
 \OpRead 和 \OpWrite 操作的对象是一系列键 $k$，它们的集合是\Keys。
 \OpRead[k]给出在当前情况下键$k$对应的值。
 写操作无返回值，但是需要第二个参数$v$，\OpWrite[k][v]在当前情况下将键$k$对应的值设置为$v$。
-这里的当前情况下指的是，当前节点执行完成一个完整事务的状态，无论这个事务是来自于用户，还是来自于其他节点。
-也就是说，在“当前状态下”系统上没有事务在执行。这种“当前状态”可以被成为快照（Snapshot, \Snapshot ）。
+这里的“当前情况”指的是当前节点执行完成一个完整事务后的状态，
+无论该事务来自用户还是其他节点。
+也就是说，在“当前状态下”系统没有事务正在执行。
+这种“当前状态”称为快照（Snapshot，记为 \Snapshot）。
 
-在给出它们的形式化表达时,我们使用一个两元组来表示序列概念。
-以事务\Txc 为例,一个事务\Txc 是一个两元组$(O, po)$,其中$O \subseteq Op$,$Op$ 是所有可能的操作的集合,是一个有限的非空的集合。
-而$po \subseteq O \times O $是一个严格的全序关系,表示操作的执行顺序。
+在给出形式化表达时，
+我们使用二元组来表示序列概念。
+以事务 \Txc 为例，
+一个事务 \Txc 是一个二元组 $(O, po)$，
+其中 $O \subseteq Op$ 是该事务包含的操作集合，$Op$ 为所有可能操作的有限非空集合。
+$po \subseteq O \times O$ 称为程序顺序（program order），
+是一个严格全序关系，表示事务内操作的执行顺序。
 
-以上概念的形式化表达为：
+以上概念的形式化表达如下：
 \begin{equation}
 \begin{aligned}
 \mathcal{K} &= \{ x, y, \ldots\}, \quad \mathcal{V} = \{ \bot ,1, 2, \ldots, n \} \\
@@ -65,33 +99,51 @@ T &= (O, po), O \subseteq Op, \quad  po \subseteq O \times O \\
 S &: \mathcal{K} \rightharpoonup \mathcal{V},  S(k) = \bot \text{ if } k \notin \text{dom}(S)
 \end{aligned}
 \end{equation}
+其中，$\mathcal{K}$ 为键的集合，$\mathcal{V}$ 为值的集合（$\bot$ 表示空值），
+$SO$ 为会话顺序（session order），表示同一会话内事务的执行顺序，
+$S$ 为快照函数，将键映射到其对应的值。
 
-此外还有两个辅助运算符，用于直接求得事务的读集合和写集合：
+此外，还有两个辅助运算符用于求得事务的读集合和写集合：
 \begin{equation}
 \begin{aligned}
 \operatorname{RSet}(T) &= \{ k \in \mathcal{K} \mid \exists O_i = \text{read}(k) \in T, \forall j < i, O_j \neq \text{write}(k, \cdot) \} \\
 \operatorname{WSet}(T) &= \{ k \in \mathcal{K} \mid \exists O \in T, O = \text{write}(k, v) \}
 \end{aligned}
 \end{equation}
+其中，$\operatorname{RSet}(T)$ 表示事务 $T$ 的读集合，
+即在本事务内被读取且在读取前未被本事务写入的键的集合；
+$\operatorname{WSet}(T)$ 表示事务 $T$ 的写集合，即被本事务写入的键的集合。
 
-当两个事务的写集合$\operatorname{WSet}$的交集不为空,也就是$\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$,则称这两个事务存在写冲突(write-conflict)。
+当两个事务的写集合交集不为空，
+即 $\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$ 时，
+称这两个事务存在写冲突（write-conflict），
+记为 $T_1 \bowtie T_2$。
 
-\subsection{VIS和AR关系}
-由于事务的处理结果是原子化的，对多个事务的处理是并发的，因此，描述事务的隔离级别的关键就在于描述每两个事务之间的关系。
-这些关系是\Log 笛卡尔积 \Log \times \Log 的子集。我们重点考虑两个关系$\text{VIS}, \text{AR} \subseteq \mathcal{L} \times \mathcal{L}$。它们是描述事务隔离级别的关键。
+\subsection{VIS 和 AR 关系}
+由于事务的处理结果是原子化的，
+而多个事务的处理是并发的，
+因此描述事务隔离级别的关键在于描述任意两个事务之间的关系。
+这些关系是事务集合笛卡尔积 $\mathcal{T} \times \mathcal{T}$ 的子集。
+我们重点考虑两个核心关系：$\text{VIS}, \text{AR} \subseteq \mathcal{T} \times \mathcal{T}$。
 
-可见性关系(Visibility Relation)$\text{VIS} \subseteq \mathcal{L} \times \mathcal{L}$定义了一个事务的执行结果对另一个事务是否可见。
-直观地说,如果$(T_1, T_2) \in \text{VIS}$,也就是$T_1  \xrightarrow{\text{VIS}} T_2$,则表示事务$T_1$的所有写操作对事务$T_2$是可见的,
-也就是说,$T_2$在执行读操作时,能够读取到$T_1$写入的值。
-$\text{VIS}$是一个偏序关系,且是无环的,即不存在$T_1 \xrightarrow{\text{VIS}} T_2 \xrightarrow{\text{VIS}} T_1$的情况。
-可见性关系决定了事务读取数据时所看到的快照状态,它是理解事务隔离级别的核心概念之一。
-从另外的角度讲,不可见意味着两个事务是并发的。
+可见性关系（Visibility Relation）$\text{VIS} \subseteq \mathcal{T} \times \mathcal{T}$ 定义了一个事务的执行结果对另一个事务是否可见。
+直观地说，如果 $(T_1, T_2) \in \text{VIS}$，也就是 $T_1 \xrightarrow{\text{VIS}} T_2$，
+则表示事务 $T_1$ 的所有写操作对事务 $T_2$ 可见，
+即 $T_2$ 在执行读操作时能够读取到 $T_1$ 写入的值。
+$\text{VIS}$ 是一个无环的偏序关系，
+即不存在 $T_1 \xrightarrow{\text{VIS}} T_2 \xrightarrow{\text{VIS}} T_1$ 的情况。
+可见性关系决定了事务读取数据时所看到的快照状态，
+是理解事务隔离级别的核心概念之一。
+从另一个角度看，两个事务之间不存在可见性关系意味着它们是并发的。
 
-仲裁关系(Arbitration Relation)$\text{AR} \subseteq \mathcal{L} \times \mathcal{L}$定义了事务之间的写操作顺序。
-当$(T_1, T_2) \in \text{AR}$时,也就是$T_1  \xrightarrow{\text{AR}} T_2$,表示事务$T_1$的写操作在逻辑上先于事务$T_2$的写操作,
-或者说,事务$T_2$的写入结果覆盖了事务$T_1$对相同键的写入结果。
-$\text{AR}$是一个全序关系,也就是说,对于任意两个事务$T_1$和$T_2$,要么$T_1 \xrightarrow{\text{AR}} T_2$,要么$T_2 \xrightarrow{\text{AR}} T_1$。
-仲裁关系确定了并发写操作的最终顺序,解决了写冲突的问题。
+仲裁关系（Arbitration Relation）$\text{AR} \subseteq \mathcal{T} \times \mathcal{T}$ 定义了事务之间写操作的全局顺序。
+当 $(T_1, T_2) \in \text{AR}$，即 $T_1 \xrightarrow{\text{AR}} T_2$ 时，
+表示事务 $T_1$ 的写操作在逻辑上先于事务 $T_2$ 的写操作，
+换言之，$T_2$ 的写入结果会覆盖 $T_1$ 对相同键的写入。
+$\text{AR}$ 是一个全序关系，
+即对于任意两个事务 $T_1$ 和 $T_2$，
+要么 $T_1 \xrightarrow{\text{AR}} T_2$，要么 $T_2 \xrightarrow{\text{AR}} T_1$。
+仲裁关系确定了并发写操作的最终顺序，解决了写冲突问题。
 
 
 在进一步讨论这两个关系之前，我们需要明确一个重要的性质：$\text{VIS} \subseteq \text{AR}$，即可见性关系是仲裁关系的子集。
@@ -127,40 +179,64 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 例如，在可串行化（Serializable）隔离级别下，$\text{VIS}$和$\text{AR}$关系需要满足严格的约束，保证事务的执行结果等价于某个串行执行顺序；
 而在较弱的隔离级别下，这些约束可以适当放松，从而允许更多的并发执行，提高系统性能。
 
-此外,我们约定集合$\operatorname{VIS^{-1}}(T)$表示对\Txc 所有可见的事务的集合。其他的倒数关系我们也做类似的约定。
+此外，我们约定 $\operatorname{VIS^{-1}}(T)$ 表示对事务 $T$ 可见的所有事务的集合，
+即 $\operatorname{VIS^{-1}}(T) = \{ T' \in \mathcal{T} \mid T' \xrightarrow{\text{VIS}} T \}$。
+其他关系的逆集合也做类似约定。
+我们还定义 $\operatorname{WriteTx}_k$ 表示对键 $k$ 有写操作的事务集合，
+并用 $T \Vdash \operatorname{op}$ 表示事务 $T$ 包含操作 $\operatorname{op}$。
 
 基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）是一个三元组$\mathcal{X} = (\mathcal{L}, \text{VIS}, \text{AR})$。
 
 \section{一致性公理}
-基于上述符号和 $\text{VIS}$、$\text{AR}$ 的定义，我们可以定义一致性公理。
+基于上述符号以及 $\text{VIS}$、$\text{AR}$ 的定义，
+我们可以定义一致性公理。
 
-所有一致性模型必须遵守两个基础公理：
+所有一致性模型必须遵守以下两个基础公理：
 \begin{itemize}
-    \item \textbf{INT (内部一致性公理，Internal Consistency)}：
-    内部一致性公理确保事务内部的读写行为符合串行语义。例如，一个事务如果先写了某个对象，再读这个对象，必须能读到自己刚刚写入的值。这条公理保证了单线程视角的逻辑正确性。
-    \item \textbf{EXT (外部一致性公理，External Consistency)}：
-    外部一致性公理定义了一个事务如何读取其他事务写入的值。它规定，一个外部读取（即读取本事务从未写入过的对象）的值，取决于所有对它可见（通过 VIS 关系）的事务中，在 AR 顺序下最新的那个事务所写入的值。
-    这条公理用于防止断裂读取 (Fractured Reads)和脏读(Dirty Reads)。
+    \item \textbf{Int（内部一致性公理，Internal Consistency）}：
+    内部一致性公理确保事务内部的读写行为符合串行语义。
+    例如，一个事务如果先写了某个对象再读该对象，
+    必须能读到自己刚写入的值。
+    这条公理保证了单事务视角的逻辑正确性。
+    \item \textbf{Ext（外部一致性公理，External Consistency）}：
+    外部一致性公理定义了事务如何读取其他事务写入的值。
+    它规定，对于本事务未写入过的对象的读取（外部读取），
+    其值取决于所有对它可见的事务中，在 AR 顺序下最新的那个事务写入的值。
+    这条公理用于防止断裂读取（Fractured Reads）和脏读（Dirty Reads）。
 \end{itemize}
 
-除此以外，还有一些额外的四个公理可以用于进一步刻画一致性模型的语义。
+除此之外，还有四个额外公理可用于进一步刻画一致性模型的语义：
 \begin{itemize}
-    \item \textbf{TRANSVIS (传递可见性，Transitive Visibility)}：
-    传递可见性公理确保如果事务$T_1$对事务$T_2$可见，而事务$T_2$又对事务$T_3$可见，那么事务$T_1$对事务$T_3$也必须可见。
-    这条公理用防止因果违例 (Causality Violation)。例如，Alice 发贴，Bob 看到后评论。如果 Charlie 看到了 Bob 的评论（意味着 Charlie 看见了 Bob），根据传递性，Charlie 也必须能看到 Alice 的原贴。
-    \item \textbf{PREFIX (前缀一致性，Prefix Consistency)}：
-    前缀一致性公理确保如果事务$T_2$对$T_1$可见，那么在$\text{AR}$关系的顺序下，$T_2$“之前”的事务也必须对$T_1$可见。
-    你不能只看到历史的“中间”一段，你看到的必须是一个完整的、没有空洞的历史前缀（Snapshot）。用于防止长分叉(Long Forks)，即防止两个并发事务各自看到不同的、不兼容的历史版本。
-    \item \textbf{NOCONFLICT (无冲突)}：
-    无冲突公理确保如果两个事务没有写冲突。如果两个事务是并发执行的，那么两个事务不能同时写入同一个对象。也就是说，两个事务之间不存在写冲突。
-    这条公理用于防止某些事务对数据的更新被直接覆盖。
-    \item \textbf{TOTALVIS (完全可见性，Total Visibility)}：
-    TOTALVIS 强调 $\text{VIS}$关系必须是一个全序关系，即对于任意两个事务$T_1$和$T_2$，要么$T_1 \xrightarrow{\text{VIS}} T_2$，要么$T_2 \xrightarrow{\text{VIS}} T_1$。
-    这意味着所有事务都在一条单一的时间线上，每一个事务都能看到它之前的所有事务。这是一条最强的公理。
+    \item \textbf{TransVis（传递可见性，Transitive Visibility）}：
+    传递可见性公理确保如果事务 $T_1$ 对事务 $T_2$ 可见，
+    而 $T_2$ 又对事务 $T_3$ 可见，
+    那么 $T_1$ 对 $T_3$ 也必须可见。
+    这条公理用于防止因果违例（Causality Violation）。
+    例如，Alice 发帖，Bob 看到后评论。
+    如果 Charlie 看到了 Bob 的评论，根据传递性，Charlie 也必须能看到 Alice 的原帖。
+    \item \textbf{Prefix（前缀一致性，Prefix Consistency）}：
+    前缀一致性公理确保如果事务 $T_2$ 对 $T_1$ 可见，
+    那么在 $\text{AR}$ 顺序下排在 $T_2$ 之前的所有事务也必须对 $T_1$ 可见。
+    换言之，事务所看到的历史必须是一个完整的、没有空洞的前缀（Snapshot）。
+    这条公理用于防止长分叉（Long Forks），
+    即防止两个并发事务各自看到不同的、不兼容的历史版本。
+    \item \textbf{NoConflict（无冲突）}：
+    无冲突公理确保如果两个事务存在写冲突，
+    则它们之间必须存在可见性关系，不能彼此并发而互不可见。
+    这条公理用于防止丢失更新（Lost Update），
+    即防止某个事务的更新被另一个并发事务直接覆盖。
+    \item \textbf{TotalVis（完全可见性，Total Visibility）}：
+    完全可见性公理要求 $\text{VIS}$ 关系必须是一个全序关系，
+    即对于任意两个事务 $T_1$ 和 $T_2$，
+    要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$。
+    这意味着所有事务都在一条单一的时间线上，
+    每个事务都能看到它之前的所有事务。
+    这是最强的公理。
 \end{itemize}
-其中前两条公理是对关系$\text{VIS}$的限制和强化，后两条公理主要聚焦对写冲突的解决方案。
+其中，TransVis 和 Prefix 两条公理是对 $\text{VIS}$ 关系的限制和强化，
+而 NoConflict 和 TotalVis 两条公理主要聚焦于写冲突的解决方案。
 
-将以上公理使用形式化的语言可以表达为：
+以上公理的形式化表达如下：
 \begin{equation}
 \begin{aligned}
 \mathsf{Int}(T) &\equiv \forall r \in O.\ \forall x, v.\ \bigl(r = \operatorname{read}(x, v) \land po_x^{-1}(r) \neq \emptyset\bigr) \\
@@ -172,19 +248,25 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 \mathsf{TotalVis}(T) &\equiv \forall T' \in \mathcal{T}.\ T' \xrightarrow{\text{AR}} T \Rightarrow T' \xrightarrow{\text{VIS}} T.
 \end{aligned}
 \end{equation}
+其中，$po_x^{-1}(r)$ 表示在程序顺序 $po$ 下排在读操作 $r$ 之前且操作对象为键 $x$ 的所有操作的集合，
+$\max_{po}$ 表示在程序顺序下取最后一个操作，
+$\max_{\text{AR}}$ 表示在仲裁顺序下取最新的事务。
 
 \section{隔离级别}
-现在我们已经有了对一致性的公理的定义，接下来，我们将基于公理，讨论各个隔离级别的特点。
-这里，我们可以直接给出表格，从弱一致性级别到强一致性级别，强调每个隔离级别需要满足的公理和防止的异常。
+基于上述一致性公理的定义，
+接下来我们讨论各个隔离级别的特点。
+表~\ref{tab:consistency-models} 从弱一致性级别到强一致性级别，
+列出了每个隔离级别需要满足的公理以及能够防止或允许的异常。
+表中 $\checkmark$ 表示该隔离级别允许该异常发生，$\times$ 表示能够防止该异常。
 \begin{table}[htbp]
   \centering
-  \caption{一致性模型以及其所满足的公理}
+  \caption{一致性模型及其所满足的公理与异常}
   \label{tab:consistency-models}
   \small
   \setlength{\tabcolsep}{4pt} % 减小列间距
   \begin{tabular}{c l l c c c c c}
     \hline
-    $\Phi$ & Consistency model & Axioms & \makecell{Fractured\\reads} & \makecell{Causality\\violation} & \makecell{Lost\\update} & \makecell{Long\\fork} & \makecell{Write\\skew} \\
+    $\Phi$ & Consistency Model & Axioms & \makecell{Fractured\\reads} & \makecell{Causality\\violation} & \makecell{Lost\\update} & \makecell{Long\\fork} & \makecell{Write\\skew} \\
     \hline
     RA  & Read Atomic
         & $\mathsf{Int},\ \mathsf{Ext}$
@@ -215,46 +297,81 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.3\textwidth]{figures/isolevels.pdf}
+  \includegraphics[width=0.4\textwidth]{figures/isolevels.pdf}
   \caption{隔离级别间的偏序关系}
   \label{fig:isolevels}
 \end{figure}
 
 
 
-从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 可以看出，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
-表~\ref{tab:consistency-models} 总结了每个隔离级别所满足的公理，以及它们能够防止或仍然允许的异常。
+从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 可以看出，
+本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
+下面分别介绍各个隔离级别的特点。
 
-\noindent\textbf{Read Atomic (RA)} 是最弱的一致性级别，只满足 $\mathsf{Int}$ 和 $\mathsf{Ext}$ 两个公理。
-它只保证事务的更新以原子方式对其他事务可见，即要么看到一个事务的全部写入，要么完全看不到该事务。
-除此之外，RA 不对事务之间的可见性关系施加额外约束，因此几乎所有其他异常都有可能发生。
+\noindent\textbf{Read Atomic (RA)} 是最弱的一致性级别，
+仅满足 $\mathsf{Int}$ 和 $\mathsf{Ext}$ 两个公理。
+它只保证事务的更新以原子方式对其他事务可见，
+即要么看到一个事务的全部写入，要么完全看不到该事务。
+RA 不对事务之间的可见性关系施加额外约束，
+因此几乎所有其他异常都可能发生。
 例如图~3(a) 中的因果违背（Causality Violation），$T_2$ 能够看到 $T_1$ 的写入，$T_3$ 能够看到 $T_2$ 的写入，但 $T_3$ 却看不到 $T_1$ 对同一对象的更新，打破了直观上的因果链。
 
-\noindent\textbf{Causal Consistency (CC)} 在 RA 的基础上增加了 $\mathsf{TransVis}$ 公理，要求可见性关系 VIS 必须具有传递性。
-也就是说，如果 $T_3$ 看到了 $T_2$，而 $T_2$ 又看到了 $T_1$，那么 $T_3$ 必须也能看到 $T_1$。
-因此 CC 能够消除图~3(a) 中的因果违背异常。
-但由于 CC 并不禁止对同一对象的并发写，图~3(c) 中那种两个事务基于相同初始快照各自更新余额、最终导致其中一个更新被覆盖的丢失更新（Lost Update）仍然是被允许的。
+\noindent\textbf{Causal Consistency (CC)} 在 RA 的基础上增加了 $\mathsf{TransVis}$ 公理，
+要求可见性关系 VIS 必须具有传递性。
+也就是说，如果 $T_3$ 看到了 $T_2$，而 $T_2$ 又看到了 $T_1$，
+那么 $T_3$ 必须也能看到 $T_1$。
+因此 CC 能够消除因果违背异常。
+但由于 CC 并不禁止对同一对象的并发写，
+丢失更新（Lost Update）异常仍然被允许。
 
-\noindent\textbf{Parallel Snapshot Isolation (PSI)} 进一步在 CC 的基础上增加了 $\mathsf{NoConflict}$ 公理。
-该公理要求，对同一对象进行写入的两个事务不能彼此并发而互不可见，它们之间必须通过 VIS 确定一个先后顺序。
-直观地说，并发写冲突必须被仲裁，不能悄无声息地丢掉某个更新。
-因此，在 PSI 下图~3(c) 所示的丢失更新异常会被排除。
-不过，PSI 仍然允许不同事务在不同节点上看到不一致的历史前缀，从而产生图~3(d) 中的长分叉（Long Fork）：$T_3$ 只看到 $T_1$，$T_4$ 只看到 $T_2$，它们对 $T_1$ 与 $T_2$ 先后关系的判断彼此矛盾。
+\noindent\textbf{Parallel Snapshot Isolation (PSI)} 在 CC 的基础上增加了 $\mathsf{NoConflict}$ 公理。
+该公理要求对同一对象进行写入的两个事务不能彼此并发而互不可见，
+它们之间必须通过 VIS 确定先后顺序。
+直观地说，并发写冲突必须被仲裁，不能惄无声息地丢掉某个更新。
+因此 PSI 能够排除丢失更新异常。
+不过，PSI 仍允许不同事务在不同节点上看到不一致的历史前缀，
+从而产生长分叉（Long Fork）异常。
 
-\noindent\textbf{Prefix Consistency (PC)} 则从另一个维度增强 CC。
-它采用 $\mathsf{Prefix}$ 公理来约束可见历史，该公理蕴含了 $\mathsf{TransVis}$，要求如果某个事务 $T_1$ 看到了事务 $T_2$，那么在仲裁顺序 AR 中排在 $T_2$ 之前的所有事务都必须对 $T_1$ 可见。
-换句话说，每个事务所看到的历史必须是全局 AR 顺序的一段前缀，而不能只看到其中的“中间几段”。
-因此，图~3(d) 中那种不同事务分别看到互不兼容历史片段的长分叉异常在 PC 下会被禁止。
-但由于 PC 并不禁止在同一快照上对不同对象进行并发写入，经典的写偏斜（Write Skew）异常在 PC 中依然可能发生。
+\noindent\textbf{Prefix Consistency (PC)} 从另一个维度增强 CC。
+它采用 $\mathsf{Prefix}$ 公理来约束可见历史，
+该公理蕴含了 $\mathsf{TransVis}$，
+要求如果事务 $T_1$ 看到了 $T_2$，
+那么在 AR 顺序中排在 $T_2$ 之前的所有事务都必须对 $T_1$ 可见。
+换言之，每个事务所看到的历史必须是全局 AR 顺序的一段前缀。
+因此，长分叉异常在 PC 下会被禁止。
+但由于 PC 并不禁止在同一快照上对不同对象进行并发写入，
+写偏斜（Write Skew）异常在 PC 中仍可能发生。
 
-\noindent\textbf{Snapshot Isolation (SI)} 可以看作 PSI 与 PC 的合流点。
-它一方面继承了 $\mathsf{Prefix}$，要求所有事务在同一条 AR 序列的某个前缀上执行；另一方面又继承了 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突。
+\noindent\textbf{Snapshot Isolation (SI)} 可看作 PSI 与 PC 的合流点。
+它一方面继承了 $\mathsf{Prefix}$，
+要求所有事务在 AR 序列的某个前缀上执行；
+另一方面继承了 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突。
 因此，SI 同时防止了丢失更新和长分叉两类异常。
-然而，由于它仍然允许事务在同一个快照上对不同对象进行更新，图~3(e) 所示的写偏斜异常依然会出现：两个事务都在检查约束成立的同一快照上各自修改不同账户，最终破坏了全局约束。
+SI 在一致性和性能之间取得了较好的平衡，
+因此被许多数据库系统支持或采用。常见数据库系统都有类似的隔离级别实现。
+然而，由于 SI 仍允许事务在同一快照上对不同对象进行更新，
+写偏斜异常仍然可能出现。
 
 \noindent\textbf{Serialisability (SER)} 通过 $\mathsf{TotalVis}$ 公理将 VIS 强化为全序关系。
-对于任意两个事务 $T_1$ 和 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，不再允许它们在抽象执行层面上真正并发。
+对于任意两个事务 $T_1$ 和 $T_2$，
+要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，
+不再允许它们在抽象执行层面真正并发。
 从结果上看，所有事务的执行效果等价于按照某个串行顺序依次执行。
-因此，SER 排除了前述所有异常，包括写偏斜，是图~\ref{fig:isolevels} 中最强的一致性级别。
+因此，SER 排除了所有前述异常，包括写偏斜，
+是图~\ref{fig:isolevels} 中最强的一致性级别。
+SER 提供了最直观的编程模型，
+开发者可以假设每个事务是在完全隔离的环境中执行的，
+无需考虑复杂的并发场景。
+但其代价是较高的性能开销，
+因为系统需要通过加锁或乐观并发控制等机制来确保事务的串行化执行。
 
-
+\section{本章小结}
+本章为复制型分布式数据库的一致性模型建立了统一的形式化描述框架。
+首先定义了事务、操作、日志和快照等基本概念，
+并引入可见性关系 VIS 和仲裁关系 AR 构建 $(\text{VIS}, \text{AR})$ 规约框架。
+随后提出了六条一致性公理：
+内部一致性、外部一致性、传递可见性、前缀一致性、无冲突和完全可见性。
+最后基于这些公理定义了从弱到强的六个隔离级别：
+RA、CC、PSI、PC、SI 和 SER，
+并分析了各级别能够防止或允许的异常类型及其偏序关系。
+该框架为后续章节的一致性验证工作奠定了理论基础。
