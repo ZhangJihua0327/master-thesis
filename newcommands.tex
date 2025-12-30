@@ -15,7 +15,15 @@
 % 操作符
 \newcommand{\OpStart}{$\operatorname{start}$}
 \newcommand{\OpCommit}{$\operatorname{commit}$}
-\newcommand{\OpRead}[1][]{$\operatorname{read}(#1)$}
+\newcommand{\OpAbort}{$\operatorname{abort}$}
+\newcommand{\OpReceive}[1][]{$\operatorname{receive}(#1)$}
+\NewDocumentCommand{\OpRead}{o o}{%
+  \IfNoValueTF{#1}{%
+    \IfNoValueTF{#2}{$\operatorname{read}()$}{$\operatorname{read}(#2)$}%
+  }{%
+    \IfNoValueTF{#2}{$\operatorname{read}(#1)$}{$\operatorname{read}(#1,#2)$}%
+  }%
+}
 \NewDocumentCommand{\OpWrite}{o o}{%
   \IfNoValueTF{#1}{%
     \IfNoValueTF{#2}{$\operatorname{write}()$}{$\operatorname{write}(#2)$}%
