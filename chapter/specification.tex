@@ -62,9 +62,9 @@
 \section{基本建模}
 以全局视角看，
 考虑到事务在提交时间维度上存在先后关系，
-我们用符号 \Log（Log）表示全局事务的执行日志，
+我们用符号 \History（History）表示全局事务的执行历史，
 它是一系列事务（Transaction，记为 \Txc 或 \Txc[x]）的有序集合。
-\Log 还需要标注隔离级别（Isolation Level），
+\History 还需要标注隔离级别（Isolation Level），
 本文涉及从高到低$\{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}$六个级别，
 我们将在后文中详细介绍。
 一个事务 \Txc 则是一系列操作（Operation）的执行序列。
@@ -94,7 +94,7 @@ $po \subseteq O \times O$ 称为程序顺序（program order），
 \mathcal{K} &= \{ x, y, \ldots\}, \quad \mathcal{V} = \{ \bot ,1, 2, \ldots, n \} \\
 Op &= \{ \text{start}, \text{commit} \} \cup \{ \text{read}(k), \text{write}(k, v) \mid k \in \mathcal{K}, v \in \mathcal{V} \} \\
 T &= (O, po), O \subseteq Op, \quad  po \subseteq O \times O \\
-\mathcal{L} &= (\mathcal{T}, SO, level), \quad \mathcal{T} = \{T_1, T_2, \ldots, T_n\}, \\
+\mathcal{H} &= (\mathcal{T}, SO, level), \quad \mathcal{T} = \{T_1, T_2, \ldots, T_n\}, \\
 & \quad SO \subseteq \mathcal{T} \times \mathcal{T}, \quad level \in \{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\} \\
 S &: \mathcal{K} \rightharpoonup \mathcal{V},  S(k) = \bot \text{ if } k \notin \text{dom}(S)
 \end{aligned}
@@ -185,7 +185,7 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 我们还定义 $\operatorname{WriteTx}_k$ 表示对键 $k$ 有写操作的事务集合，
 并用 $T \Vdash \operatorname{op}$ 表示事务 $T$ 包含操作 $\operatorname{op}$。
 
-基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）是一个三元组$\mathcal{X} = (\mathcal{L}, \text{VIS}, \text{AR})$。
+基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）是一个三元组$\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。
 
 \section{一致性公理}
 基于上述符号以及 $\text{VIS}$、$\text{AR}$ 的定义，
