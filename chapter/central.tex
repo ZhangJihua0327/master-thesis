@@ -1,7 +1,39 @@
 \chapter{基于中心节点生成时间戳的分布式复制数据库的设计与实现}
-
+本章将基于上一章中所提到的建模、公理和隔离级别公约，基于高效生成时钟的中心点，实现一个分布式复制数据库的原型。
 \section{协议设计}
 
 
-
 \section{具体实现}
+
+\section{example}
+
+\begin{algorithm}[H]
+\caption{Operational semantics of SI-SER}
+\label{alg:si-ser}
+\begin{algorithmic}[1]
+\State \textbf{log}: the log of committed transactions, sorted by cts
+\Procedure{Start}{$T$}
+    \State $T.\sts \gets \textsc{TimestampRequest}(O)$
+    \State \Return ok
+\EndProcedure
+\Procedure{Write}{$T, k, v$}
+    \State $T.\text{buffer} \gets T.\text{buffer} \circ \langle k, v \rangle$ \Comment{append $\langle k, v \rangle$ to $T.\mathit{buffer}$}
+    \State \Return ok
+\EndProcedure
+\Procedure{Read}{$T, k$}
+    \State \Return value of $k$ from $T.\mathit{buffer}$ and log as of $T.\sts$
+\EndProcedure
+\Procedure{Commit}{$T$}
+    \State $T.\cts \gets \textsc{TimestampRequest}(O)$
+    \If{$\exists T'. T'.\cts \in [T.\sts, T.\cts] \land T \conflictwith T'$}
+        \State \Return aborted
+    \EndIf
+    \If{$\level(T) = \text{SER} \land \exists T'. T'.\cts \in [T.\sts, T.\cts] \land \WSet(T') \cap \RSet(T) = \emptyset$}
+        \State \Return aborted
+    \EndIf
+    \State $\text{log} \gets \text{log} \circ \langle T.\text{buffer}, T.\cts \rangle$ \Comment{append $T$ to $\mathit{log}$}
+    \State \Return committed
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+

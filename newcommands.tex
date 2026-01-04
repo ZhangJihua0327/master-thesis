@@ -31,3 +31,28 @@
     \IfNoValueTF{#2}{$\operatorname{write}(#1)$}{$\operatorname{write}(#1,#2)$}%
   }%
 }
+
+% chapter 3
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{etoolbox}
+
+% 算法命令定义
+\algrenewcommand\textproc{}
+\renewcommand{\algorithmicprocedure}{\textbf{procedure}}
+\algrenewcommand{\algorithmiccomment}[1]{\hfill $\triangleright$ #1}
+
+% 重定义 \EndProcedure 以增加 Procedure 之间的间距
+\let\OriginalEndProcedure\EndProcedure
+\renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.4em}}
+
+% 算法行距设置
+\AtBeginEnvironment{algorithmic}{\setlength{\baselineskip}{12pt}}
+
+% 算法中常用的函数和符号
+\newcommand{\WSet}[1]{\operatorname{WSet}(#1)}
+\newcommand{\RSet}[1]{\operatorname{RSet}(#1)}
+\newcommand{\level}[1]{\operatorname{level}(#1)}
+\newcommand{\cts}{\mathit{cts}}
+\newcommand{\sts}{\mathit{sts}}
+\newcommand{\conflictwith}{\bowtie}

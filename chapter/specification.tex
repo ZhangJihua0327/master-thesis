@@ -4,7 +4,8 @@
 首先，本章阐述了对复制型数据库进行一致性建模的必要性，分析了分布式环境下网络延迟和故障对事务执行结果的影响。
 其次，本章定义了事务、操作、日志和快照等基本概念，并引入了可见性关系 VIS 和仲裁关系 AR 两个核心二元关系，以此为基础构建 $(\text{VIS}, \text{AR})$ 规约框架。
 然后，本章提出了六条一致性公理，包括内部一致性、外部一致性、传递可见性、前缀一致性、无冲突和完全可见性，并给出了它们的形式化表达。
-最后，本章基于这些公理定义了六个隔离级别，从弱到强依次为 Read Atomic、Causal Consistency、Parallel Snapshot Isolation、Prefix Consistency、Snapshot Isolation 和 Serialisability，
+最后，本章基于这些公理定义了六个隔离级别，从弱到强依次为 Read Atomic(RA)、Causal Consistency(CC)、Parallel Snapshot Isolation(PSI)、
+Prefix Consistency(PC)、Snapshot Isolation(SI) 和 Serialisability(SER)。
 并分析了它们之间的偏序关系以及各自能够防止或允许的异常类型。
 
 \section{为什么需要一致性建模和形式化描述}
