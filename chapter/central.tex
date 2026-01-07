@@ -1,9 +1,60 @@
-\chapter{基于中心节点生成时间戳的分布式复制数据库的设计与实现}
-本章将基于上一章中所提到的建模、公理和隔离级别公约，基于高效生成时钟的中心点，实现一个分布式复制数据库的原型。
+\chapter{基于中心化的逻辑时间戳分配节点的混合隔离级别的分布式事务协议的设计}
+本章将基于上一章中所提到的建模、公理和隔离级别公约，基于中心化的逻辑时间戳分配节点，实现一个分布式复制数据库的原型。
+在实现的过程中，我们设计的协议需要满足上一章节中所提到的隔离级别公约，向客户端提供一致性和隔离性的保证的同时，给出相应的具体操作的接口。
+
 \section{协议设计}
+在设计协议时，我们需要重点关注三个操作：事务在开始时应当选择哪种快照；如何决定事务之间的逻辑上的先后顺序；如何处理事务之间的冲突。
+
+\subsection{时间戳和时间戳生成}
+先发生(happened-before)是由Lamport\cite{happened-before}提出的分布式系统中一个重要的概念，用于描述事务之间的逻辑顺序。
+其目的是解决分布式场景下 “如何判断两个事件的先后顺序” 这一基础问题。
+在事务内部，由于每个事务的请求独占某一个节点(replica)，事务内部操作的逻辑顺序是天然存在的。
+事务之间，由于事务请求分散在不同的节点执行，事务之间的逻辑顺序不直接存在，需要借助其他手段来决定。
+
+通过时间戳预言机(Timestamp Oracle，TSO)\cite{tso1}来解决确定事务间逻辑上的先后顺序问题。
+TSO是分布式系统中一种中心化的服务，是为事务或事件分配全局唯一、单调递增的时间戳的核心服务或者组件。
+它的核心作用是解决分布式环境下缺乏统一时钟的问题，为事务提供统一的时间基准，确保系统能实现强一致性（如线性一致性或外部一致性）。
+在众多分布式数据库中也有使用时间戳预言机的，
+像 Google Spanner 使用 TrueTime API 作为 TSO\cite{spanner}，
+TiDB 则依靠 PD（Placement Driver）服务充当 TSO 角色\cite{TiDB}。
+它们生成的时间戳用于确定分布式事务的执行顺序，实现一致性读写，让不同节点读取到的数据保持统一视图。
+
+TSO 用于决定 AR 上的全序关系，每个事务在提交的时候必然持有一个全局唯一的自增的提交时间戳(commit timestamp, cts)，
+若\Txc[1] 在\Txc[2] 之前提交，那么 $T_1.\text{cts} < T_2.\text{cts}$。
+VIS不是一个全序关系，但是它是AR的子集，TSO在决定VIS上的偏序关系提供帮助。
+时间戳也是事务开始的标志，每个完整完成的事务在持有提交时间戳cts的同时还有开始时间戳(start timestamp, sts)。
+如果一个$T_1 \xrightarrow{\text{VIS}} T_2$ 意味着 $ T_1.\cts \leq T_2.\sts$。
+接下来的章节中，我们将直接使用时间戳的比较关系来反映事务之间的逻辑顺序和它们直接的(AR,VIS)关系。
+
+对于事务\Txc[1]和\Txc[2]，如果$T_1.sts < T_2.sts  \wedge T_1.cts > T_2.cts$，
+也就是事务\Txc[1]在事务\Txc[2]之前开始，但\Txc[1]在\Txc[2]之后提交，那么这两个事务是并行的(concurrent)，
+记作$T_1 || T_2$。
+
+算法~\ref{alg:timestamp-oracle} 展示了一个简化的时间戳预言机的核心操作。
+TSO 维护一个单调递增的计数器 \textbf{counter}，
+通过两个基本操作实现时间戳的分配：
+\textsc{Tick()} 操作用于读取当前的时间戳值，
+而 \textsc{Tock()} 操作则将计数器递增并返回新的时间戳。
+这种设计确保了系统中所有时间戳的全局唯一性和单调性，
+为分布式事务提供了统一的逻辑时钟基础。
 
 
-\section{具体实现}
+\begin{algorithm}[H]
+\caption{Timestamp Oracle}
+\label{alg:timestamp-oracle}
+\begin{algorithmic}[1]
+\State \textbf{counter}: monotonically increasing timestamp counter
+\Procedure{Tick()}{}
+    \State \Return $\text{counter}$ \Comment{return current timestamp}
+\EndProcedure
+\Procedure{Tock()}{}
+    \State $\text{counter} \gets \text{counter} + 1$
+    \State \Return $\text{counter}$ \Comment{increment and return new timestamp}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{操作语义的设计与证明}
 
 \section{example}
 

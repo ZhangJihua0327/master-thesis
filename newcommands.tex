@@ -42,9 +42,12 @@
 \renewcommand{\algorithmicprocedure}{\textbf{procedure}}
 \algrenewcommand{\algorithmiccomment}[1]{\hfill $\triangleright$ #1}
 
-% 重定义 \EndProcedure 以增加 Procedure 之间的间距
+% 重定义 \Procedure 和 \EndProcedure 以增加 Procedure 之间的间距
+% 第一个参数自动使用 \textsc{} 包裹
+\let\OriginalProcedure\Procedure
 \let\OriginalEndProcedure\EndProcedure
-\renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.4em}}
+\renewcommand{\Procedure}[2]{\vspace{0.2em}\OriginalProcedure{\textsc{#1}}{#2}}
+\renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.2em}}
 
 % 算法行距设置
 \AtBeginEnvironment{algorithmic}{\setlength{\baselineskip}{12pt}}
