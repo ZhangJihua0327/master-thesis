@@ -2,10 +2,9 @@
 本章将基于上一章中所提到的建模、公理和隔离级别公约，基于中心化的逻辑时间戳分配节点，实现一个分布式复制数据库的原型。
 在实现的过程中，我们设计的协议需要满足上一章节中所提到的隔离级别公约，向客户端提供一致性和隔离性的保证的同时，给出相应的具体操作的接口。
 
-\section{协议设计}
 在设计协议时，我们需要重点关注三个操作：事务在开始时应当选择哪种快照；如何决定事务之间的逻辑上的先后顺序；如何处理事务之间的冲突。
 
-\subsection{时间戳和时间戳生成}
+\section{时间戳和时间戳生成}
 先发生(happened-before)是由Lamport\cite{happened-before}提出的分布式系统中一个重要的概念，用于描述事务之间的逻辑顺序。
 其目的是解决分布式场景下 “如何判断两个事件的先后顺序” 这一基础问题。
 在事务内部，由于每个事务的请求独占某一个节点(replica)，事务内部操作的逻辑顺序是天然存在的。
@@ -54,37 +53,104 @@ TSO 维护一个单调递增的计数器 \textbf{counter}，
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{操作语义的设计与证明}
+\section{操作语义的设计}
+本节，我们将从RA隔离级别出发，向SER一步一步推导，设计各个隔离级别的操作语义，并证明其正确性。
 
-\section{example}
+\subsection{RA(Read Atomic)}
 
-\begin{algorithm}[H]
-\caption{Operational semantics of SI-SER}
-\label{alg:si-ser}
-\begin{algorithmic}[1]
-\State \textbf{log}: the log of committed transactions, sorted by cts
-\Procedure{Start}{$T$}
-    \State $T.\sts \gets \textsc{TimestampRequest}(O)$
-    \State \Return ok
-\EndProcedure
-\Procedure{Write}{$T, k, v$}
-    \State $T.\text{buffer} \gets T.\text{buffer} \circ \langle k, v \rangle$ \Comment{append $\langle k, v \rangle$ to $T.\mathit{buffer}$}
-    \State \Return ok
-\EndProcedure
-\Procedure{Read}{$T, k$}
-    \State \Return value of $k$ from $T.\mathit{buffer}$ and log as of $T.\sts$
-\EndProcedure
-\Procedure{Commit}{$T$}
-    \State $T.\cts \gets \textsc{TimestampRequest}(O)$
-    \If{$\exists T'. T'.\cts \in [T.\sts, T.\cts] \land T \conflictwith T'$}
-        \State \Return aborted
-    \EndIf
-    \If{$\level(T) = \text{SER} \land \exists T'. T'.\cts \in [T.\sts, T.\cts] \land \WSet(T') \cap \RSet(T) = \emptyset$}
-        \State \Return aborted
-    \EndIf
-    \State $\text{log} \gets \text{log} \circ \langle T.\text{buffer}, T.\cts \rangle$ \Comment{append $T$ to $\mathit{log}$}
-    \State \Return committed
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
+实现RA隔离级别需要保证内部一致性和外部一致性公理(INT和EXT)。
+在事务执行时，需要选择一个快照(snapshot)，这个快照由多个事务的共同作用决定。
+在事务的执行过程中，写操作的操作结果需要预先写入一个缓存；
+读操作从缓存中读取数据，如果数据不存在于缓存中，则从快照中读取数据。
+在提交时，写入操作需要保证要么全部成功提交，要么全部不提交，即要么所有写操作都成功，要么所有写操作都不成功。
 
+\begin{equation}
+\begin{aligned}
+S &= \langle T_1,\dots,T_n\rangle
+\quad\text{s.t.}\quad
+\forall\, 1 \le i < j \le n.\ T_i\  \text{AR} \  T_j \\
+C_1(k,v) &\triangleq (v = T.\text{buffer}(k))\\
+C_2(k,v) &\triangleq S(k,v)\\
+C_3(k,v) &\triangleq (v = \bot)\\
+Read(k,v) &\Longleftarrow C_1(k,v) \lor C_2(k,v) \lor C_3(k,v)\\
+          &\land \neg(C_1(k,v) \land C_2(k,v))\\
+          &\land \neg(C_1(k,v) \land C_3(k,v))\\
+          &\land \neg(C_2(k,v) \land C_3(k,v))
+\end{aligned}
+\end{equation}
+
+在实现时，每个节点会持有变量 deps，这是一个局部变量，用来记录该节点之前接收到哪些事务的提交时间戳。
+和MVCC相似，它由两部分组成，minDep和depSet，minDep是一个时间戳，表示小于等于该时间戳的事务都已被该节点接收，
+depSet是时间戳大于minDep的已经被该节点接收的事务的时间戳的集合。deps意味着哪些事务是当前节点可见的。
+\begin{equation}
+    \forall T_1, T_2.\ \ T_2 \in T_1.\text{deps} \implies T_2 \xrightarrow{\text{VIS}} T_1
+\end{equation}
+
+对于RA级别，对开始的时间戳没有特别的限制，事务可以选择deps中最大的时间戳作为自己的开始时间戳，即$T_i.\text{sts} = \max(\text{deps})$。
+在提交时，节点向TSO发送一个\tock 请求，申请一个新的时间戳作为自己的提交时间戳。
+RA隔离级别下，只需要关注内部一致性和外部一致性，无需考虑事务之间的冲突，时间戳更大，也就是更晚提交的事务会覆盖更早提交的事务。
+为了保证和其他隔离级别语义的一致性，在提交时间，节点也需要将当前deps一并提交。
+
+RA隔离级别较低，只需要保证事务的提交或者回滚操作是原子的，即要么全部提交，要么全部回滚，就可以保证该事务的正确性。
+
+\subsection{CC(Causal Consistency)}
+CC 相较于RA，增加了传递可见性公理(TransVis)，如果事务\Txc[1]对\Txc[2]可见，
+那么对\Txc[1]可见的任何事务对\Txc[2]也必须可见，即强调 VIS关系的传递性。
+
+在实现时，每个新任务的deps有如下性质：
+\begin{equation}
+    T.\text{deps} = \bigcup\nolimits_{S \xrightarrow{\text{VIS}} T} (S.\text{deps} \cup \{S\})
+\end{equation}
+CC隔离级别下，节点开启事务的前提条件是deps中的所有事务的deps都是deps的子集，即所有对deps中事务可见的事务对当前快照必须可见：
+\begin{equation}
+    \forall S \in T.\text{deps}.\ S.\text{deps} \subseteq T.\text{deps}
+\end{equation}
+
+要证明CC隔离级别的正确性，需要通过deps实现VIS关系的传递性。我们使用反证法进行证明。
+假设存在\Txc[1]、\Txc[2]、\Txc[3]，满足$T_1 \xrightarrow{} T_2$, $T_2 \xrightarrow{} T_3, T_1 \nrightarrow T_3$，
+即$T_1 \in T_2.\text{deps}, T_1 \in T_2.\text{deps}$，从而$T_1 \in T_3.\text{deps}$，得到 $T_1 \xrightarrow{} T_3$，
+与假设相违，证得deps实现了VIS关系的传递性。
+
+可以补充到：对于任意的事务\Txc，VIS关系在$T.\text{deps}$下的限制是自反传递闭包。
+\begin{equation}
+    \text{VIS} \upharpoonright (T.\text{deps}) = \left( \text{VIS} \upharpoonright (T.\text{deps}) \right)^*.
+\end{equation}
+
+在CC级别下，事务开始时是需要检查deps中的所有事务的deps是否都是当前deps的子集，这种状态可以被定义为因果交付(Causal Delivery)。
+只有当前快照满足因果交付的条件，才能够执行CC隔离级别的事务。
+
+\subsection{PC(Prefix Consistency)}
+PC隔离级别在CC的基础上，增加了前缀一致性公理(Prefix Consistency)，即：
+\begin{equation}
+ \forall T', S \in \mathcal{T}.\ T' \xrightarrow{\text{AR}} S \land S \xrightarrow{\text{VIS}} T \Rightarrow T' \xrightarrow{\text{VIS}} T
+\end{equation}
+前缀一致性公理实际上是对传递可见性公理的加强，它强调了如果一个事务对另外一个事务可见，那么它所覆盖的事务对另一个事务也必须可见。
+我们在前文中提到，TSO生成的时间戳是单调递增的，提交时间戳的大小关系反映事务在AR下的全序关系；
+而deps集合意味着当前事务可见的事务的集合，对于其中具有最大提交时间戳的事务\Txc[max]，有
+\begin{equation}
+    \forall T'\in \mathcal{T}.\quad T'.\text{cts} \le T_max.\text{cts} \implies T' \xrightarrow{\text{AR}} T_{max}
+\end{equation}
+又因为\Txc[max] 对当前事务可见，所有小于等于\Txc[max]提交时间戳的事务都应当被当前事务看到。
+从而要实现前缀一致性，需要满足：
+\begin{equation}
+    \forall T \in \mathcal{T}, T.\text{cts} \leq t.\  T.\text{cts} \in \text{deps}
+\end{equation}
+对于一个指定的时间戳ts，如果快照$\mathcal{S}$ 满足：
+% 所有小于等于ts的事务都被接收来构成这个快照
+\begin{equation}
+\begin{aligned}
+    S_\text{ts} &= \langle T_0,T_1,\dots,T_\text{ts}\rangle \\
+      &\quad\text{s.t.}\quad \forall 0 \leq u \le \text{ts}, T_\text{i}.\text{cts} + 1 = T_\text{i+1}.\text{cts}
+\end{aligned}
+\end{equation}
+即，所有小于等于ts的事务都被接收来构成这个快照，那么这是快照就满足完全交付(Total Delivery)。完全交付对前缀一致性公理的实现无需额外证明。
+
+开始事务时，和RA隔离级别一样，可以选择deps中最大的时间戳作为自己的开始时间戳，或者向客户端发送\tick 请求，获取一个更新的时间戳作为开始时间戳。
+相对于RA隔离级别，PC隔离级别在事务开始时需要保证所有提交时间戳小于等于开始时间戳的事务都被接收，满足完全交付。
+
+\subsection{PSI(Parallel Snapshot Isolation)}
+这是我们第一次在隔离级别的操作语义设计中，涉及到冲突解决。
+
+\subsection{SI(Snapshot Isolation)}
+
+\subsection{SER(Serializability)}
