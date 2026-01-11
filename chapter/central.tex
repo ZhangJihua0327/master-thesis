@@ -162,13 +162,28 @@ WSet(\Txc )为事务$T$的写集合(WriteSet)，PSI的核心约束可以形式�
 \end{equation}
 即，在当前事务$T$的可见快照之后、提交时间戳之前，不允许出现对相同键进行写入并成功提交的其他事务，从而实现 First-Committer-Wins 风格的写写冲突规约。
 
-面向~\ref{eq:consistency}中的No Conflict公理，上述约束实现了它的逆否命题，即：
+面向~\ref{eq:consistency}中的No Conflict公理，上述约束实现了它的逆否命题，从而保证了无冲突公理的正确性。
 \begin{equation}
 \mathsf{NoConflict}(T) \equiv \forall T' \in \mathcal{T}.
 \ T' \centernot{\xrightarrow{\text{VIS}}} T \Rightarrow \neg(T' \bowtie T) \lor T' \centernot{\xrightarrow{\text{AR}}} T
 \end{equation}
-从而保证了无冲突公理的正确性。
+
 
 \subsection{SI(Snapshot Isolation)}
+
+SI隔离级别是对PC和PSI隔离级别的析取，在CC隔离级别的基础上既要满足PC隔离级别的完全交付，又要满足PSI隔离级别的无冲突公理。
+从理论模型上看，SI 同时满足 $\mathsf{Prefix}$ 和 $\mathsf{NoConflict}$ 两个公理，
+能够同时防止丢失更新和长分叉两类异常，在一致性和性能之间取得了较好的平衡。
+
+在操作语义的实现上，SI 隔离级别需要同时满足 PC 和 PSI 两个隔离级别的约束条件。
+具体而言，事务开始时需要满足完全交付条件，即所有提交时间戳小于等于开始时间戳的事务都必须被节点接收；
+同时事务提交时需要满足无冲突约束，即在事务的执行期间不允许有对相同键进行写入的其他事务成功提交。
+
+SI 隔离级别通过结合完全交付和无冲突两个约束，
+在实现上保证了事务的快照一致性和写冲突检测，
+从而提供了比 PSI 和 PC 更强的一致性保证。
+然而，由于 SI 仍允许事务在同一快照上对不同对象进行更新，
+写偏斜（Write Skew）异常仍然可能出现。
+要彻底消除写偏斜，需要进一步提升到 SER 隔离级别。
 
 \subsection{SER(Serializability)}
