@@ -251,6 +251,7 @@ $\text{AR}$的作用是在$\text{VIS}$的基础上进行扩展：对于已经存
 
 以上公理的形式化表达如下：
 \begin{equation}
+\label{eq:consistency}
 \begin{aligned}
 \mathsf{Int}(T) &\equiv \forall r \in O.\ \forall x, v.\ \bigl(r = \operatorname{read}(x, v) \land po_x^{-1}(r) \neq \emptyset\bigr) \\
 &\qquad\Rightarrow \max\nolimits_{po}\bigl(po_x^{-1}(r)\bigr) = \operatorname{write}(x, v), \\[0.4em]

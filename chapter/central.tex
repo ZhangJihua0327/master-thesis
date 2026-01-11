@@ -149,7 +149,25 @@ PC隔离级别在CC的基础上，增加了前缀一致性公理(Prefix Consiste
 相对于RA隔离级别，PC隔离级别在事务开始时需要保证所有提交时间戳小于等于开始时间戳的事务都被接收，满足完全交付。
 
 \subsection{PSI(Parallel Snapshot Isolation)}
+PSI 隔离级别相较于CC隔离级别增加了无冲突公理，无冲突公理确保如果两个事务存在写冲突，则它们
+之间必须存在可见性关系，不能彼此并发而互不可见，防止更新丢失。
 这是我们第一次在隔离级别的操作语义设计中，涉及到冲突解决。
+
+PSI隔离级别同样建立在CC隔离级别之上，和PC隔离级别不同的是，PSI的加强发生在提交阶段。
+在操作语义的设计上，我们关注事务$T$在其开始时间戳$T.\text{sts}$与提交时间戳$T.\text{cts}$之间的时间区间内，
+由于这段时间的事务提交对当前事务是不可见的，不应出现与当前事务\Txc 发生写写冲突且对\Txc 不可见的提交事务。
+WSet(\Txc )为事务$T$的写集合(WriteSet)，PSI的核心约束可以形式化为：
+\begin{equation}
+    \forall T' \in \mathcal{T}.\ T'.\text{cts} \in (T.\text{sts}, T.\text{cts}) \Rightarrow \text{WSet}(T') \cap \text{WSet}(T) = \varnothing
+\end{equation}
+即，在当前事务$T$的可见快照之后、提交时间戳之前，不允许出现对相同键进行写入并成功提交的其他事务，从而实现 First-Committer-Wins 风格的写写冲突规约。
+
+面向~\ref{eq:consistency}中的No Conflict公理，上述约束实现了它的逆否命题，即：
+\begin{equation}
+\mathsf{NoConflict}(T) \equiv \forall T' \in \mathcal{T}.
+\ T' \centernot{\xrightarrow{\text{VIS}}} T \Rightarrow \neg(T' \bowtie T) \lor T' \centernot{\xrightarrow{\text{AR}}} T
+\end{equation}
+从而保证了无冲突公理的正确性。
 
 \subsection{SI(Snapshot Isolation)}
 
