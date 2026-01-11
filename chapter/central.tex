@@ -93,6 +93,13 @@ RA隔离级别下，只需要关注内部一致性和外部一致性，无需考
 
 RA隔离级别较低，只需要保证事务的提交或者回滚操作是原子的，即要么全部提交，要么全部回滚，就可以保证该事务的正确性。
 
+RA 隔离级别仅保证事务更新的原子可见性，
+即其他事务要么看到该事务的全部写入，要么完全看不到。
+由于 RA 不对事务之间的可见性关系施加传递性、前缀一致性或冲突检测等额外约束，
+因此几乎所有并发异常都可能发生，
+包括因果违背（Causality Violation）、丢失更新（Lost Update）、长分叉（Long Fork）和写偏斜（Write Skew）。
+这使得 RA 成为最弱的一致性级别，但同时也具有最低的性能开销和最高的并发度。
+
 \subsection{CC(Causal Consistency)}
 CC 相较于RA，增加了传递可见性公理(TransVis)，如果事务\Txc[1]对\Txc[2]可见，
 那么对\Txc[1]可见的任何事务对\Txc[2]也必须可见，即强调 VIS关系的传递性。
@@ -118,6 +125,14 @@ CC隔离级别下，节点开启事务的前提条件是deps中的所有事务�
 
 在CC级别下，事务开始时是需要检查deps中的所有事务的deps是否都是当前deps的子集，这种状态可以被定义为因果交付(Causal Delivery)。
 只有当前快照满足因果交付的条件，才能够执行CC隔离级别的事务。
+
+CC 隔离级别通过强制 VIS 关系的传递性，
+有效消除了因果违背异常，
+保证了事务之间的因果依赖关系能够被正确传播。
+然而，由于 CC 并不禁止对同一对象的并发写操作，
+丢失更新（Lost Update）异常仍然被允许。
+同时，CC 也不要求事务看到一致的历史前缀，
+因此长分叉（Long Fork）和写偏斜（Write Skew）异常同样可能出现。
 
 \subsection{PC(Prefix Consistency)}
 PC隔离级别在CC的基础上，增加了前缀一致性公理(Prefix Consistency)，即：
@@ -148,6 +163,16 @@ PC隔离级别在CC的基础上，增加了前缀一致性公理(Prefix Consiste
 开始事务时，和RA隔离级别一样，可以选择deps中最大的时间戳作为自己的开始时间戳，或者向客户端发送\tick 请求，获取一个更新的时间戳作为开始时间戳。
 相对于RA隔离级别，PC隔离级别在事务开始时需要保证所有提交时间戳小于等于开始时间戳的事务都被接收，满足完全交付。
 
+PC 隔离级别通过完全交付约束，
+确保每个事务看到的历史是全局 AR 序列的一段连续前缀，
+从而有效防止了长分叉（Long Fork）异常。
+前缀一致性公理蕴含了传递可见性，
+因此 PC 同样能够消除因果违背异常。
+然而，由于 PC 不禁止在同一快照上对不同对象进行并发写入，
+写偏斜（Write Skew）异常在 PC 中仍可能发生。
+此外，PC 也不检测对同一对象的并发写冲突，
+丢失更新（Lost Update）异常同样被允许。
+
 \subsection{PSI(Parallel Snapshot Isolation)}
 PSI 隔离级别相较于CC隔离级别增加了无冲突公理，无冲突公理确保如果两个事务存在写冲突，则它们
 之间必须存在可见性关系，不能彼此并发而互不可见，防止更新丢失。
@@ -162,12 +187,22 @@ WSet(\Txc )为事务$T$的写集合(WriteSet)，PSI的核心约束可以形式�
 \end{equation}
 即，在当前事务$T$的可见快照之后、提交时间戳之前，不允许出现对相同键进行写入并成功提交的其他事务，从而实现 First-Committer-Wins 风格的写写冲突规约。
 
-面向~\ref{eq:consistency}中的No Conflict公理，上述约束实现了它的逆否命题，从而保证了无冲突公理的正确性。
+面向~\ref{eq:consistency}中的NoConflict公理，上述约束实现了它的逆否命题，从而保证了无冲突公理的正确性。
 \begin{equation}
 \mathsf{NoConflict}(T) \equiv \forall T' \in \mathcal{T}.
-\ T' \centernot{\xrightarrow{\text{VIS}}} T \Rightarrow \neg(T' \bowtie T) \lor T' \centernot{\xrightarrow{\text{AR}}} T
+\ T' \centernot{\xrightarrow{\text{VIS}}} T \Rightarrow \text{WSet}(T') \cap \text{WSet}(T) = \varnothing \lor T' \centernot{\xrightarrow{\text{AR}}} T
 \end{equation}
 
+PSI 隔离级别通过无冲突公理，
+强制要求对同一对象进行写入的两个事务必须通过 VIS 确定先后顺序，
+从而有效排除了丢失更新（Lost Update）异常。
+结合从 CC 继承的传递可见性，
+PSI 同样能够消除因果违背异常。
+然而，PSI 不强制要求完全交付，
+不同事务在不同节点上可能看到不一致的历史前缀，
+因此长分叉（Long Fork）异常仍然可能发生。
+同时，由于 PSI 不检查除了写冲突以外的其他冲突，允许事务在同一快照上对不同对象进行并发写入，
+写偏斜（Write Skew）异常也被允许。
 
 \subsection{SI(Snapshot Isolation)}
 
@@ -187,3 +222,34 @@ SI 隔离级别通过结合完全交付和无冲突两个约束，
 要彻底消除写偏斜，需要进一步提升到 SER 隔离级别。
 
 \subsection{SER(Serializability)}
+SER隔离级别解决了写偏斜异常，让事务执行的效果与串行化执行一致。
+相较于SI隔离级别，SER隔离级别通过要求在提交阶段进行相较于SI中写写冲突检查更严格的读写冲突(WR-Conflict)检查，从而进一步增强了事务的隔离性。
+SER是SI的超集，通过要求在提交阶段进行更严格的读写冲突检查，实现了真正的NoConflict公理，从而确保事务执行的效果与串行化执行一致。
+即：
+\begin{equation}
+\begin{aligned}
+&\mathsf{NoConflict}(T) \equiv \forall T' \in \mathcal{T}.
+\ T' \centernot{\xrightarrow{\text{VIS}}} T \Rightarrow T \bowtie T' \lor T' \centernot{\xrightarrow{\text{AR}}} T \\ 
+% 补充定义bowtie
+&T \bowtie T' \equiv (\text{WSet}(T) \cup \text{RSet}(T)) \cap (\text{WSet}(T') \cup \text{RSet}(T')) \neq \varnothing
+\end{aligned}
+\end{equation}
+
+值得注意的是，SER 并不强制事务以串行方式执行，而是允许事务并发执行。
+其核心约束在于：
+两个并发事务的读写集合不能存在交集，即它们不能访问相同的数据对象。
+只有当两个事务的读写集合完全不相交时，系统才允许它们并发执行。
+这种冲突检测机制确保了并发执行的结果等价于某个串行执行顺序，从而实现了可串行化保证。
+
+\section{本章小结}
+本章在上一章形式化建模与隔离级别公理体系的基础上，围绕中心化时间戳预言机（TSO）设计并实现了一个分布式复制数据库的事务协议原型。
+通过 TSO 提供的全局单调递增时间戳，我们统一了事务的开始时间戳与提交时间戳，构建了基于 (AR, VIS) 的逻辑时间顺序，
+并使用 \textit{deps} 结构刻画节点本地可见的事务集合，为后续各类隔离级别的操作语义奠定了统一的时钟与可见性基础。
+
+本章从 RA 隔离级别出发，逐步增强一致性约束，依次给出了 CC、PC、PSI、SI 与 SER 的操作语义：
+RA 仅要求内部一致性与外部一致性，提供原子可见性但几乎允许所有并发异常；CC 在此基础上引入传递可见性，使因果依赖能够正确传播，
+从而消除了因果违背异常；PC 进一步要求完全交付，保证事务观察到的是全局 AR 序列的连续前缀，
+有效防止长分叉异常；PSI 通过无冲突公理在提交阶段检测写写冲突，采用 First-Committer-Wins 规则消除丢失更新异常；
+SI 同时满足完全交付与无冲突两个约束，在保证快照一致性与写冲突检测的同时，综合消除了丢失更新与长分叉两类异常；
+最终，SER 通过更严格的读写冲突检测实现完整的 NoConflict 公理，使事务的并发执行结果等价于某一串行执行序列，从而进一步消除写偏斜异常。
+
