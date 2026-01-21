@@ -66,7 +66,7 @@ Prefix Consistency(PC)、Snapshot Isolation(SI) 和 Serialisability(SER)。
 我们用符号 \History（History）表示全局事务的执行历史，
 它是一系列事务（Transaction，记为 \Txc 或 \Txc[x]）的有序集合。
 \History 还需要标注隔离级别（Isolation Level），
-本文涉及从高到低$\{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}$六个级别，
+本文涉及从高到低$\{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}$六个级别\cite{Schultz2015}，
 我们将在后文中详细介绍。
 一个事务 \Txc 则是一系列操作（Operation）的执行序列。
 我们的研究目标是键值数据库，
