@@ -1,381 +1,421 @@
-% ==========================================
-% 1.1 综述与背景 (Overview & Background)
-% ==========================================
 
 @inproceedings{acid,
-    author    = {Berenson, Hal and Bernstein, Phil and Gray, Jim and Melton, Jim and O'Neil, Elizabeth and O'Neil, Patrick},
-    title     = {A critique of ANSI SQL isolation levels},
-    year      = {1995},
-    isbn      = {0897917316},
-    publisher = {Association for Computing Machinery},
-    address   = {New York, NY, USA},
-    url       = {https://doi.org/10.1145/223784.223785},
-    doi       = {10.1145/223784.223785},
-    abstract  = {ANSI SQL-92 [MS, ANSI] defines Isolation Levels in terms of phenomena: Dirty Reads, Non-Repeatable Reads, and Phantoms. This paper shows that these phenomena and the ANSI SQL definitions fail to properly characterize several popular isolation levels, including the standard locking implementations of the levels covered. Ambiguity in the statement of the phenomena is investigated and a more formal statement is arrived at; in addition new phenomena that better characterize isolation types are introduced. Finally, an important multiversion isolation type, called Snapshot Isolation, is defined.},
-    booktitle = {Proceedings of the 1995 ACM SIGMOD International Conference on Management of Data},
-    pages     = {1–10},
-    numpages  = {10},
-    location  = {San Jose, California, USA},
-    series    = {SIGMOD '95}
+  author    = {Berenson, Hal and Bernstein, Phil and Gray, Jim and Melton, Jim and O'Neil, Elizabeth and O'Neil, Patrick},
+  title     = {A critique of ANSI SQL isolation levels},
+  year      = {1995},
+  isbn      = {0897917316},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/223784.223785},
+  doi       = {10.1145/223784.223785},
+  abstract  = {ANSI SQL-92 [MS, ANSI] defines Isolation Levels in terms of phenomena: Dirty Reads, Non-Repeatable Reads, and Phantoms. This paper shows that these phenomena and the ANSI SQL definitions fail to properly characterize several popular isolation levels, including the standard locking implementations of the levels covered. Ambiguity in the statement of the phenomena is investigated and a more formal statement is arrived at; in addition new phenomena that better characterize isolation types are introduced. Finally, an important multiversion isolation type, called Snapshot Isolation, is defined.},
+  booktitle = {Proceedings of the 1995 ACM SIGMOD International Conference on Management of Data},
+  pages     = {1–10},
+  numpages  = {10},
+  location  = {San Jose, California, USA},
+  series    = {SIGMOD '95}
 }
 
 @article{Agrawal2016,
-    title     = {The evolution of cloud computing},
-    author    = {Agrawal, Divyakant and El Abbadi, Amr and Emam, Ahmed},
-    journal   = {IEEE Cloud Computing},
-    volume    = {3},
-    number    = {2},
-    pages     = {70--73},
-    year      = {2016},
-    publisher = {IEEE}
+  title     = {The evolution of cloud computing},
+  author    = {Agrawal, Divyakant and El Abbadi, Amr and Emam, Ahmed},
+  journal   = {IEEE Cloud Computing},
+  volume    = {3},
+  number    = {2},
+  pages     = {70--73},
+  year      = {2016},
+  publisher = {IEEE}
+}
+
+@inproceedings{akkoorath2016cure,
+  author       = {Akkoorath, Deepthi Devaki and Tomsic, Alejandro Z. and Bravo, Manuel and Li, Zhongmiao and Crain, Tyler and Bieniusa, Annette and Pregui{\c{c}}a, Nuno M. and Shapiro, Marc},
+  title        = {Cure: Strong Semantics Meets High Availability and Low Latency},
+  booktitle    = {2016 IEEE 36th International Conference on Distributed Computing Systems (ICDCS)},
+  pages        = {405--414},
+  year         = {2016},
+  organization = {IEEE},
+  doi          = {10.1109/ICDCS.2016.98}
 }
 
 @article{Bailis2014,
-    title   = {Probabilistic Bounded Staleness ({PBS}) for Read-Only Transactions},
-    author  = {Bailis, Peter and Venkataraman, Shivaram and Franklin, Michael J and Hellerstein, Joseph M and Stoica, Ion},
-    journal = {Proceedings of the VLDB Endowment},
-    volume  = {5},
-    number  = {11},
-    pages   = {1774--1775},
-    year    = {2012}
+  title   = {Probabilistic Bounded Staleness ({PBS}) for Read-Only Transactions},
+  author  = {Bailis, Peter and Venkataraman, Shivaram and Franklin, Michael J and Hellerstein, Joseph M and Stoica, Ion},
+  journal = {Proceedings of the VLDB Endowment},
+  volume  = {5},
+  number  = {11},
+  pages   = {1774--1775},
+  year    = {2012}
+}
+
+@article{bailis2016ramp,
+  author    = {Bailis, Peter and Fekete, Alan and Ghodsi, Ali and Hellerstein, Joseph M. and Stoica, Ion},
+  title     = {Scalable Atomic Visibility with {RAMP} Transactions},
+  journal   = {ACM Transactions on Database Systems (TODS)},
+  volume    = {41},
+  number    = {3},
+  pages     = {15:1--15:45},
+  year      = {2016},
+  publisher = {ACM},
+  doi       = {10.1145/2909870}
+}
+
+@inproceedings{berenson1995critique,
+  author    = {Berenson, Hal and Bernstein, Phil and Gray, Jim and Melton, Jim and O'Neil, Elizabeth and O'Neil, Patrick},
+  title     = {A Critique of {ANSI} {SQL} Isolation Levels},
+  booktitle = {Proceedings of the 1995 ACM SIGMOD International Conference on Management of Data},
+  pages     = {1--10},
+  year      = {1995},
+  doi       = {10.1145/223784.223785}
 }
 
 @inproceedings{Brewer2000,
-    title     = {Towards robust distributed systems},
-    author    = {Brewer, Eric A},
-    booktitle = {Proceedings of the 19th Annual ACM Symposium on Principles of Distributed Computing (PODC)},
-    pages     = {7},
-    year      = {2000}
+  title     = {Towards robust distributed systems},
+  author    = {Brewer, Eric A},
+  booktitle = {Proceedings of the 19th Annual ACM Symposium on Principles of Distributed Computing (PODC)},
+  pages     = {7},
+  year      = {2000}
+}
+
+
+@inproceedings{burckhardt2015global,
+  title        = {Global sequence protocol: A robust abstraction for replicated shared state},
+  author       = {Burckhardt, Sebastian and Leijen, Daan and Protzenko, Jonathan and F{\"a}hndrich, Manuel},
+  booktitle    = {29th European Conference on Object-Oriented Programming (ECOOP 2015)},
+  pages        = {568--590},
+  year         = {2015},
+  organization = {Schloss Dagstuhl--Leibniz-Zentrum f{\"u}r Informatik}
 }
 
 @book{Carlson2013,
-    title     = {{Redis} in Action},
-    author    = {Carlson, Josiah L},
-    year      = {2013},
-    publisher = {Manning Publications Co.}
+  title     = {{Redis} in Action},
+  author    = {Carlson, Josiah L},
+  year      = {2013},
+  publisher = {Manning Publications Co.}
 }
 
-% ==========================================
-% 1.2 基础理论: ACID, CAP, Isolation (Theory)
-% ==========================================
 
 @article{Cattell2011,
-    title     = {Scalable {SQL} and {NoSQL} data stores},
-    author    = {Cattell, Rick},
-    journal   = {SIGMOD Record},
-    volume    = {39},
-    number    = {4},
-    pages     = {12--27},
-    year      = {2011},
-    publisher = {ACM New York, NY, USA}
+  title     = {Scalable {SQL} and {NoSQL} data stores},
+  author    = {Cattell, Rick},
+  journal   = {SIGMOD Record},
+  volume    = {39},
+  number    = {4},
+  pages     = {12--27},
+  year      = {2011},
+  publisher = {ACM New York, NY, USA}
 }
 
 @inproceedings{Corbett2013,
-    title     = {{Spanner}: {Google}'s globally distributed database},
-    author    = {Corbett, James C and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, JJ and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and others},
-    booktitle = {Proceedings of the 10th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
-    pages     = {251--264},
-    year      = {2013}
+  title     = {{Spanner}: {Google}'s globally distributed database},
+  author    = {Corbett, James C and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, JJ and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and others},
+  booktitle = {Proceedings of the 10th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {251--264},
+  year      = {2013}
 }
-
 
 @inproceedings{DeCandia2007,
-    title     = {{Dynamo}: amazon's highly available key-value store},
-    author    = {DeCandia, Giuseppe and Hastorun, Deniz and Jampani, Madan and Kakulapati, Gunavardhan and Lakshman, Avinash and Pilchin, Alex and Sivasubramanian, Swaminathan and Vosshall, Peter and Vogels, Werner},
-    booktitle = {Proceedings of twenty-first ACM SIGOPS symposium on Operating systems principles (SOSP)},
-    pages     = {205--220},
-    year      = {2007}
+  title     = {{Dynamo}: amazon's highly available key-value store},
+  author    = {DeCandia, Giuseppe and Hastorun, Deniz and Jampani, Madan and Kakulapati, Gunavardhan and Lakshman, Avinash and Pilchin, Alex and Sivasubramanian, Swaminathan and Vosshall, Peter and Vogels, Werner},
+  booktitle = {Proceedings of twenty-first ACM SIGOPS symposium on Operating systems principles (SOSP)},
+  pages     = {205--220},
+  year      = {2007}
 }
+
 
 @article{Gilbert2002,
-    title     = {Brewer's conjecture and the feasibility of consistent, available, partition-tolerant web services},
-    author    = {Gilbert, Seth and Lynch, Nancy},
-    journal   = {SIGACT News},
-    volume    = {33},
-    number    = {2},
-    pages     = {51--59},
-    year      = {2002},
-    publisher = {ACM New York, NY, USA}
+  title     = {Brewer's conjecture and the feasibility of consistent, available, partition-tolerant web services},
+  author    = {Gilbert, Seth and Lynch, Nancy},
+  journal   = {SIGACT News},
+  volume    = {33},
+  number    = {2},
+  pages     = {51--59},
+  year      = {2002},
+  publisher = {ACM New York, NY, USA}
 }
 
-% ==========================================
-% 1.3 传统数据库与分片挑战 (Sharding & 2PC)
-% ==========================================
-
 @book{Gray1993,
-    title     = {Transaction processing: concepts and techniques},
-    author    = {Gray, Jim and Reuter, Andreas},
-    year      = {1993},
-    publisher = {Morgan Kaufmann}
+  title     = {Transaction processing: concepts and techniques},
+  author    = {Gray, Jim and Reuter, Andreas},
+  year      = {1993},
+  publisher = {Morgan Kaufmann}
 }
 
 @article{Haerder1983,
-    title     = {Principles of transaction-oriented database recovery},
-    author    = {Haerder, Theo and Reuter, Andreas},
-    journal   = {ACM Computing Surveys (CSUR)},
-    volume    = {15},
-    number    = {4},
-    pages     = {287--317},
-    year      = {1983},
-    publisher = {ACM New York, NY, USA}
+  title     = {Principles of transaction-oriented database recovery},
+  author    = {Haerder, Theo and Reuter, Andreas},
+  journal   = {ACM Computing Surveys (CSUR)},
+  volume    = {15},
+  number    = {4},
+  pages     = {287--317},
+  year      = {1983},
+  publisher = {ACM New York, NY, USA}
 }
-
-% ==========================================
-% 1.4 Redis 相关 (Redis)
-% ==========================================
 
 @inbook{happened-before,
-    author    = {Lamport, Leslie},
-    title     = {Time, clocks, and the ordering of events in a distributed system},
-    year      = {2019},
-    isbn      = {9781450372701},
-    publisher = {Association for Computing Machinery},
-    address   = {New York, NY, USA},
-    url       = {https://doi.org/10.1145/3335772.3335934},
-    booktitle = {Concurrency: The Works of Leslie Lamport},
-    pages     = {179–196},
-    numpages  = {18}
+  author    = {Lamport, Leslie},
+  title     = {Time, clocks, and the ordering of events in a distributed system},
+  year      = {2019},
+  isbn      = {9781450372701},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/3335772.3335934},
+  booktitle = {Concurrency: The Works of Leslie Lamport},
+  pages     = {179–196},
+  numpages  = {18}
 }
 
-
-% ==========================================
-% 1.5 NewSQL: TiDB, Spanner, FDB (Strong Consistency)
-% ==========================================
-
 @article{Huang2020,
-    title   = {{TiDB}: a {Raft}-based {HTAP} database},
-    author  = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Liu, Litian and Zhou, Zhiming and Tang, Boxin and others},
-    journal = {Proceedings of the VLDB Endowment},
-    volume  = {13},
-    number  = {12},
-    pages   = {3072--3084},
-    year    = {2020}
+  title   = {{TiDB}: a {Raft}-based {HTAP} database},
+  author  = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Liu, Litian and Zhou, Zhiming and Tang, Boxin and others},
+  journal = {Proceedings of the VLDB Endowment},
+  volume  = {13},
+  number  = {12},
+  pages   = {3072--3084},
+  year    = {2020}
 }
 
 @article{Lakshman2010,
-    title     = {{Cassandra}: a decentralized structured storage system},
-    author    = {Lakshman, Avinash and Malik, Prashant},
-    journal   = {SIGOPS Operating Systems Review},
-    volume    = {44},
-    number    = {2},
-    pages     = {35--40},
-    year      = {2010},
-    publisher = {ACM}
+  title     = {{Cassandra}: a decentralized structured storage system},
+  author    = {Lakshman, Avinash and Malik, Prashant},
+  journal   = {SIGOPS Operating Systems Review},
+  volume    = {44},
+  number    = {2},
+  pages     = {35--40},
+  year      = {2010},
+  publisher = {ACM}
 }
 
 @inproceedings{Lampson1976,
-    title     = {Crash recovery in a distributed data storage system},
-    author    = {Lampson, Butler and Sturgis, Howard},
-    booktitle = {Distributed Systems: Architecture and Implementation},
-    pages     = {357--370},
-    year      = {1976},
-    publisher = {Springer}
+  title     = {Crash recovery in a distributed data storage system},
+  author    = {Lampson, Butler and Sturgis, Howard},
+  booktitle = {Distributed Systems: Architecture and Implementation},
+  pages     = {357--370},
+  year      = {1976},
+  publisher = {Springer}
 }
 
 @article{Li2019,
-    author     = {Li, Feifei},
-    title      = {Cloud-native database systems at Alibaba: opportunities and challenges},
-    year       = {2019},
-    issue_date = {August 2019},
-    publisher  = {VLDB Endowment},
-    volume     = {12},
-    number     = {12},
-    issn       = {2150-8097},
-    url        = {https://doi.org/10.14778/3352063.3352141},
-    doi        = {10.14778/3352063.3352141},
-    abstract   = {Cloud-native databases become increasingly important for the era of cloud computing, due to the needs for elasticity and on-demand usage by various applications. These challenges from cloud applications present new opportunities for cloud-native databases that cannot be fully addressed by traditional on-premise enterprise database systems. A cloud-native database leverages software-hardware co-design to explore accelerations offered by new hardware such as RDMA, NVM, kernel bypassing protocols such as DPDK. Meanwhile, new design architectures, such as shared storage, enable a cloud-native database to decouple computation from storage and provide excellent elasticity. For highly concurrent workloads that require horizontal scalability, a cloud-native database can leverage a shared-nothing layer to provide distributed query and transaction processing. Applications also require cloud-native databases to offer high availability through distributed consensus protocols.At Alibaba, we have explored a suite of technologies to design cloud-native database systems. Our storage engine, X-Engine and PolarFS, improves both write and read throughputs by using a LSM-tree design and self-adapted separation of hot and cold data records. Based on these efforts, we have designed and implemented POLARDB and its distributed version POLARDB-X, which has successfully supported the extreme transaction workloads during the 2018 Global Shopping Festival on November 11, 2018, and achieved commercial success on Alibaba Cloud. We have also designed an OLAP system called AnalyticDB (ADB in short) for enabling real-time interactive data analytics for big data. We have explored a self-driving database platform to achieve autoscaling and intelligent database management. We will report key technologies and lessons learned to highlight the technical challenges and opportunities for cloud-native database systems at Alibaba.},
-    journal    = {Proc. VLDB Endow.},
-    month      = aug,
-    pages      = {2263–2272},
-    numpages   = {10}
+  author     = {Li, Feifei},
+  title      = {Cloud-native database systems at Alibaba: opportunities and challenges},
+  year       = {2019},
+  issue_date = {August 2019},
+  publisher  = {VLDB Endowment},
+  volume     = {12},
+  number     = {12},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/3352063.3352141},
+  doi        = {10.14778/3352063.3352141},
+  abstract   = {Cloud-native databases become increasingly important for the era of cloud computing, due to the needs for elasticity and on-demand usage by various applications. These challenges from cloud applications present new opportunities for cloud-native databases that cannot be fully addressed by traditional on-premise enterprise database systems. A cloud-native database leverages software-hardware co-design to explore accelerations offered by new hardware such as RDMA, NVM, kernel bypassing protocols such as DPDK. Meanwhile, new design architectures, such as shared storage, enable a cloud-native database to decouple computation from storage and provide excellent elasticity. For highly concurrent workloads that require horizontal scalability, a cloud-native database can leverage a shared-nothing layer to provide distributed query and transaction processing. Applications also require cloud-native databases to offer high availability through distributed consensus protocols.At Alibaba, we have explored a suite of technologies to design cloud-native database systems. Our storage engine, X-Engine and PolarFS, improves both write and read throughputs by using a LSM-tree design and self-adapted separation of hot and cold data records. Based on these efforts, we have designed and implemented POLARDB and its distributed version POLARDB-X, which has successfully supported the extreme transaction workloads during the 2018 Global Shopping Festival on November 11, 2018, and achieved commercial success on Alibaba Cloud. We have also designed an OLAP system called AnalyticDB (ADB in short) for enabling real-time interactive data analytics for big data. We have explored a self-driving database platform to achieve autoscaling and intelligent database management. We will report key technologies and lessons learned to highlight the technical challenges and opportunities for cloud-native database systems at Alibaba.},
+  journal    = {Proc. VLDB Endow.},
+  month      = aug,
+  pages      = {2263–2272},
+  numpages   = {10}
 }
 
 @article{newsql,
-    author     = {Stonebraker, Michael},
-    title      = {New opportunities for New SQL},
-    year       = {2012},
-    issue_date = {November 2012},
-    publisher  = {Association for Computing Machinery},
-    address    = {New York, NY, USA},
-    volume     = {55},
-    number     = {11},
-    issn       = {0001-0782},
-    url        = {https://doi.org/10.1145/2366316.2366319},
-    doi        = {10.1145/2366316.2366319},
-    abstract   = {The Communications Web site, http://cacm.acm.org, features more than a dozen bloggers in the BLOG@CACM community. In each issue of Communications, we publish selected posts or excerpts.twitterFollow us on Twitter at http://twitter.com/blogCACMhttp://cacm.acm.org/blogs/blog-cacmMichael Stonebraker expects a substantial increase in the number of New SQL engines using a variety of architectures in the near future.},
-    journal    = {Commun. ACM},
-    month      = nov,
-    pages      = {10–11},
-    numpages   = {2}
+  author     = {Stonebraker, Michael},
+  title      = {New opportunities for New SQL},
+  year       = {2012},
+  issue_date = {November 2012},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {55},
+  number     = {11},
+  issn       = {0001-0782},
+  url        = {https://doi.org/10.1145/2366316.2366319},
+  doi        = {10.1145/2366316.2366319},
+  abstract   = {The Communications Web site, http://cacm.acm.org, features more than a dozen bloggers in the BLOG@CACM community. In each issue of Communications, we publish selected posts or excerpts.twitterFollow us on Twitter at http://twitter.com/blogCACMhttp://cacm.acm.org/blogs/blog-cacmMichael Stonebraker expects a substantial increase in the number of New SQL engines using a variety of architectures in the near future.},
+  journal    = {Commun. ACM},
+  month      = nov,
+  pages      = {10–11},
+  numpages   = {2}
 }
 
-% ==========================================
-% 1.6 AP Systems & Tunable Consistency (Dynamo, Cassandra)
-% ==========================================
-
 @book{Ozsu2011,
-    title     = {Principles of distributed database systems},
-    author    = {{\"O}zsu, M Tamer and Valduriez, Patrick},
-    year      = {2011},
-    publisher = {Springer Science \& Business Media},
-    edition   = {3rd}
+  title     = {Principles of distributed database systems},
+  author    = {{\"O}zsu, M Tamer and Valduriez, Patrick},
+  year      = {2011},
+  publisher = {Springer Science \& Business Media},
+  edition   = {3rd}
+}
+
+@article{papadimitriou1979serializability,
+  author    = {Papadimitriou, Christos H.},
+  title     = {The Serializability of Concurrent Database Updates},
+  journal   = {Journal of the ACM (JACM)},
+  volume    = {26},
+  number    = {4},
+  pages     = {631--653},
+  year      = {1979},
+  publisher = {ACM},
+  doi       = {10.1145/322154.322158}
 }
 
 @article{Pavlo2011,
-    title   = {What's really new with {NewSQL}?},
-    author  = {Pavlo, Andrew and Aslett, Matthew},
-    journal = {SIGMOD Record},
-    volume  = {45},
-    number  = {2},
-    pages   = {45--55},
-    year    = {2016},
-    note    = {Note: Often cited as 2011 conceptually, but this 2016 paper is the definitive retrospect}
+  title   = {What's really new with {NewSQL}?},
+  author  = {Pavlo, Andrew and Aslett, Matthew},
+  journal = {SIGMOD Record},
+  volume  = {45},
+  number  = {2},
+  pages   = {45--55},
+  year    = {2016},
+  note    = {Note: Often cited as 2011 conceptually, but this 2016 paper is the definitive retrospect}
 }
 
 @inproceedings{Perkins2011,
-    title        = {Performance analysis of distributed transactions in partitioned database systems},
-    author       = {Perkins, Eric and Wong, Prudence and Gupta, Indranil},
-    booktitle    = {Proceedings of the 2011 IEEE International Symposium on Modeling, Analysis and Simulation of Computer and Telecommunication Systems},
-    pages        = {250--259},
-    year         = {2011},
-    organization = {IEEE}
-}
-
-@article{spanner,
-    author     = {Corbett, James C. and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, J. J. and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and Hsieh, Wilson and Kanthak, Sebastian and Kogan, Eugene and Li, Hongyi and Lloyd, Alexander and Melnik, Sergey and Mwaura, David and Nagle, David and Quinlan, Sean and Rao, Rajesh and Rolig, Lindsay and Saito, Yasushi and Szymaniak, Michal and Taylor, Christopher and Wang, Ruth and Woodford, Dale},
-    title      = {Spanner: Google’s Globally Distributed Database},
-    year       = {2013},
-    issue_date = {August 2013},
-    publisher  = {Association for Computing Machinery},
-    address    = {New York, NY, USA},
-    volume     = {31},
-    number     = {3},
-    issn       = {0734-2071},
-    url        = {https://doi.org/10.1145/2491245},
-    doi        = {10.1145/2491245},
-    abstract   = {Spanner is Google’s scalable, multiversion, globally distributed, and synchronously replicated database. It is the first system to distribute data at global scale and support externally-consistent distributed transactions. This article describes how Spanner is structured, its feature set, the rationale underlying various design decisions, and a novel time API that exposes clock uncertainty. This API and its implementation are critical to supporting external consistency and a variety of powerful features: nonblocking reads in the past, lock-free snapshot transactions, and atomic schema changes, across all of Spanner.},
-    journal    = {ACM Trans. Comput. Syst.},
-    month      = aug,
-    articleno  = {8},
-    numpages   = {22},
-    keywords   = {transactions, time management, replication, concurrency control, Distributed databases}
-}
-
-@article{sql-for-Ai,
-    title   = {迎接人工智能挑战: 构建下一代数据库系统},
-    author  = {陈志标 and 欧伟杰 and 孟凡彬 and 李伟超 and 王思涵},
-    journal = {计算},
-    volume  = {1},
-    number  = {7},
-    pages   = {78--88},
-    year    = {2025}
-}
-
-@article{Stonebraker2010,
-    title     = {{SQL} databases v. {NoSQL} databases},
-    author    = {Stonebraker, Michael},
-    journal   = {Communications of the ACM},
-    volume    = {53},
-    number    = {4},
-    pages     = {10--11},
-    year      = {2010},
-    publisher = {ACM}
-}
-
-@inproceedings{Terry2013,
-    title     = {Consistency-based service level agreements for cloud storage},
-    author    = {Terry, Douglas B and Prabhakaran, Vijayan and Kotla, Ramakrishna and Balakrishnan, Mahesh and Aguilera, Marcos K and Abu-Libdeh, Hussam},
-    booktitle = {Proceedings of the 24th ACM Symposium on Operating Systems Principles (SOSP)},
-    pages     = {309--324},
-    year      = {2013}
-}
-
-@article{TiDB,
-    author     = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Tang, Liu and Zhou, Yuxing and Huang, Menglong and Wei, Wan and Liu, Cong and Zhang, Jian and Li, Jianjun and Wu, Xuelian and Song, Lingyu and Sun, Ruoxi and Yu, Shuaipeng and Zhao, Lei and Cameron, Nicholas and Pei, Liquan and Tang, Xin},
-    title      = {TiDB: a Raft-based HTAP database},
-    year       = {2020},
-    issue_date = {August 2020},
-    publisher  = {VLDB Endowment},
-    volume     = {13},
-    number     = {12},
-    issn       = {2150-8097},
-    url        = {https://doi.org/10.14778/3415478.3415535},
-    doi        = {10.14778/3415478.3415535},
-    abstract   = {Hybrid Transactional and Analytical Processing (HTAP) databases require processing transactional and analytical queries in isolation to remove the interference between them. To achieve this, it is necessary to maintain different replicas of data specified for the two types of queries. However, it is challenging to provide a consistent view for distributed replicas within a storage system, where analytical requests can efficiently read consistent and fresh data from transactional workloads at scale and with high availability.To meet this challenge, we propose extending replicated state machine-based consensus algorithms to provide consistent replicas for HTAP workloads. Based on this novel idea, we present a Raft-based HTAP database: TiDB. In the database, we design a multi-Raft storage system which consists of a row store and a column store. The row store is built based on the Raft algorithm. It is scalable to materialize updates from transactional requests with high availability. In particular, it asynchronously replicates Raft logs to learners which transform row format to column format for tuples, forming a real-time updatable column store. This column store allows analytical queries to efficiently read fresh and consistent data with strong isolation from transactions on the row store. Based on this storage system, we build an SQL engine to process large-scale distributed transactions and expensive analytical queries. The SQL engine optimally accesses row-format and column-format replicas of data. We also include a powerful analysis engine, TiSpark, to help TiDB connect to the Hadoop ecosystem. Comprehensive experiments show that TiDB achieves isolated high performance under CH-benCHmark, a benchmark focusing on HTAP workloads.},
-    journal    = {Proc. VLDB Endow.},
-    month      = aug,
-    pages      = {3072–3084},
-    numpages   = {13}
+  title        = {Performance analysis of distributed transactions in partitioned database systems},
+  author       = {Perkins, Eric and Wong, Prudence and Gupta, Indranil},
+  booktitle    = {Proceedings of the 2011 IEEE International Symposium on Modeling, Analysis and Simulation of Computer and Telecommunication Systems},
+  pages        = {250--259},
+  year         = {2011},
+  organization = {IEEE}
 }
 
 
-@inproceedings{tso1,
-    author    = {Peng, Daniel and Dabek, Frank},
-    title     = {Large-scale incremental processing using distributed transactions and notifications},
-    year      = {2010},
-    publisher = {USENIX Association},
-    address   = {USA},
-    abstract  = {Updating an index of the web as documents are crawled requires continuously transforming a large repository of existing documents as new documents arrive. This task is one example of a class of data processing tasks that transform a large repository of data via small, independent mutations. These tasks lie in a gap between the capabilities of existing infrastructure. Databases do not meet the storage or throughput requirements of these tasks: Google's indexing system stores tens of petabytes of data and processes billions of updates per day on thousands of machines. MapReduce and other batch-processing systems cannot process small updates individually as they rely on creating large batches for efficiency.We have built Percolator, a system for incrementally processing updates to a large data set, and deployed it to create the Google web search index. By replacing a batch-based indexing system with an indexing system based on incremental processing using Percolator, we process the same number of documents per day, while reducing the average age of documents in Google search results by 50\%.},
-    booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
-    pages     = {251–264},
-    numpages  = {14},
-    location  = {Vancouver, BC, Canada},
-    series    = {OSDI'10}
+@article{Schultz2015,
+  author     = {Schultz, William and Demirbas, Murat},
+  title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
+  year       = {2025},
+  issue_date = {August 2025},
+  publisher  = {VLDB Endowment},
+  volume     = {18},
+  number     = {12},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/3750601.3750626},
+  doi        = {10.14778/3750601.3750626},
+  abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
+  journal    = {Proc. VLDB Endow.},
+  month      = aug,
+  pages      = {5045–5058},
+  numpages   = {14}
 }
 
-@article{Vogels2009,
-    title     = {Eventually consistent},
-    author    = {Vogels, Werner},
-    journal   = {Communications of the ACM},
-    volume    = {52},
-    number    = {1},
-    pages     = {40--44},
-    year      = {2009},
-    publisher = {ACM New York, NY, USA}
+@article{Schultz2025,
+  author     = {Schultz, William and Demirbas, Murat},
+  title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
+  year       = {2025},
+  issue_date = {August 2025},
+  publisher  = {VLDB Endowment},
+  volume     = {18},
+  number     = {12},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/3750601.3750626},
+  doi        = {10.14778/3750601.3750626},
+  abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
+  journal    = {Proc. VLDB Endow.},
+  month      = aug,
+  pages      = {5045–5058},
+  numpages   = {14}
 }
 
 
 // chapter 
+@inproceedings{sovran2011walter,
+  author    = {Sovran, Yair and Power, Russell and Aguilera, Marcos K. and Li, Jinyang},
+  title     = {Transactional Storage for Geo-replicated Systems},
+  booktitle = {Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles (SOSP)},
+  pages     = {385--400},
+  year      = {2011},
+  doi       = {10.1145/2043556.2043592}
+}
+
+@article{spanner,
+  author     = {Corbett, James C. and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, J. J. and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and Hsieh, Wilson and Kanthak, Sebastian and Kogan, Eugene and Li, Hongyi and Lloyd, Alexander and Melnik, Sergey and Mwaura, David and Nagle, David and Quinlan, Sean and Rao, Rajesh and Rolig, Lindsay and Saito, Yasushi and Szymaniak, Michal and Taylor, Christopher and Wang, Ruth and Woodford, Dale},
+  title      = {Spanner: Google’s Globally Distributed Database},
+  year       = {2013},
+  issue_date = {August 2013},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {31},
+  number     = {3},
+  issn       = {0734-2071},
+  url        = {https://doi.org/10.1145/2491245},
+  doi        = {10.1145/2491245},
+  abstract   = {Spanner is Google’s scalable, multiversion, globally distributed, and synchronously replicated database. It is the first system to distribute data at global scale and support externally-consistent distributed transactions. This article describes how Spanner is structured, its feature set, the rationale underlying various design decisions, and a novel time API that exposes clock uncertainty. This API and its implementation are critical to supporting external consistency and a variety of powerful features: nonblocking reads in the past, lock-free snapshot transactions, and atomic schema changes, across all of Spanner.},
+  journal    = {ACM Trans. Comput. Syst.},
+  month      = aug,
+  articleno  = {8},
+  numpages   = {22},
+  keywords   = {transactions, time management, replication, concurrency control, Distributed databases}
+}
+
+@article{sql-for-Ai,
+  title   = {迎接人工智能挑战: 构建下一代数据库系统},
+  author  = {陈志标 and 欧伟杰 and 孟凡彬 and 李伟超 and 王思涵},
+  journal = {计算},
+  volume  = {1},
+  number  = {7},
+  pages   = {78--88},
+  year    = {2025}
+}
+
+
+@article{Stonebraker2010,
+  title     = {{SQL} databases v. {NoSQL} databases},
+  author    = {Stonebraker, Michael},
+  journal   = {Communications of the ACM},
+  volume    = {53},
+  number    = {4},
+  pages     = {10--11},
+  year      = {2010},
+  publisher = {ACM}
+}
+
+@inproceedings{Terry2013,
+  title     = {Consistency-based service level agreements for cloud storage},
+  author    = {Terry, Douglas B and Prabhakaran, Vijayan and Kotla, Ramakrishna and Balakrishnan, Mahesh and Aguilera, Marcos K and Abu-Libdeh, Hussam},
+  booktitle = {Proceedings of the 24th ACM Symposium on Operating Systems Principles (SOSP)},
+  pages     = {309--324},
+  year      = {2013}
+}
+
+@article{TiDB,
+  author     = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Tang, Liu and Zhou, Yuxing and Huang, Menglong and Wei, Wan and Liu, Cong and Zhang, Jian and Li, Jianjun and Wu, Xuelian and Song, Lingyu and Sun, Ruoxi and Yu, Shuaipeng and Zhao, Lei and Cameron, Nicholas and Pei, Liquan and Tang, Xin},
+  title      = {TiDB: a Raft-based HTAP database},
+  year       = {2020},
+  issue_date = {August 2020},
+  publisher  = {VLDB Endowment},
+  volume     = {13},
+  number     = {12},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/3415478.3415535},
+  doi        = {10.14778/3415478.3415535},
+  abstract   = {Hybrid Transactional and Analytical Processing (HTAP) databases require processing transactional and analytical queries in isolation to remove the interference between them. To achieve this, it is necessary to maintain different replicas of data specified for the two types of queries. However, it is challenging to provide a consistent view for distributed replicas within a storage system, where analytical requests can efficiently read consistent and fresh data from transactional workloads at scale and with high availability.To meet this challenge, we propose extending replicated state machine-based consensus algorithms to provide consistent replicas for HTAP workloads. Based on this novel idea, we present a Raft-based HTAP database: TiDB. In the database, we design a multi-Raft storage system which consists of a row store and a column store. The row store is built based on the Raft algorithm. It is scalable to materialize updates from transactional requests with high availability. In particular, it asynchronously replicates Raft logs to learners which transform row format to column format for tuples, forming a real-time updatable column store. This column store allows analytical queries to efficiently read fresh and consistent data with strong isolation from transactions on the row store. Based on this storage system, we build an SQL engine to process large-scale distributed transactions and expensive analytical queries. The SQL engine optimally accesses row-format and column-format replicas of data. We also include a powerful analysis engine, TiSpark, to help TiDB connect to the Hadoop ecosystem. Comprehensive experiments show that TiDB achieves isolated high performance under CH-benCHmark, a benchmark focusing on HTAP workloads.},
+  journal    = {Proc. VLDB Endow.},
+  month      = aug,
+  pages      = {3072–3084},
+  numpages   = {13}
+}
+
+@inproceedings{tso1,
+  author    = {Peng, Daniel and Dabek, Frank},
+  title     = {Large-scale incremental processing using distributed transactions and notifications},
+  year      = {2010},
+  publisher = {USENIX Association},
+  address   = {USA},
+  abstract  = {Updating an index of the web as documents are crawled requires continuously transforming a large repository of existing documents as new documents arrive. This task is one example of a class of data processing tasks that transform a large repository of data via small, independent mutations. These tasks lie in a gap between the capabilities of existing infrastructure. Databases do not meet the storage or throughput requirements of these tasks: Google's indexing system stores tens of petabytes of data and processes billions of updates per day on thousands of machines. MapReduce and other batch-processing systems cannot process small updates individually as they rely on creating large batches for efficiency.We have built Percolator, a system for incrementally processing updates to a large data set, and deployed it to create the Google web search index. By replacing a batch-based indexing system with an indexing system based on incremental processing using Percolator, we process the same number of documents per day, while reducing the average age of documents in Google search results by 50\%.},
+  booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
+  pages     = {251–264},
+  numpages  = {14},
+  location  = {Vancouver, BC, Canada},
+  series    = {OSDI'10}
+}
+
+@article{Vogels2009,
+  title     = {Eventually consistent},
+  author    = {Vogels, Werner},
+  journal   = {Communications of the ACM},
+  volume    = {52},
+  number    = {1},
+  pages     = {40--44},
+  year      = {2009},
+  publisher = {ACM New York, NY, USA}
+}
+
 @inproceedings{Zhou2021,
-    title     = {{FoundationDB}: A Distributed Unbundled Transactional Key Value Store},
-    author    = {Zhou, Jingyu and Xu, Meng and Shraer, Alexander and Namasivayam, Bala and Miller, Alex and Tschannen, Evan and Atherton, Steve and Beamon, Andrew J and Lang, Dinan and Sears, Paul and others},
-    booktitle = {Proceedings of the 2021 International Conference on Management of Data (SIGMOD)},
-    pages     = {2653--2664},
-    year      = {2021}
-}
-
-@article{Schultz2015,
-    author     = {Schultz, William and Demirbas, Murat},
-    title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
-    year       = {2025},
-    issue_date = {August 2025},
-    publisher  = {VLDB Endowment},
-    volume     = {18},
-    number     = {12},
-    issn       = {2150-8097},
-    url        = {https://doi.org/10.14778/3750601.3750626},
-    doi        = {10.14778/3750601.3750626},
-    abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
-    journal    = {Proc. VLDB Endow.},
-    month      = aug,
-    pages      = {5045–5058},
-    numpages   = {14}
-}
-
-@article{Schultz2025,
-    author     = {Schultz, William and Demirbas, Murat},
-    title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
-    year       = {2025},
-    issue_date = {August 2025},
-    publisher  = {VLDB Endowment},
-    volume     = {18},
-    number     = {12},
-    issn       = {2150-8097},
-    url        = {https://doi.org/10.14778/3750601.3750626},
-    doi        = {10.14778/3750601.3750626},
-    abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
-    journal    = {Proc. VLDB Endow.},
-    month      = aug,
-    pages      = {5045–5058},
-    numpages   = {14}
+  title     = {{FoundationDB}: A Distributed Unbundled Transactional Key Value Store},
+  author    = {Zhou, Jingyu and Xu, Meng and Shraer, Alexander and Namasivayam, Bala and Miller, Alex and Tschannen, Evan and Atherton, Steve and Beamon, Andrew J and Lang, Dinan and Sears, Paul and others},
+  booktitle = {Proceedings of the 2021 International Conference on Management of Data (SIGMOD)},
+  pages     = {2653--2664},
+  year      = {2021}
 }

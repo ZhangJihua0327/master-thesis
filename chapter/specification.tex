@@ -277,17 +277,17 @@ $S$ 为快照函数，将键映射到其对应的值。
 基于上述一致性公理的定义，接下来我们讨论各个隔离级别的特点。为了在一致性、可扩展性和可用性之间取得平衡，现代数据库系统提供了一系列不同强度的隔离级别。这些级别根据其提供的可见性保证和所能防止的异常现象，构成了一个从最弱的“原子读”到最强的“可串行化”的层级体系。
 \\
 
-\noindent\textbf{读原子性（Read Atomic，RA）}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 与 $\mathsf{Ext}$ 两条公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~3(a) 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
+\noindent\textbf{读原子性（Read Atomic，RA）}\cite{bailis2016ramp}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 与 $\mathsf{Ext}$ 两条公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~3(a) 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
 
-\noindent\textbf{因果一致性（Causal Consistency，CC）}在 RA 基础上增加 $\mathsf{TransVis}$ 公理，要求可见性关系 $\text{VIS}$ 具有传递性：若 $T_3$ 看到了 $T_2$，且 $T_2$ 看到了 $T_1$，则 $T_3$ 也必须看到 $T_1$。因此 CC 能排除因果违背异常。需要注意的是，CC 并不要求对同一对象的并发写进行强制排序或互斥处理，因此丢失更新（Lost Update）等写冲突相关异常仍可能发生。
+\noindent\textbf{因果一致性（Causal Consistency，CC）}\cite{akkoorath2016cure}在 RA 基础上增加 $\mathsf{TransVis}$ 公理，要求可见性关系 $\text{VIS}$ 具有传递性：若 $T_3$ 看到了 $T_2$，且 $T_2$ 看到了 $T_1$，则 $T_3$ 也必须看到 $T_1$。因此 CC 能排除因果违背异常。需要注意的是，CC 并不要求对同一对象的并发写进行强制排序或互斥处理，因此丢失更新（Lost Update）等写冲突相关异常仍可能发生。
 
-\noindent\textbf{并发快照隔离（Parallel Snapshot Isolation，PSI）}在 CC 基础上增加 $\mathsf{NoConflict}$ 公理。该公理要求对同一对象发生写冲突的两个事务不能彼此并发且互不可见，必须通过 $\text{VIS}$ 建立先后关系，从而使写冲突被显式仲裁，而非“悄无声息”地丢弃某个已提交更新。因此 PSI 能够排除丢失更新异常。不过，PSI 仍允许不同事务在不同节点上观察到不一致的历史前缀，从而可能产生长分叉（Long Fork）异常。
+\noindent\textbf{并发快照隔离（Parallel Snapshot Isolation，PSI）}\cite{sovran2011walter}在 CC 基础上增加 $\mathsf{NoConflict}$ 公理。该公理要求对同一对象发生写冲突的两个事务不能彼此并发且互不可见，必须通过 $\text{VIS}$ 建立先后关系，从而使写冲突被显式仲裁，而非“悄无声息”地丢弃某个已提交更新。因此 PSI 能够排除丢失更新异常。不过，PSI 仍允许不同事务在不同节点上观察到不一致的历史前缀，从而可能产生长分叉（Long Fork）异常。
 
-\noindent\textbf{前缀一致性（Prefix Consistency，PC）}从“历史形态”维度增强一致性。它通过 $\mathsf{Prefix}$ 公理约束可见历史（该公理蕴含 $\mathsf{TransVis}$）：若事务 $T_1$ 看到了 $T_2$，则在 $\text{AR}$ 顺序中先于 $T_2$ 的所有事务也必须对 $T_1$ 可见。换言之，每个事务所观察到的历史必须构成全局 $\text{AR}$ 序列的某个前缀，因此 PC 禁止长分叉异常。另一方面，PC 并不要求对不同对象的并发写进行全局互斥；当多个事务在同一快照上更新不同对象时，仍可能出现写偏斜（Write Skew）。
+\noindent\textbf{前缀一致性（Prefix Consistency，PC）}\cite{burckhardt2015global}从“历史形态”维度增强一致性。它通过 $\mathsf{Prefix}$ 公理约束可见历史（该公理蕴含 $\mathsf{TransVis}$）：若事务 $T_1$ 看到了 $T_2$，则在 $\text{AR}$ 顺序中先于 $T_2$ 的所有事务也必须对 $T_1$ 可见。换言之，每个事务所观察到的历史必须构成全局 $\text{AR}$ 序列的某个前缀，因此 PC 禁止长分叉异常。另一方面，PC 并不要求对不同对象的并发写进行全局互斥；当多个事务在同一快照上更新不同对象时，仍可能出现写偏斜（Write Skew）。
 
-\noindent\textbf{快照隔离（Snapshot Isolation，SI）}可视为 PSI 与 PC 的“合流点”。一方面，SI 继承 $\mathsf{Prefix}$，要求每个事务都在 $\text{AR}$ 序列的某个前缀上执行，从而排除长分叉；另一方面，SI 继承 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突，从而排除丢失更新。由于在一致性与性能之间取得较好平衡，SI 被许多实际系统采用或以变体形式实现。但需要强调的是，SI 仍允许事务在同一快照上对不同对象并发更新，因此写偏斜异常仍可能出现。
+\noindent\textbf{快照隔离（Snapshot Isolation，SI）}\cite{berenson1995critique}可视为 PSI 与 PC 的“合流点”。一方面，SI 继承 $\mathsf{Prefix}$，要求每个事务都在 $\text{AR}$ 序列的某个前缀上执行，从而排除长分叉；另一方面，SI 继承 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突，从而排除丢失更新。由于在一致性与性能之间取得较好平衡，SI 被许多实际系统采用或以变体形式实现。但需要强调的是，SI 仍允许事务在同一快照上对不同对象并发更新，因此写偏斜异常仍可能出现。
 
-\noindent\textbf{可串行化（Serialisability，SER）}通过 $\mathsf{TotalVis}$ 公理将可见性关系强化为全序关系：对任意两事务 $T_1$ 与 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，从抽象执行语义上不再允许真正并发。等价地，所有事务的执行效果可视为按某个串行顺序依次执行。因此 SER 排除上述所有异常（包括写偏斜），是图~\ref{fig:isolevels} 中最强的一致性级别。SER 提供最直观的编程模型：开发者可将事务视为在完全隔离环境中执行，而无需显式处理复杂并发交织；其代价是更高的协调与控制开销，实践中通常需要加锁、验证或更强的复制一致性机制来保证串行化效果。补充地，由于 $\text{VIS} \subseteq \text{AR}$，强调 $\text{VIS}$ 的全序也可理解为对 $\text{AR}$ 的全序要求进一步显式化。
+\noindent\textbf{可串行化（Serialisability，SER）}\cite{papadimitriou1979serializability}通过 $\mathsf{TotalVis}$ 公理将可见性关系强化为全序关系：对任意两事务 $T_1$ 与 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，从抽象执行语义上不再允许真正并发。等价地，所有事务的执行效果可视为按某个串行顺序依次执行。因此 SER 排除上述所有异常（包括写偏斜），是图~\ref{fig:isolevels} 中最强的一致性级别。SER 提供最直观的编程模型：开发者可将事务视为在完全隔离环境中执行，而无需显式处理复杂并发交织；其代价是更高的协调与控制开销，实践中通常需要加锁、验证或更强的复制一致性机制来保证串行化效果。补充地，由于 $\text{VIS} \subseteq \text{AR}$，强调 $\text{VIS}$ 的全序也可理解为对 $\text{AR}$ 的全序要求进一步显式化。
 
 表~\ref{tab:consistency-models} 从弱一致性级别到强一致性级别，列出了每个隔离级别需要满足的公理以及能够防止或允许的异常。表中 $\checkmark$ 表示该隔离级别允许该异常发生，$\times$ 表示能够防止该异常。
 \begin{table}[htbp]
