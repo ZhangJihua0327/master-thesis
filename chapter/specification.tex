@@ -4,9 +4,7 @@
 首先，本章阐述了分布式环境下进行一致性建模的必要性，分析了网络延迟和节点故障对事务执行结果的影响。
 其次，本章定义了事务、操作、日志和快照等基本概念，引入可见性关系（VIS）和仲裁关系（AR）两个核心二元关系，构建了 $(\text{VIS}, \text{AR})$ 规约框架。
 然后，本章提出了六条一致性公理，分别为内部一致性、外部一致性、传递可见性、前缀一致性、无冲突和完全可见性，并给出了形式化定义。
-最后，本章基于这些公理定义了六个隔离级别，从弱到强依次为读原子性（Read Atomic，RA）、因果一致性（Causal Consistency，CC）、并发快照隔离（Parallel Snapshot Isolation，PSI）、
-前缀一致性（Prefix Consistency，PC）、快照隔离（Snapshot Isolation，SI）和可串行化（Serialisability，SER），
-并分析了各级别之间的偏序关系及其能够防止或允许的异常类型。
+最后，本章基于这些公理定义了六个隔离级别，从弱到强大致依次为读原子性（Read Atomic，RA）、因果一致性（Causal Consistency，CC）、并发快照隔离（Parallel Snapshot Isolation，PSI）、前缀一致性（Prefix Consistency，PC）、快照隔离（Snapshot Isolation，SI）和可串行化（Serialisability，SER），并分析了各级别之间的偏序关系及其能够防止或允许的异常类型。
 
 
 \section{一致化建模的必要性}
@@ -48,20 +46,20 @@
     \item \OpRead[k][v]：读操作，表示读取键 $k$ 的值，期望读取结果为 $v$。
     \item \OpWrite[k][v]：写操作，表示将键 $k$ 的值设置为 $v$。
 \end{itemize}
-其中，\OpRead 和 \OpWrite 操作的对象是键 $k$，所有键的集合记为 \Keys。在复制型分布式数据库中，\OpReceive 操作对于理解节点间的数据同步至关重要：当一个事务在某个节点提交后，其更新需要通过网络传播到其他节点，其他节点通过 \OpReceive 操作接收并应用这些更新。
+其中，\OpRead 和 \OpWrite 操作的对象是键 $k$，所有键的集合记为 \Keys。
 
-快照（Snapshot，记为 \Snapshot）表示某一时刻数据库的一致性状态。具体来说，快照是当前节点执行完成一个完整事务后的状态，无论该事务是本地提交的还是通过 \OpReceive 从其他节点接收的。在快照状态下，系统没有事务正在执行。
+快照（Snapshot，记为 \Snapshot），是数据库在指定时间戳上创建的只读一致性数据视图，是分布式事务一致性的核心底层机制。本文主要讨论的是事务级别的快照。快照是实现多版本并发控制（Multi-Version Concurrency Control，MVCC）的基础，通过为每个事务分配一个独立的快照，允许多个事务并发执行而不会相互干扰，从而提高系统的并发性能和响应速度。对于一个事务，我们不需要将数据完全复制一遍，而是确定一个版本时间戳（readTimestamp、commitTimestamp）并基于定义的规则：只可见该时间戳之前已提交的所有数据版本，不可见之后的任何修改；数据仍然存在原地，只是通过版本号做 “可见性过滤”。降低开销的基础上，为事务的并发提供条件。快照函数 $S$ 将键映射到其对应的值，表示在该快照下每个键的值。
 
 在给出形式化表达时，我们使用二元组来表示序列概念。以事务 \Txc 为例，一个事务 \Txc 是一个二元组 $(O, po)$，其中 $O \subseteq Op$ 是该事务包含的操作集合，$Op$ 为所有可能操作的有限非空集合。$po \subseteq O \times O$ 称为程序顺序（program order），是一个严格全序关系，表示事务内操作的执行顺序。同样的，\History 也有类似的定义方式，其中的$SO$ 也是一个严格全序关系，表示事务之间的执行顺序。
 
 以上概念的形式化表达如下：
 \begin{equation}
     \begin{aligned}
-        \mathcal{K} & = \{ x, y, \ldots\}, \quad \mathcal{V} = \{ \bot ,1, 2, \ldots, n \}                                                                         \\
-        Op          & = \{ \text{start}, \text{commit}, \text{abort} \} \cup \{ \text{read}(k, v), \text{write}(k, v) \mid k \in \mathcal{K}, v \in \mathcal{V} \} \\
-        T           & = (O, po), O \subseteq Op, \quad  po \subseteq O \times O                                                                                    \\
-        \mathcal{H} & = (\mathcal{T}, SO, level), \quad \mathcal{T} = \{T_1, T_2, \ldots, T_n\},                                                                   \\
-                    & \quad SO \subseteq \mathcal{T} \times \mathcal{T}, \quad level \in \{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}    \\
+        \mathcal{K} & = \{ x, y, \ldots\}, \quad \mathcal{V} = \{ \bot ,1, 2, \ldots, n \}                                                                                               \\
+        Op          & = \{ \text{start}, \text{commit}, \text{abort} \} \cup \{ \text{read}(k, v), \text{write}(k, v) \mid k \in \mathcal{K}, v \in \mathcal{V} \}                       \\
+        T           & = (O, po), O \subseteq Op, \quad  po \subseteq O \times O                                                                                                          \\
+        \mathcal{H} & = (\mathcal{T}, SO, \text{level}), \quad \mathcal{T} = \{T_1, T_2, \ldots, T_n\},                                                                                  \\
+                    & \quad SO \subseteq \mathcal{T} \times \mathcal{T}, \quad level \in \{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}  \triangleq  \mathcal{L} \\
         S           & : \mathcal{K} \rightharpoonup \mathcal{V},  S(k) = \bot \text{ if } k \notin \text{dom}(S)
     \end{aligned}
 \end{equation}
@@ -110,52 +108,151 @@ $S$ 为快照函数，将键映射到其对应的值。
 
 此外，我们约定 $\operatorname{VIS^{-1}}(T)$ 表示对事务 $T$ 可见的所有事务的集合，即 $\operatorname{VIS^{-1}}(T) = \{ T' \in \mathcal{T} \mid T' \xrightarrow{\text{VIS}} T \}$。其他关系的逆集合也做类似约定。我们还定义 $\operatorname{WriteTx}_k$ 表示对键 $k$ 有写操作的事务集合，并用 $T \Vdash \operatorname{op}$ 表示事务 $T$ 包含操作 $\operatorname{op}$。
 
-基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）是一个三元组$\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。
+基于以上提供的符号，我们可以定义抽象执行（Abstract Execution）为$\mathcal{X} = (\mathcal{T}, $SO$, \text{level}, \text{VIS}, \text{AR})$，因为$\mathcal{H}$ 中的 $\mathcal{T}$、$SO$ 和 $\text{level}$ 已经定义过了，我们可以简写为 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。
 
-\section{一致性公理}
-基于上述符号以及 $\text{VIS}$、$\text{AR}$ 的定义，我们可以定义一致性公理。
+\section{异常与一致性公理}
+
+\subsection{数据一致性异常}
+由于分布式环境下的网络延迟和节点故障，分布式数据库可能出现多种数据一致性异常。在介绍一致性公理之前，我们利用前文构建的 $(\text{VIS}, \text{AR})$ 框架，对几种典型的异常进行形式化描述。
+
+\subsubsection{因果关系违背 (Causality Violation)}
+因果一致性要求：若事务观察到某项更新，则也必须观察到该更新的因果前驱。如图~\ref{fig:anomaly-causality}所示，\Txc[3] 观察到了 \Txc[2] 的评论，但没有观察到评论所针对的 \Txc[1] 的帖子。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        % 事务框
+        \node[txn] (t1) {\Txc[1]: write(x, post) $\xrightarrow{po}$ write(y, empty)};
+        \node[txn, below=1.2cm of t1] (t2) {\Txc[2]: read(x, post) $\xrightarrow{po}$ write(y, comment)};
+        \node[txn, below=1.2cm of t2] (t3) {\Txc[3]: read(x, empty) $\xrightarrow{po}$ read(y, comment)};
+
+        % 关系线
+        % VIS (右侧) - 增大弧度，使用 east 锚点避免遮挡
+        \draw[vis] (t1.east) to [bend left=60] node[right, blue] {VIS} (t2.east);
+        \draw[vis] (t2.east) to [bend left=60] node[right, blue] {VIS} (t3.east);
+
+        % AR (中间及左侧) - 补全标签
+        \draw[ar] (t1) -- node[left, red] {AR} (t2);
+        \draw[ar] (t2) -- node[left, red] {AR} (t3);
+        \draw[ar] (t1.west) to [bend right=60] node[left, red] {AR} (t3.west);
+    \end{tikzpicture}
+    \caption{因果关系违背示例}
+    \label{fig:anomaly-causality}
+\end{figure}
+
+\subsubsection{破碎读 (Fractured Reads)}
+事务观察到了另一事务的部分更新。如图~\ref{fig:anomaly-fractured} 所示，\Txc[2] 读到了 Alice 关注了 Bob（由 \Txc[1] 写入），但却没读到 Bob 关注了 Alice（同样由 \Txc[1] 写入）。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: write($x_A$, Bob) $\xrightarrow{po}$ write($x_B$, Alice)};
+        \node[txn, right=2.0cm of t1] (t2) {\Txc[2]: read($x_A$, Bob) $\xrightarrow{po}$ read($x_B$, empty)};
+
+        \draw[vis] (t1) -- node[above, blue] {VIS} (t2);
+    \end{tikzpicture}
+    \caption{破碎读示例}
+    \label{fig:anomaly-fractured}
+\end{figure}
+
+\subsubsection{脏读 (Dirty Read)}
+脏读允许事务读取到其他并发事务尚未提交的中间状态。如图~\ref{fig:anomaly-dirtyread} 所示，\Txc[1] 在执行过程中修改了 $x$ 的值，该值在 \Txc[1] 提交之前被 \Txc[2] 读取。这意味着 \Txc[2] 观察到了 \Txc[1] 的中间状态（Uncommitted Data），不管 \Txc[1] 后续是提交还是中止，这种现象都违背了隔离性原则。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        % T1
+        \node (t1_op1) {write(x, 10)};
+        \node[right=1.2cm of t1_op1] (t1_op2) {$\dots$};
+        \draw[->] (t1_op1) -- node[above, font=\footnotesize] {$po$} (t1_op2);
+
+        \node[left=0.2cm of t1_op1] (l1) {\Txc[1]:};
+        % 手动绘制虚线框表示事务范围，体现"打破框体"
+        \draw[dashed, gray] ($(l1.north west)+(-0.1,0.25)$) rectangle ($(t1_op2.south east)+(0.2,-0.25)$);
+
+        % T2
+        \node[below=1.5cm of t1_op1] (t2_op1) {read(x, 10)};
+        \node[left=0.2cm of t2_op1] (l2) {\Txc[2]:};
+        \draw[dashed, gray] ($(l2.north west)+(-0.1,0.25)$) rectangle ($(t2_op1.south east)+(0.2,-0.25)$);
+
+        % VIS
+        \draw[vis] (t1_op1) -- node[right, blue] {VIS} (t2_op1);
+    \end{tikzpicture}
+    \caption{脏读示例}
+    \label{fig:anomaly-dirtyread}
+\end{figure}
+
+\subsubsection{更新丢失 (Lost Update)}
+两个事务并发读取同一数据并基于原值进行更新，其中一个事务的提交覆盖了另一个事务的修改。如图~\ref{fig:anomaly-lostupdate} 所示，\Txc[2] 的更新被 \Txc[1] 的后续写入（在 AR 顺序上）覆盖，或者反之，导致其中一个更新虽然提交但实际上被丢弃。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: read(acct, 0) $\xrightarrow{po}$ write(acct, 50)};
+        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct, 0) $\xrightarrow{po}$ write(acct, 25)};
+        \node[txn, right=2.0cm of t1, yshift=-0.4cm] (t3) {\Txc[3]: read(acct, 25)};
+
+        \draw[ar] (t1) -- node[left, red] {AR} (t2);
+        \draw[vis] (t2) to [bend right=30] node[below, blue] {VIS} (t3);
+        \draw[vis] (t1) to [bend left=40] node[above, blue] {VIS} (t3);
+    \end{tikzpicture}
+    \caption{更新丢失示例}
+    \label{fig:anomaly-lostupdate}
+\end{figure}
+
+\subsubsection{长叉异常 (Long Fork)}
+长叉异常允许两个并发事务以互斥的顺序观察彼此。如图~\ref{fig:anomaly-longfork} 所示，\Txc[3] 认为 \Txc[1] 发生在 \Txc[2] 之前，而 \Txc[4] 认为 \Txc[2] 发生在 \Txc[1] 之前。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: write(x, post1)};
+        \node[txn, below=1cm of t1] (t2) {\Txc[2]: write(y, post2)};
+        \node[txn, right=1.5cm of t1] (t3) {\Txc[3]: read(x, post1) $\xrightarrow{po}$ read(y, empty)};
+        \node[txn, right=1.5cm of t2] (t4) {\Txc[4]: read(x, empty) $\xrightarrow{po}$ read(y, post2)};
+
+        \draw[vis] (t1) -- node[above, blue] {VIS} (t3);
+        \draw[vis] (t2) -- node[above, blue] {VIS} (t4);
+    \end{tikzpicture}
+    \caption{长叉异常示例}
+    \label{fig:anomaly-longfork}
+\end{figure}
+
+\subsubsection{写偏斜 (Write Skew)}
+两个事务读取重叠的数据集，但修改不相交的数据项。如图~\ref{fig:anomaly-writeskew} 所示，虽然每个事务独立看都符合约束（总和 $>100$），但并发执行后导致约束失效（总和变为 $-80$）。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct1, -40)};
+        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct2, -40)};
+    \end{tikzpicture}
+    \caption{写偏斜示例}
+    \label{fig:anomaly-writeskew}
+\end{figure}
+
+\subsection{一致性公理}
+现在我们已经了解了分布式数据库中可能出现的数据一致性异常，接下来介绍用于定义一致性模型的公理。这些公理基于前文介绍的 $(\text{VIS}, \text{AR})$ 框架，精确刻画了不同隔离级别下允许和禁止的异常类型。
 
 所有一致性模型必须遵守以下两个基础公理：
 \begin{itemize}
     \item \textbf{Int（内部一致性公理，Internal Consistency）}：
-          内部一致性公理确保事务内部的读写行为符合串行语义。
-          例如，一个事务如果先写了某个对象再读该对象，
-          必须能读到自己刚写入的值。
-          这条公理保证了单事务视角的逻辑正确性。
+          内部一致性公理确保事务内部的读写行为符合串行语义。例如，一个事务如果先写了某个对象再读该对象，必须能读到自己刚写入的值。这条公理保证了单事务视角的逻辑正确性。
     \item \textbf{Ext（外部一致性公理，External Consistency）}：
-          外部一致性公理定义了事务如何读取其他事务写入的值。
-          它规定，对于本事务未写入过的对象的读取（外部读取），
-          其值取决于所有对它可见的事务中，在 AR 顺序下最新的那个事务写入的值。
-          这条公理用于防止断裂读取（Fractured Reads）和脏读（Dirty Reads）。
+          外部一致性公理定义了事务如何读取其他事务写入的值。它规定，对于本事务未写入过的对象的读取（外部读取），其值取决于所有对它可见的事务中，在 AR 顺序下最新的那个事务写入的值。这条公理用于防止断裂读取（Fractured Reads）和脏读（Dirty Reads）。
 \end{itemize}
 
-除此之外，还有四个额外公理可用于进一步刻画一致性模型的语义：
+这两个公理是所有一致性模型的基础，如果一个数据库系统不支持内部一致性和外部一致性公理，那么对事物的原子性和隔离性都无法保证。这样的数据库对事务不存在任何支持，无法满足应用程序对事务的基本需求。除此之外，还有四个额外公理可用于进一步刻画一致性模型的语义：
 \begin{itemize}
     \item \textbf{TransVis（传递可见性，Transitive Visibility）}：
-          传递可见性公理确保如果事务 $T_1$ 对事务 $T_2$ 可见，
-          而 $T_2$ 又对事务 $T_3$ 可见，
-          那么 $T_1$ 对 $T_3$ 也必须可见。
-          这条公理用于防止因果违例（Causality Violation）。
-          例如，Alice 发帖，Bob 看到后评论。
-          如果 Charlie 看到了 Bob 的评论，根据传递性，Charlie 也必须能看到 Alice 的原帖。
+          传递可见性公理确保如果事务 $T_1$ 对事务 $T_2$ 可见，而 $T_2$ 又对事务 $T_3$ 可见，那么 $T_1$ 对 $T_3$ 也必须可见。这条公理用于防止对违背因果给厝（Causality Violation）。例如，Alice 发帖，Bob 看到后评论。如果 Charlie 看到了 Bob 的评论，根据传递性，Charlie 也必须能看到 Alice 的原帖。
     \item \textbf{Prefix（前缀一致性，Prefix Consistency，PC）}：
-          前缀一致性公理确保如果事务 $T_2$ 对 $T_1$ 可见，
-          那么在 $\text{AR}$ 顺序下排在 $T_2$ 之前的所有事务也必须对 $T_1$ 可见。
-          换言之，事务所看到的历史必须是一个完整的、没有空洞的前缀（Snapshot）。
-          这条公理用于防止长分叉（Long Forks），
-          即防止两个并发事务各自看到不同的、不兼容的历史版本。
+          前缀一致性公理确保如果事务 $T_2$ 对 $T_1$ 可见， 那么在 $\text{AR}$ 顺序下排在 $T_2$ 之前的所有事务也必须对 $T_1$ 可见。换言之，事务所看到的历史必须是一个完整的、没有空洞的前缀（Snapshot）。 这条公理用于防止长分叉（Long Forks），即防止两个并发事务各自看到不同的、不兼容的历史版本。
     \item \textbf{NoConflict（无冲突）}：
-          无冲突公理确保如果两个事务存在写冲突，
-          则它们之间必须存在可见性关系，不能彼此并发而互不可见。
-          这条公理用于防止丢失更新（Lost Update），
-          即防止某个事务的更新被另一个并发事务直接覆盖。
+          无冲突公理确保如果两个事务存在写冲突，则它们之间必须存在可见性关系，不能彼此并发而互不可见。这条公理用于防止丢失更新（Lost Update），即防止某个事务的更新被另一个并发事务直接覆盖。
     \item \textbf{TotalVis（完全可见性，Total Visibility）}：
-          完全可见性公理要求 $\text{VIS}$ 关系必须是一个全序关系，
-          即对于任意两个事务 $T_1$ 和 $T_2$，
-          要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$。
-          这意味着所有事务都在一条单一的时间线上，
-          每个事务都能看到它之前的所有事务。
-          这是最强的公理。
+          完全可见性公理要求 $\text{VIS}$ 关系必须是一个全序关系，即对于任意两个事务 $T_1$ 和 $T_2$，
+          要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$。这意味着所有事务都在一条单一的时间线上，每个事务都能看到它之前的所有事务。 这是最强的公理。
 \end{itemize}
 其中，TransVis 和 Prefix 两条公理是对 $\text{VIS}$ 关系的限制和强化，而 NoConflict 和 TotalVis 两条公理主要聚焦于写冲突的解决方案。
 
@@ -229,9 +326,15 @@ $S$ 为快照函数，将键映射到其对应的值。
     \label{fig:isolevels}
 \end{figure}
 
+从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 给出了每个隔离级别所允许和阻止的异常，并基于对异常的选择，讨论了各个隔离级别之间的关系，用偏序关系表示，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
 
-
-从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 可以看出，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
+\section{本章小结}
+本章构建了分布式数据库一致性模型的形式化描述框架。
+首先，本章阐述了在存在网络延迟和故障的分布式环境下，进行一致性建模的必要性，指出了一致性模型是数据库与应用之间的重要契约。
+其次，本章给出了事务、历史、快照等基本概念的形式化定义，并引入了可见性关系 ($\text{VIS}$) 和仲裁关系 ($\text{AR}$) 两个核心关系，提出了 $\text{VIS} \subseteq \text{AR}$ 的一致性基础。
+在此基础上，本章详细分析了因果违背、破碎读、脏读、更新丢失、长叉异常和写偏斜等数据一致性异常，并提出了内部一致性、外部一致性、传递可见性、前缀一致性、无冲突和完全可见性等六条一致性公理。
+最后，本章基于定义的公理体系，形式化地定义了六种隔离级别：读原子性 (RA)、因果一致性 (CC)、并发快照隔离 (PSI)、前缀一致性 (PC)、快照隔离 (SI) 和可串行化 (SER)，并系统地比较了它们之间的偏序关系以及对各种异常的防御能力。
+这一形式化框架为后续章节中具体的事务处理协议设计验证提供了理论基础。
 
 
 
