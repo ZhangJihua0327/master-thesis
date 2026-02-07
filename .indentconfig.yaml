@@ -1,0 +1,44 @@
+# latexindent 配置文件
+# 完整文档: https://ctan.org/pkg/latexindent
+
+---
+# 缩进设置
+indentation:
+  defaultIndent: "    "  # 4个空格作为缩进
+  
+# 换行符设置
+fileContents:
+  preserveBlankLines: 1
+
+# 对齐设置
+alignment:
+  aligned: 1
+  tabular: 1
+  
+# 删除尾部空格
+removeTrailingWhitespace:
+  beforeProcessing: 0
+  afterProcessing: 1
+
+# 环境特定缩进
+environments:
+  equation:
+    indent: "    "
+  align:
+    indent: "    "
+  itemize:
+    indent: "  "
+  enumerate:
+    indent: "  "
+  description:
+    indent: "  "
+
+# 命令特定处理
+commands:
+  indent: 1
+
+# 日志设置
+logFilePreferences:
+  showDecorationStarted: 0
+  showDecorationFinished: 0
+  showLogFileHeader: 0

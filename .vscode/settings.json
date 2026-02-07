@@ -1,0 +1,34 @@
+{
+  // 自动保存配置
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 20000,
+  
+  // 编辑器换行设置
+  "editor.wordWrap": "on",
+  "editor.rulers": [80],
+  
+  // latexindent 格式化配置
+  "[latex]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "James-Yu.latex-workshop",
+    "editor.formatOnPaste": true
+  },
+  "[tex]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "James-Yu.latex-workshop",
+    "editor.formatOnPaste": true
+  },
+  
+  // LaTeX Workshop 扩展配置
+  "latex-workshop.latexindent.path": "C:\\texlive\\latexindent\\bin\\windows\\latexindent",
+  "latex-workshop.latexindent.args": [
+    "-c",
+    "%DIR%/",
+    "%TMPFILE%"
+  ],
+  "latex-workshop.formatting.latex": "latexindent",
+  
+  // latexindent 全局配置
+  "latex-workshop.latexindent.local": "",
+  "latex-workshop.latexindent.modify": true
+}
