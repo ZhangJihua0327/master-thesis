@@ -1,6 +1,6 @@
 {
   // 自动保存配置
-  "files.autoSave": "afterDelay",
+  "files.autoSave": "onFocusChange",
   "files.autoSaveDelay": 20000,
   
   // 编辑器换行设置

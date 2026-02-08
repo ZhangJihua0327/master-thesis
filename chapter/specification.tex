@@ -38,7 +38,7 @@
 
 
 \section{基本概念与建模}
-从全局视角出发，考虑到事务在提交时间维度上客观存在的先后次序，本文使用符号 \History（history）表示全局事务执行历史。执行历史由一系列事务（transaction，记为 \Txc 或 \Txc[x]）构成，并需要标注其所遵循的隔离级别（isolation level）。本文讨论六个典型隔离级别（从强到弱）：可串行化（Serialisability，SER）、快照隔离（Snapshot Isolation，SI）、前缀一致性（Prefix Consistency，PC）、并发快照隔离（Parallel Snapshot Isolation，PSI）、因果一致性（Causal Consistency，CC）与读原子性（Read Atomic，RA）\cite{Schultz2015}。它们的形式化定义将在后文给出。
+从全局视角出发，考虑到事务在提交时间维度上客观存在的先后次序，本文使用符号 \History（history）表示全局事务执行历史。执行历史由一系列事务（transaction，记为 \Txc 或 \Txc[x]）构成，并需要标注其所遵循的隔离级别（isolation level）。本文讨论六个典型隔离级别（从强到弱）：可串行化（Serialisability，SER）、快照隔离（Snapshot Isolation，SI）、前缀一致性（Prefix Consistency，PC）、并发快照隔离（Parallel Snapshot Isolation，PSI）、因果一致性（Causal Consistency，CC）与读原子性（Read Atomic，RA）\cite{Schultz2015}。关于它们的形式化定义我们将在后文中讨论。
 
 在微观层面，一个事务 \Txc 被定义为一系列操作（Operation）的执行序列。鉴于本研究主要针对键值（Key-Value）数据库，我们暂不考虑复杂的谓词逻辑操作。在此前提下，事务中的具体操作可抽象为以下几种基本类型：
 \begin{itemize}
@@ -287,7 +287,7 @@ $S$ 为快照函数，将键映射到其对应的值。
 
 \noindent\textbf{快照隔离（Snapshot Isolation，SI）}\cite{berenson1995critique}可视为 PSI 与 PC 的“合流点”。一方面，SI 继承 $\mathsf{Prefix}$，要求每个事务都在 $\text{AR}$ 序列的某个前缀上执行，从而排除长分叉；另一方面，SI 继承 $\mathsf{NoConflict}$，禁止对同一对象的并发写冲突，从而排除丢失更新。由于在一致性与性能之间取得较好平衡，SI 被许多实际系统采用或以变体形式实现。但需要强调的是，SI 仍允许事务在同一快照上对不同对象并发更新，因此写偏斜异常仍可能出现。
 
-\noindent\textbf{可串行化（Serialisability，SER）}\cite{papadimitriou1979serializability}通过 $\mathsf{TotalVis}$ 公理将可见性关系强化为全序关系：对任意两事务 $T_1$ 与 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，从抽象执行语义上不再允许真正并发。等价地，所有事务的执行效果可视为按某个串行顺序依次执行。因此 SER 排除上述所有异常（包括写偏斜），是图~\ref{fig:isolevels} 中最强的一致性级别。SER 提供最直观的编程模型：开发者可将事务视为在完全隔离环境中执行，而无需显式处理复杂并发交织；其代价是更高的协调与控制开销，实践中通常需要加锁、验证或更强的复制一致性机制来保证串行化效果。补充地，由于 $\text{VIS} \subseteq \text{AR}$，强调 $\text{VIS}$ 的全序也可理解为对 $\text{AR}$ 的全序要求进一步显式化。
+\noindent\textbf{可串行化（Serialisability，SER）}\cite{papadimitriou1979serializability}通过 $\mathsf{TotalVis}$ 公理将可见性关系强化为全序关系：对任意两事务 $T_1$ 与 $T_2$，要么 $T_1 \xrightarrow{\text{VIS}} T_2$，要么 $T_2 \xrightarrow{\text{VIS}} T_1$，从抽象执行语义上不再允许真正并发。所有事务的执行效果等价为按某个串行顺序依次执行。因此 SER 排除上述所有异常（包括写偏斜），是图~\ref{fig:isolevels} 中最强的一致性级别。SER 提供最直观的编程模型：开发者可将事务视为在完全隔离环境中执行，而无需显式处理复杂并发交织；其代价是更高的协调与控制开销，实践中通常需要加锁、验证或更强的复制一致性机制来保证串行化效果。补充地，由于 $\text{VIS} \subseteq \text{AR}$，强调 $\text{VIS}$ 的全序也可理解为对 $\text{AR}$ 的全序要求进一步显式化。
 
 表~\ref{tab:consistency-models} 从弱一致性级别到强一致性级别，列出了每个隔离级别需要满足的公理以及能够防止或允许的异常。表中 $\checkmark$ 表示该隔离级别允许该异常发生，$\times$ 表示能够防止该异常。
 \begin{table}[htbp]
@@ -329,6 +329,18 @@ $S$ 为快照函数，将键映射到其对应的值。
 \end{figure}
 
 从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 给出了每个隔离级别所允许和阻止的异常，并基于对异常的选择，讨论了各个隔离级别之间的关系，用偏序关系表示，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
+
+记 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$ 为一个抽象执行。对任意事务 $T \in \mathcal{T}$，有
+\begin{equation}
+    \label{eq:contain}
+    \begin{aligned}
+        \mathrm{SER}(T) & \Rightarrow \mathrm{SI}(T) \Rightarrow \mathrm{PSI}(T) \Rightarrow \mathrm{CC}(T) \Rightarrow \mathrm{RA}(T), \\
+        \mathrm{SI}(T)  & \Rightarrow \mathrm{PC}(T) \Rightarrow \mathrm{CC}(T).
+    \end{aligned}
+\end{equation}
+
+\section{混合事务隔离级别}
+对于一个抽象执行$\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，如果其中的每个事务$T \in \mathcal{T}$，其隔离级别$\operatorname{L}[T]$所要求的公理都被满足，那么则称其是一致的。如果一个历史\History[i] 是一致的，那么则必然存在一个抽象执行$\mathcal{X}= (\mathcal{H}_i, \text{VIS}, \text{AR})$是一致的。
 
 \section{本章小结}
 本章系统构建了分布式数据库一致性模型的形式化描述框架。
