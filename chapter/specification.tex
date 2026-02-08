@@ -340,14 +340,112 @@ $S$ 为快照函数，将键映射到其对应的值。
 \end{equation}
 
 \section{混合事务隔离级别}
-对于一个抽象执行$\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，如果其中的每个事务$T \in \mathcal{T}$，其隔离级别$\operatorname{L}[T]$所要求的公理都被满足，那么则称其是一致的。如果一个历史\History[i] 是一致的，那么则必然存在一个抽象执行$\mathcal{X}= (\mathcal{H}_i, \text{VIS}, \text{AR})$是一致的。
+对于一个抽象执行 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，若对其中任意事务 $T \in \mathcal{T}$，其隔离级别 $\text{level}(T)$ 所要求的公理均被满足，则称 $\mathcal{X}$ 在该隔离级别配置下是一致的。若一个历史 \History[i] 是一致的，则必然存在某个抽象执行 $\mathcal{X}= (\mathcal{H}_i, \text{VIS}, \text{AR})$ 与之对应且一致。
+
+进一步地，若抽象执行 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$ 中所有事务均满足 $\forall T \in \mathcal{T}.\ \text{level}(T)=\text{SER}$，则称 $\mathcal{X}$ 为可串行化的抽象执行。若此时 $\mathcal{X}$ 还是一致的，则记作 $\mathcal{X} \vDash \text{SER}$。
+相应地，若存在某个可串行化且一致的抽象执行 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$ 与历史 $\mathcal{H}$ 对应，则称历史 $\mathcal{H}$ 是可串行化的。
+
+在混合隔离级别的场景下，历史中可同时包含不同隔离级别的事务。例如，若历史 $\mathcal{H}$ 同时包含 SI 与 SER 两类事务，且在相应的 level 配置下是“一致”的，则可记作 $\mathcal{H} \vDash \text{SI-SER}$。类似的记号也可用于描述其他混合隔离级别的历史与抽象执行。
+
+
+\begin{figure}[htbp]
+    \centering
+    \tikzset{
+    % 事务框样式
+    txbox/.style={
+            draw,
+            rounded corners=4pt,
+            align=left,
+            font=\small\ttfamily,
+            inner sep=6pt,
+            minimum width=2cm
+        },
+    % 正常 VIS 箭头样式
+    vis/.style={
+    -{Stealth[scale=1.1]},
+    thick,
+    orange!70!black
+    },
+    % 加粗 VIS 箭头样式（图中较粗的箭头）
+    vis_thick/.style={
+    -{Stealth[scale=1.4]},
+    line width=2pt,
+    orange!70!black
+    },
+    % VIS 标签文字样式
+    vis_label/.style={
+            orange!70!black,
+            font=\footnotesize\bfseries
+        },
+    }
+
+    \begin{tikzpicture}[node distance=1.8cm and 1.2cm]
+        % ==================== (a) 子图 ====================
+        \begin{scope}[local bounding box=suba]
+            \node (T1a) [txbox] at (0,3.5) {$T_1[\text{CC}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+            \node (T2a) [txbox] at (0,0) {$T_2[\text{PC}]$\\read($a,1$)\\read($b,2$)\\read($c,2$)};
+            \node (T3a) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,3$)\\read($c,2$)\\write($c,3$)};
+            \node (T4a) [txbox] at (3.5,0.5) {$T_4[\text{SI}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+
+            \draw[vis] (T1a) -- (T3a) node[midway, above, vis_label] {VIS};
+            \draw[vis] (T1a) -- (T2a) node[midway, left, vis_label] {VIS};
+            \draw[vis] (T1a) -- (T4a) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+            \draw[vis] (T2a) -- (T4a) node[midway, above, vis_label] {VIS};
+            \draw[vis] (T2a) -- (T3a) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+            \draw[vis] (T4a) -- (T3a) node[midway, right, vis_label] {VIS};
+        \end{scope}
+        \node[below=0.6cm of suba, font=\bfseries\large] {(a) $\mathcal{X}_1$ 是一致的};
+
+        % ==================== (b) 子图 ====================
+        \begin{scope}[local bounding box=subb, xshift=7.8cm]
+            \node (T1b) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+            \node (T2b) [txbox] at (0,0) {$T_2[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)};
+            \node (T3b) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,2$)\\write($c,3$)};
+            \node (T4b) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+
+            \draw[vis] (T1b) -- (T3b) node[midway, above, vis_label] {VIS};
+            \draw[vis] (T1b) -- (T2b) node[midway, left, vis_label] {VIS};
+            \draw[vis] (T1b) -- (T4b) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+            \draw[vis] (T4b) -- (T2b) node[midway, above, vis_label] {VIS};
+            \draw[vis_thick] (T2b) -- (T3b) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+            \draw[vis] (T4b) -- (T3b) node[midway, right, vis_label] {$\overline{\text{VIS}}$};
+        \end{scope}
+        \node[below=0.6cm of subb, font=\bfseries\large] {(b) $\mathcal{X}_2$ 是一致的};
+    \end{tikzpicture}
+
+    \vspace{0.6cm}
+
+    \begin{tikzpicture}[node distance=1.8cm and 1.2cm]
+        % ==================== (c) 子图 ====================
+        \begin{scope}[local bounding box=subc]
+            \node (T1c) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+            \node (T2c) [txbox] at (0,0) {$T_2[\text{CC}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,\textcolor{red}{3}$)};
+            \node (T3c) [txbox] at (3.5,4) {$T_3[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)\\write($c,3$)};
+            \node (T4c) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+
+            \draw[vis] (T1c) -- (T3c) node[midway, above, vis_label] {VIS};
+            \draw[vis] (T1c) -- (T2c) node[midway, left, vis_label] {VIS};
+            \draw[vis] (T1c) -- (T4c) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+            \draw[vis] (T4c) -- (T2c) node[midway, above, vis_label] {$\overline{\text{VIS}}$};
+            \draw[vis_thick] (T3c.south west) -- (T1c.south east) node[midway, above, vis_label, sloped] {VIS};
+            \draw[vis] (T4c) -- (T3c) node[midway, right, vis_label] {VIS};
+        \end{scope}
+        \node[below=0.6cm of subc, font=\bfseries\large] {(c) $\mathcal{X}_3$ 是不一致的};
+    \end{tikzpicture}
+
+    \caption{混合隔离级别下抽象执行一致性示例}
+    \label{fig:mixed-isolation-consistency}
+\end{figure}
+
+图~\ref{fig:mixed-isolation-consistency} 展示了三个混合隔离级别的抽象执行示例 $\mathcal{X}_1$、$\mathcal{X}_2$ 与 $\mathcal{X}_3$。其中，$\mathcal{X}_1$ 包含 CC、PC 与 SI 三种隔离级别的事务，且满足各自的公理要求，因此是一致的；$\mathcal{X}_2$ 包含 SER 与 SI 两种隔离级别的事务，且也满足各自的公理要求，因此也是一致的；而 $\mathcal{X}_3$ 包含 SER 与 CC 两种隔离级别的事务，但由于 CC 事务 $T_2$ 违反了 SER 事务 $T_1$ 的写入可见性要求（$T_2$ 读取了 $b=2$ 和 $c=3$，但 $T_1$ 写入了 $b=2$ 和 $c=2$），因此不满足各自的公理要求，从而是不一致的。
+
 
 \section{本章小结}
 本章系统构建了分布式数据库一致性模型的形式化描述框架。
 首先，本章阐明在分布式环境中建立一致性模型的必要性，指出网络延迟、分区与节点故障会引入可见性偏差，从而使事务结果偏离单机直觉；一致性模型因此成为数据库与应用之间不可或缺的语义契约。
 其次，本章形式化定义事务、执行历史与快照等基本概念，并以可见性关系 $\text{VIS}$ 与仲裁关系 $\text{AR}$ 为核心建立 $(\text{VIS}, \text{AR})$ 规约框架，明确 $\text{VIS} \subseteq \text{AR}$ 这一基础约束，为后续推理提供共同语言。
 在此基础上，本章给出内部一致性、外部一致性、传递可见性、前缀一致性、无冲突性与完全可见性六条一致性公理，并据此对因果违背、破碎读、脏读、更新丢失、长分叉与写偏斜等典型异常进行形式化刻画与对照分析。
-最后，本章在公理体系上严格定义 RA、CC、PSI、PC、SI 与 SER 六种隔离级别，建立它们在一致性强度上的偏序关系，并总结其对不同异常的防御能力边界。上述框架为后续章节中分布式事务处理协议的设计、比较与正确性论证奠定了坚实基础。
+最后，本章在公理体系上严格定义 RA、CC、PSI、PC、SI 与 SER 六种隔离级别，建立它们在一致性强度上的偏序关系，并总结其对不同异常的防御能力边界。此外，本章探讨了混合事务隔离级别模型，给出了混合场景下的抽象执行一致性定义，说明了如何在统一的形式化框架下兼容并判定不同隔离级别事务的正确性。上述框架为后续章节中分布式事务处理协议的设计、比较与正确性论证奠定了坚实基础。
 
 
 
