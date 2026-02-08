@@ -379,59 +379,57 @@ $S$ 为快照函数，将键映射到其对应的值。
         },
     }
 
-    \begin{tikzpicture}[node distance=1.8cm and 1.2cm]
-        % ==================== (a) 子图 ====================
-        \begin{scope}[local bounding box=suba]
-            \node (T1a) [txbox] at (0,3.5) {$T_1[\text{CC}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-            \node (T2a) [txbox] at (0,0) {$T_2[\text{PC}]$\\read($a,1$)\\read($b,2$)\\read($c,2$)};
-            \node (T3a) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,3$)\\read($c,2$)\\write($c,3$)};
-            \node (T4a) [txbox] at (3.5,0.5) {$T_4[\text{SI}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+    \scalebox{0.72}{%
+        \begin{tikzpicture}[node distance=1.6cm and 1.1cm]
+            % ==================== (a) 子图 ====================
+            \begin{scope}[local bounding box=suba]
+                \node (T1a) [txbox] at (0,3.5) {$T_1[\text{CC}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+                \node (T2a) [txbox] at (0,0) {$T_2[\text{PC}]$\\read($a,1$)\\read($b,2$)\\read($c,2$)};
+                \node (T3a) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,3$)\\read($c,2$)\\write($c,3$)};
+                \node (T4a) [txbox] at (3.5,0.5) {$T_4[\text{SI}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-            \draw[vis] (T1a) -- (T3a) node[midway, above, vis_label] {VIS};
-            \draw[vis] (T1a) -- (T2a) node[midway, left, vis_label] {VIS};
-            \draw[vis] (T1a) -- (T4a) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-            \draw[vis] (T2a) -- (T4a) node[midway, above, vis_label] {VIS};
-            \draw[vis] (T2a) -- (T3a) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
-            \draw[vis] (T4a) -- (T3a) node[midway, right, vis_label] {VIS};
-        \end{scope}
-        \node[below=0.6cm of suba, font=\bfseries\large] {(a) $\mathcal{X}_1$ 是一致的};
+                \draw[vis] (T1a) -- (T3a) node[midway, above, vis_label] {VIS};
+                \draw[vis] (T1a) -- (T2a) node[midway, left, vis_label] {VIS};
+                \draw[vis] (T1a) -- (T4a) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+                \draw[vis] (T2a) -- (T4a) node[midway, above, vis_label] {VIS};
+                \draw[vis] (T2a) -- (T3a) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+                \draw[vis] (T4a) -- (T3a) node[midway, right, vis_label] {VIS};
+            \end{scope}
+            \node[below=0.3cm of suba, font=\bfseries\large] {(a) $\mathcal{X}_1$ 是一致的};
 
-        % ==================== (b) 子图 ====================
-        \begin{scope}[local bounding box=subb, xshift=7.8cm]
-            \node (T1b) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-            \node (T2b) [txbox] at (0,0) {$T_2[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)};
-            \node (T3b) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,2$)\\write($c,3$)};
-            \node (T4b) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+            % ==================== (b) 子图 ====================
+            \begin{scope}[local bounding box=subb, xshift=7.0cm]
+                \node (T1b) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+                \node (T2b) [txbox] at (0,0) {$T_2[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)};
+                \node (T3b) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,2$)\\write($c,3$)};
+                \node (T4b) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-            \draw[vis] (T1b) -- (T3b) node[midway, above, vis_label] {VIS};
-            \draw[vis] (T1b) -- (T2b) node[midway, left, vis_label] {VIS};
-            \draw[vis] (T1b) -- (T4b) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-            \draw[vis] (T4b) -- (T2b) node[midway, above, vis_label] {VIS};
-            \draw[vis_thick] (T2b) -- (T3b) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
-            \draw[vis] (T4b) -- (T3b) node[midway, right, vis_label] {$\overline{\text{VIS}}$};
-        \end{scope}
-        \node[below=0.6cm of subb, font=\bfseries\large] {(b) $\mathcal{X}_2$ 是一致的};
-    \end{tikzpicture}
+                \draw[vis] (T1b) -- (T3b) node[midway, above, vis_label] {VIS};
+                \draw[vis] (T1b) -- (T2b) node[midway, left, vis_label] {VIS};
+                \draw[vis] (T1b) -- (T4b) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+                \draw[vis] (T4b) -- (T2b) node[midway, above, vis_label] {VIS};
+                \draw[vis_thick] (T2b) -- (T3b) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+                \draw[vis] (T4b) -- (T3b) node[midway, right, vis_label] {$\overline{\text{VIS}}$};
+            \end{scope}
+            \node[below=0.3cm of subb, font=\bfseries\large] {(b) $\mathcal{X}_2$ 是一致的};
 
-    \vspace{0.6cm}
+            % ==================== (c) 子图 ====================
+            \begin{scope}[local bounding box=subc, xshift=14.0cm]
+                \node (T1c) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+                \node (T2c) [txbox] at (0,0) {$T_2[\text{CC}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,\textcolor{red}{3}$)};
+                \node (T3c) [txbox] at (3.5,4) {$T_3[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)\\write($c,3$)};
+                \node (T4c) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-    \begin{tikzpicture}[node distance=1.8cm and 1.2cm]
-        % ==================== (c) 子图 ====================
-        \begin{scope}[local bounding box=subc]
-            \node (T1c) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-            \node (T2c) [txbox] at (0,0) {$T_2[\text{CC}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,\textcolor{red}{3}$)};
-            \node (T3c) [txbox] at (3.5,4) {$T_3[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)\\write($c,3$)};
-            \node (T4c) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
-
-            \draw[vis] (T1c) -- (T3c) node[midway, above, vis_label] {VIS};
-            \draw[vis] (T1c) -- (T2c) node[midway, left, vis_label] {VIS};
-            \draw[vis] (T1c) -- (T4c) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-            \draw[vis] (T4c) -- (T2c) node[midway, above, vis_label] {$\overline{\text{VIS}}$};
-            \draw[vis_thick] (T3c.south west) -- (T1c.south east) node[midway, above, vis_label, sloped] {VIS};
-            \draw[vis] (T4c) -- (T3c) node[midway, right, vis_label] {VIS};
-        \end{scope}
-        \node[below=0.6cm of subc, font=\bfseries\large] {(c) $\mathcal{X}_3$ 是不一致的};
-    \end{tikzpicture}
+                \draw[vis] (T1c) -- (T3c) node[midway, above, vis_label] {VIS};
+                \draw[vis] (T1c) -- (T2c) node[midway, left, vis_label] {VIS};
+                \draw[vis] (T1c) -- (T4c) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+                \draw[vis] (T4c) -- (T2c) node[midway, above, vis_label] {$\overline{\text{VIS}}$};
+                \draw[vis_thick] (T3c.south west) -- (T1c.south east) node[midway, above, vis_label, sloped] {VIS};
+                \draw[vis] (T4c) -- (T3c) node[midway, right, vis_label] {VIS};
+            \end{scope}
+            \node[below=0.3cm of subc, font=\bfseries\large] {(c) $\mathcal{X}_3$ 是不一致的};
+        \end{tikzpicture}%
+    }
 
     \caption{混合隔离级别下抽象执行一致性示例}
     \label{fig:mixed-isolation-consistency}
