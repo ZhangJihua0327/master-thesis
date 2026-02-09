@@ -3,3 +3,60 @@
 
 \section{系统架构建模}
 我们采用一个经典的分布式数据库的系统模型，遵循客户端路由架构，这种架构被如MongoDB分布式数据库广泛使用。我们采用分片的架构，对数据被分布在多个节点上，每个节点负责存储数据的一个子集。客户端通过路由器将请求发送到相应的节点。
+
+\section{混合逻辑时钟}
+在分布式系统中，时钟（Clock）是用于刻画事件发生顺序、界定事件间时序关系的核心抽象工具，其本质是为系统中的每一个事件分配一个可比较的标识（时间戳，Timestamp），通过时间戳的序关系映射事件的发生序，为分布式一致性、事件追踪与事务排序提供基础支撑。
+
+时钟的意义是区分事件发生的先后顺序，刻画事件间的因果关系，从而为分布式系统中的一致性协议、并发控制、故障恢复等机制提供时间基础。
+对于事件 $e_1$ 和 $e_2$，如果 $e_1$ 发生在 $e_2$ 之前，我们希望通过时钟分配的时间戳 $\operatorname{TS}(e_1)$ 和 $\operatorname{TS}(e_2)$ 满足 $\operatorname{TS}(e_1) < \operatorname{TS}(e_2)$。这种时间戳的序关系使得系统能够判断事件的先后顺序，进而实现一致性保证和正确的并发控制。
+
+从理论与工程分类来看，时钟主要分为两类：一类是物理时钟（Physical Clock），基于现实世界的物理时间（如UTC时间），通过网络时间协议（NTP）、精确时间协议（PTP）等实现分布式节点间的时钟同步，为事件分配具有人类可读语义的时间戳，但受网络延迟、时钟漂移等因素影响，节点间时钟无法实现完全同步，存在固有误差且可能出现时钟回拨；另一类是逻辑时钟（Logical Clock），不依赖物理时间，仅通过节点本地计数或消息交互更新时间戳，核心目标是捕获事件间的因果依赖关系，确保具有因果关联的事件拥有可比较的时间戳，但缺乏物理时间语义，无法支撑基于物理时间的系统需求（如快照隔离、日志时间定位）。
+
+混合逻辑时钟（Hybrid Logical Clock, HLC）\cite{Kulkarni2014TR}结合了物理时钟和逻辑时钟的优点，能够在分布式系统中提供一个全局一致的时间戳。HLC 由物理时间和逻辑计数器组成，，严格遵循时钟条件，有效弥补了纯物理时钟与纯逻辑时钟的固有缺陷，能够有效地处理网络延迟和节点故障带来的时间不一致问题。
+
+一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
+\begin{equation}
+    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+\end{equation}
+它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|：
+
+\begin{algorithm}[H]
+    \caption{混合逻辑时钟管理}
+    \textbf{State:} 本地时钟 $(\text{wall}, \text{logical})$
+    \begin{algorithmic}[1]
+        \Procedure{Now}{$\text{pt}$}
+        \Comment{生成本地时间戳}
+        \If{$\text{pt} > \text{wall}$}
+        \State $\text{wall} \gets \text{pt}$
+        \State $\text{logical} \gets 0$
+        \Else
+        \State $\text{logical} \gets \text{logical} + 1$
+        \EndIf
+        \State \Return $(\text{wall}, \text{logical})$
+        \EndProcedure
+
+        \Procedure{Update}{$\text{msg}, \text{pt}$}
+        \Comment{同步远程时间戳}
+        \State $\text{old\_wall} \gets \text{wall}$
+        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+        \ElsIf{$\text{wall} = \text{old\_wall}$}
+        \State $\text{logical} \gets \text{logical} + 1$
+        \ElsIf{$\text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \text{msg.logical} + 1$
+        \Else
+        \State $\text{logical} \gets 0$
+        \EndIf
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取 本地时间、远程时间 和 当前物理时间 三者中的最大值，并相应地调整逻辑计数器。这是保证 因果关系（Happens-before） 的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC的这两个接口，在我们设计分布式数据库混合隔离级别下的事务操作语义至关重要。
+
+
+
+\section{面向隔离级别的形式语义}
+
+\section{基于\TLAPlus 形式语义验证}
+
