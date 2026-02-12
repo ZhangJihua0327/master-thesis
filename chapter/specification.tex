@@ -242,9 +242,13 @@ $S$ 为快照函数，将键映射到其对应的值。
           内部一致性公理确保事务内部的读写行为符合串行语义。例如，一个事务如果先写了某个对象再读该对象，必须能读到自己刚写入的值。这条公理保证了单事务视角的逻辑正确性。
     \item \textbf{Ext（外部一致性公理，External Consistency）}：
           外部一致性公理定义了事务如何读取其他事务写入的值。它规定，对于本事务未写入过的对象的读取（外部读取），其值取决于所有对它可见的事务中，在 AR 顺序下最新的那个事务写入的值。这条公理用于防止断裂读取（Fractured Reads）和脏读（Dirty Reads）。
+    \item \textbf{Session（会话一致性，Session）}：
+          会话一致性公理确保同一会话内的事务遵循会话顺序（SO）。即如果事务 $T_1$ 在会话中先于事务 $T_2$ 执行，则 $T_1$ 必须对 $T_2$ 可见（$T_1 \xrightarrow{\text{VIS}} T_2$）。这条公理保证了单用户视角下的操作顺序一致性。
 \end{itemize}
 
-以上两个公理是所有一致性模型的基础。若数据库系统无法满足内部一致性与外部一致性，则事务的原子性与隔离性都难以保证，系统也就无法向应用提供最基本的事务语义。除此之外，还可引入四条额外公理，以进一步刻画一致性模型在可见性传递、历史前缀与写冲突处理等方面的语义边界：
+内部一致性、外部一致性和会话公理是所有一致性模型的基础。若数据库系统无法满足内部一致性与外部一致性，或在同一个会话内，事务的执行顺序被破坏，则事务的原子性与隔离性都难以保证，系统也就无法向应用提供最基本的事务语义。
+
+除此之外，还可引入四条额外公理，以进一步刻画一致性模型在可见性传递、历史前缀与写冲突处理等方面的语义边界：
 \begin{itemize}
     \item \textbf{TransVis（传递可见性，Transitive Visibility）}：
           传递可见性公理确保如果事务 $T_1$ 对事务 $T_2$ 可见，且 $T_2$ 对事务 $T_3$ 可见，那么 $T_1$ 也必须对 $T_3$ 可见。这条公理用于防止因果关系违背（Causality Violation）。例如，Alice 发帖，Bob 看到后评论；若 Charlie 看到了 Bob 的评论，则根据传递性，Charlie 也必须能看到 Alice 的原帖。
@@ -265,6 +269,7 @@ $S$ 为快照函数，将键映射到其对应的值。
         \mathsf{Int}(T)        & \equiv \forall r \in O.\ \forall x, v.\ \bigl(r = \operatorname{read}(x, v) \land po_x^{-1}(r) \neq \emptyset\bigr)                                                                                   \\
                                & \qquad\Rightarrow \max\nolimits_{po}\bigl(po_x^{-1}(r)\bigr) = \operatorname{write}(x, v),                                                                                                            \\[0.4em]
         \mathsf{Ext}(T)        & \equiv \forall x, v.\ T \Vdash \operatorname{read}(x, v) \Rightarrow \max\nolimits_{\text{AR}}\bigl(\operatorname{VIS^{-1}}(T) \cap \operatorname{WriteTx}_x\bigr) \Vdash \operatorname{write}(x, v), \\[0.4em]
+        \mathsf{Session}(T)    & \equiv \forall T' \in \mathcal{T}.\ T' SO T \Rightarrow T' \xrightarrow{\text{VIS}} T,                                                                                                                \\[0.4em]
         \mathsf{TransVis}(T)   & \equiv \forall T', S \in \mathcal{T}.\ T' \xrightarrow{\text{VIS}} S \land S \xrightarrow{\text{VIS}} T \Rightarrow T' \xrightarrow{\text{VIS}} T,                                                    \\[0.4em]
         \mathsf{Prefix}(T)     & \equiv \forall T', S \in \mathcal{T}.\ T' \xrightarrow{\text{AR}} S \land S \xrightarrow{\text{VIS}} T \Rightarrow T' \xrightarrow{\text{VIS}} T,                                                     \\[0.4em]
         \mathsf{NoConflict}(T) & \equiv \forall T' \in \mathcal{T}.\ T' \bowtie T \land T' \xrightarrow{\text{AR}} T \Rightarrow T' \xrightarrow{\text{VIS}} T,                                                                        \\[0.4em]
@@ -277,7 +282,7 @@ $S$ 为快照函数，将键映射到其对应的值。
 基于上述一致性公理的定义，接下来我们讨论各个隔离级别的特点。为了在一致性、可扩展性和可用性之间取得平衡，现代数据库系统提供了一系列不同强度的隔离级别。这些级别根据其提供的可见性保证和所能防止的异常现象，构成了一个从最弱的“原子读”到最强的“可串行化”的层级体系。
 \\
 
-\noindent\textbf{读原子性（Read Atomic，RA）}\cite{bailis2016ramp}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 与 $\mathsf{Ext}$ 两条公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~3(a) 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
+\noindent\textbf{读原子性（Read Atomic，RA）}\cite{bailis2016ramp}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 、 $\mathsf{Ext}$ 和 $\mathsf{Session}$ 三条基础性公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~3(a) 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
 
 \noindent\textbf{因果一致性（Causal Consistency，CC）}\cite{akkoorath2016cure}在 RA 基础上增加 $\mathsf{TransVis}$ 公理，要求可见性关系 $\text{VIS}$ 具有传递性：若 $T_3$ 看到了 $T_2$，且 $T_2$ 看到了 $T_1$，则 $T_3$ 也必须看到 $T_1$。因此 CC 能排除因果违背异常。需要注意的是，CC 并不要求对同一对象的并发写进行强制排序或互斥处理，因此丢失更新（Lost Update）等写冲突相关异常仍可能发生。
 
