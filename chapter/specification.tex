@@ -303,25 +303,25 @@ $S$ 为快照函数，将键映射到其对应的值。
     \setlength{\tabcolsep}{4pt} % 减小列间距
     \begin{tabular}{c l c c c c c}
         \hline
-        $\Phi$ & Axioms                                            & \makecell{Fractured                                              \\reads} & \makecell{Causality\\violation} & \makecell{Lost\\update} & \makecell{Long\\fork} & \makecell{Write\\skew} \\
+        $\Phi$ & Axioms                                                               & \makecell{Fractured                                              \\reads} & \makecell{Causality\\violation} & \makecell{Lost\\update} & \makecell{Long\\fork} & \makecell{Write\\skew} \\
         \hline
-        RA     & $\mathsf{Int},\ \mathsf{Ext}$
-               & $\times$                                          & $\checkmark$        & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+        RA     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session}$
+               & $\times$                                                             & $\checkmark$        & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
         \midrule
-        CC     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{TransVis}$
-               & $\times$                                          & $\times$            & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+        CC     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},\ \mathsf{TransVis}$
+               & $\times$                                                             & $\times$            & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
         \midrule
-        PSI    & \makecell[l]{$\mathsf{Int},\ \mathsf{Ext},$                                                                          \\$\mathsf{TransVis},\ \mathsf{NoConflict}$}
-               & $\times$                                          & $\times$            & $\times$     & $\checkmark$ & $\checkmark$ \\
+        PSI    & \makecell[l]{$\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session}$                                                                           \\$\mathsf{TransVis},\ \mathsf{NoConflict}$}
+               & $\times$                                                             & $\times$            & $\times$     & $\checkmark$ & $\checkmark$ \\
         \midrule
-        PC     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Prefix}$
-               & $\times$                                          & $\times$            & $\times$     & $\times$     & $\checkmark$ \\
+        PC     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},\ \mathsf{Prefix}$
+               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\checkmark$ \\
         \midrule
-        SI     & \makecell[l]{$\mathsf{Int},\ \mathsf{Ext},$                                                                          \\$\mathsf{Prefix},\ \mathsf{NoConflict}$}
-               & $\times$                                          & $\times$            & $\times$     & $\times$     & $\times$     \\
+        SI     & \makecell[l]{$\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},$                                                                          \\$\mathsf{Prefix},\ \mathsf{NoConflict}$}
+               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\times$     \\
         \midrule
-        SER    & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{TotalVis}$
-               & $\times$                                          & $\times$            & $\times$     & $\times$     & $\times$     \\
+        SER    & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},\ \mathsf{TotalVis}$
+               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\times$     \\
         \hline
     \end{tabular}
 \end{table}

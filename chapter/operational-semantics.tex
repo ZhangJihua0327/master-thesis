@@ -18,40 +18,40 @@
 
 一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
 \begin{equation}
-      \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
 \end{equation}
-它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|：
+它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{alg:hlc}所示：
 
-\begin{algorithm}[H]
-      \caption{混合逻辑时钟管理}
-      \textbf{State:} 本地时钟 $(\text{wall}, \text{logical})$
-      \begin{algorithmic}[1]
-            \Procedure{Now}{$\text{pt}$}
-            \Comment{生成本地时间戳}
-            \If{$\text{pt} > \text{wall}$}
-            \State $\text{wall} \gets \text{pt}$
-            \State $\text{logical} \gets 0$
-            \Else
-            \State $\text{logical} \gets \text{logical} + 1$
-            \EndIf
-            \State \Return $(\text{wall}, \text{logical})$
-            \EndProcedure
+\begin{algorithm}[htbp]
+    \caption{混合逻辑时钟管理}
+    \textbf{State:} 本地时钟 $(\text{wall}, \text{logical})$
+    \begin{algorithmic}[1]
+        \Procedure{Now}{$\text{pt}$}
+        \Comment{生成本地时间戳}
+        \If{$\text{pt} > \text{wall}$}
+        \State $\text{wall} \gets \text{pt}$
+        \State $\text{logical} \gets 0$
+        \Else
+        \State $\text{logical} \gets \text{logical} + 1$
+        \EndIf
+        \State \Return $(\text{wall}, \text{logical})$
+        \EndProcedure
 
-            \Procedure{Update}{$\text{msg}, \text{pt}$}
-            \Comment{同步远程时间戳}
-            \State $\text{old\_wall} \gets \text{wall}$
-            \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
-            \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
-            \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
-            \ElsIf{$\text{wall} = \text{old\_wall}$}
-            \State $\text{logical} \gets \text{logical} + 1$
-            \ElsIf{$\text{wall} = \text{msg.wall}$}
-            \State $\text{logical} \gets \text{msg.logical} + 1$
-            \Else
-            \State $\text{logical} \gets 0$
-            \EndIf
-            \EndProcedure
-      \end{algorithmic}
+        \Procedure{Update}{$\text{msg}, \text{pt}$}
+        \Comment{同步远程时间戳}
+        \State $\text{old\_wall} \gets \text{wall}$
+        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+        \ElsIf{$\text{wall} = \text{old\_wall}$}
+        \State $\text{logical} \gets \text{logical} + 1$
+        \ElsIf{$\text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \text{msg.logical} + 1$
+        \Else
+        \State $\text{logical} \gets 0$
+        \EndIf
+        \EndProcedure
+    \end{algorithmic}
 \end{algorithm}
 
 \lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取 本地时间、远程时间 和 当前物理时间 三者中的最大值，并相应地调整逻辑计数器。这是保证 因果关系（Happens-before） 的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC的这两个接口，在我们设计分布式数据库混合隔离级别下的事务操作语义至关重要。
@@ -59,3 +59,4 @@
 \section{面向混合隔离级别的形式语义}
 
 
+\subsection{}
