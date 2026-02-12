@@ -2,7 +2,9 @@
 
 
 \section{系统架构建模}
-我们采用一个经典的分布式数据库的系统模型，遵循客户端路由架构，这种架构被如MongoDB分布式数据库广泛使用。我们采用分片的架构，对数据被分布在多个节点上，每个节点负责存储数据的一个子集。客户端通过路由器将请求发送到相应的节点。
+我们采用一个经典的分布式数据库的系统模型，遵循客户端路由架构，这种架构被如MongoDB分布式数据库广泛使用。MongoDB 采用分片集群（Sharded Cluster）架构，主要包含三个核心组件：分片服务器（Shard）、配置服务器（Config Server）和路由服务器（mongos）。分片服务器负责实际数据的存储；配置服务器存储集群的元数据和分片配置；路由服务器作为客户端的接入点，负责将请求路由到正确的分片上。这种架构具有卓越的水平扩展能力和高可用性。
+
+选择该架构来实现混合隔离级别数据库原型具有以下合理性：首先，客户端路由架构实现了事务协调与数据存储的解耦，便于我们在路由层或客户端灵活实现不同的事务协调协议以支持多种隔离级别；其次，其基于混合逻辑时钟（HLC）的时间戳机制为分布式事务的定序提供了天然支持，契合本文的形式化模型；最后，分片架构使得系统能够通过增加节点线性提升吞吐量，能够验证混合隔离级别在大规模分布式环境下的性能表现。
 
 \section{混合逻辑时钟}
 在分布式系统中，时钟（Clock）是用于刻画事件发生顺序、界定事件间时序关系的核心抽象工具，其本质是为系统中的每一个事件分配一个可比较的标识（时间戳，Timestamp），通过时间戳的序关系映射事件的发生序，为分布式一致性、事件追踪与事务排序提供基础支撑。
@@ -16,47 +18,44 @@
 
 一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
 \begin{equation}
-    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+      \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
 \end{equation}
 它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|：
 
 \begin{algorithm}[H]
-    \caption{混合逻辑时钟管理}
-    \textbf{State:} 本地时钟 $(\text{wall}, \text{logical})$
-    \begin{algorithmic}[1]
-        \Procedure{Now}{$\text{pt}$}
-        \Comment{生成本地时间戳}
-        \If{$\text{pt} > \text{wall}$}
-        \State $\text{wall} \gets \text{pt}$
-        \State $\text{logical} \gets 0$
-        \Else
-        \State $\text{logical} \gets \text{logical} + 1$
-        \EndIf
-        \State \Return $(\text{wall}, \text{logical})$
-        \EndProcedure
+      \caption{混合逻辑时钟管理}
+      \textbf{State:} 本地时钟 $(\text{wall}, \text{logical})$
+      \begin{algorithmic}[1]
+            \Procedure{Now}{$\text{pt}$}
+            \Comment{生成本地时间戳}
+            \If{$\text{pt} > \text{wall}$}
+            \State $\text{wall} \gets \text{pt}$
+            \State $\text{logical} \gets 0$
+            \Else
+            \State $\text{logical} \gets \text{logical} + 1$
+            \EndIf
+            \State \Return $(\text{wall}, \text{logical})$
+            \EndProcedure
 
-        \Procedure{Update}{$\text{msg}, \text{pt}$}
-        \Comment{同步远程时间戳}
-        \State $\text{old\_wall} \gets \text{wall}$
-        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
-        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
-        \ElsIf{$\text{wall} = \text{old\_wall}$}
-        \State $\text{logical} \gets \text{logical} + 1$
-        \ElsIf{$\text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \text{msg.logical} + 1$
-        \Else
-        \State $\text{logical} \gets 0$
-        \EndIf
-        \EndProcedure
-    \end{algorithmic}
+            \Procedure{Update}{$\text{msg}, \text{pt}$}
+            \Comment{同步远程时间戳}
+            \State $\text{old\_wall} \gets \text{wall}$
+            \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+            \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+            \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+            \ElsIf{$\text{wall} = \text{old\_wall}$}
+            \State $\text{logical} \gets \text{logical} + 1$
+            \ElsIf{$\text{wall} = \text{msg.wall}$}
+            \State $\text{logical} \gets \text{msg.logical} + 1$
+            \Else
+            \State $\text{logical} \gets 0$
+            \EndIf
+            \EndProcedure
+      \end{algorithmic}
 \end{algorithm}
 
 \lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取 本地时间、远程时间 和 当前物理时间 三者中的最大值，并相应地调整逻辑计数器。这是保证 因果关系（Happens-before） 的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC的这两个接口，在我们设计分布式数据库混合隔离级别下的事务操作语义至关重要。
 
+\section{面向混合隔离级别的形式语义}
 
-
-\section{面向隔离级别的形式语义}
-
-\section{基于\TLAPlus 形式语义验证}
 
