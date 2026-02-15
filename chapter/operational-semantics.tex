@@ -12,40 +12,41 @@
 
 一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
 \begin{equation}
-  \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
 \end{equation}
 它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{alg:hlc}所示：
 
 \begin{algorithm}[htbp]
-  \caption{混合逻辑时钟管理}
-  \begin{algorithmic}[1]
-    \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
-    \Procedure{Now}{$\text{pt}$}
-    \Comment{生成本地时间戳}
-    \If{$\text{pt} > \text{wall}$}
-    \State $\text{wall} \gets \text{pt}$
-    \State $\text{logical} \gets 0$
-    \Else
-    \State $\text{logical} \gets \text{logical} + 1$
-    \EndIf
-    \State \Return $(\text{wall}, \text{logical})$
-    \EndProcedure
+    \caption{混合逻辑时钟管理}
+    \label{algo:hlc}
+    \begin{algorithmic}[1]
+        \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
+        \Procedure{Now}{$\text{pt}$}
+        \Comment{生成本地时间戳}
+        \If{$\text{pt} > \text{wall}$}
+        \State $\text{wall} \gets \text{pt}$
+        \State $\text{logical} \gets 0$
+        \Else
+        \State $\text{logical} \gets \text{logical} + 1$
+        \EndIf
+        \State \Return $(\text{wall}, \text{logical})$
+        \EndProcedure
 
-    \Procedure{Update}{$\text{msg}, \text{pt}$}
-    \Comment{同步远程时间戳}
-    \State $\text{old\_wall} \gets \text{wall}$
-    \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
-    \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
-    \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
-    \ElsIf{$\text{wall} = \text{old\_wall}$}
-    \State $\text{logical} \gets \text{logical} + 1$
-    \ElsIf{$\text{wall} = \text{msg.wall}$}
-    \State $\text{logical} \gets \text{msg.logical} + 1$
-    \Else
-    \State $\text{logical} \gets 0$
-    \EndIf
-    \EndProcedure
-  \end{algorithmic}
+        \Procedure{Update}{$\text{msg}, \text{pt}$}
+        \Comment{同步远程时间戳}
+        \State $\text{old\_wall} \gets \text{wall}$
+        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+        \ElsIf{$\text{wall} = \text{old\_wall}$}
+        \State $\text{logical} \gets \text{logical} + 1$
+        \ElsIf{$\text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \text{msg.logical} + 1$
+        \Else
+        \State $\text{logical} \gets 0$
+        \EndIf
+        \EndProcedure
+    \end{algorithmic}
 \end{algorithm}
 
 \lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取 本地时间、远程时间 和 当前物理时间 三者中的最大值，并相应地调整逻辑计数器。这是保证 因果关系（Happens-before） 的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC的这两个接口，在我们设计分布式数据库混合隔离级别下的事务操作语义至关重要。
@@ -59,16 +60,16 @@
 
 
 \begin{algorithm}[htbp]
-  \newcommand{\buff}{$\text{buff}$}
-  \newcommand{\storage}{$\text{storage}$}
-  \newcommand{\hlc}{$\text{hlc}$}
-  \caption{shard protocal}
-  \label{algo:shard}
-  \begin{algorithmic}[1]
-    \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
-    \Procedure{Read}{}
-    \EndProcedure
-  \end{algorithmic}
+    \newcommand{\buff}{$\text{buff}$}
+    \newcommand{\storage}{$\text{storage}$}
+    \newcommand{\hlc}{$\text{hlc}$}
+    \caption{shard protocal}
+    \label{algo:shard}
+    \begin{algorithmic}[1]
+        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
+        \Procedure{Read}{}
+        \EndProcedure
+    \end{algorithmic}
 \end{algorithm}
 
 
@@ -76,27 +77,27 @@
 在上一章，我们提到了各个隔离级别在需要满足的公理，以集合的视角看，它们存在着包含关系，如表~\ref{tab:isolation_levels_axioms}所示。对于不同隔离级别的事务，我们需要在系统中配置不同的组件以实现相应的公理组合，从而满足隔离级别的语义要求。更高一致性的隔离级别是低一致性隔离级别的子集，在实现阶段，可以通过对操作语义的某些过程中添加一些新的限制以实现新的公理，从而满足更高隔离级别的要求。
 
 \begin{table}[htbp]
-  \centering
-  \renewcommand{\arraystretch}{1.5}
-  \caption{隔离级别及其公理组合}
-  \label{tab:isolation_levels_axioms}
-  \begin{tabular}{|l|l|l|}
-    \hline
-    \textbf{隔离级别}               & \textbf{强制满足的公理组合}                                   & \textbf{核心语义说明}        \\
-    \hline
-    \textbf{RA (Read Atomic)}   & $\text{Int} \wedge \text{Ext} \wedge \text{Session}$ & 保证原子可见性，防止断裂读。         \\
-    \hline
-    \textbf{CC (Causal)}        & $\text{RA} \wedge \text{TransVis}$                   & 保证因果一致性。               \\
-    \hline
-    \textbf{PC (Prefix)}        & $\text{RA} \wedge \text{Prefix}$                     & 保证观察到的是全局序的一致前缀。       \\
-    \hline
-    \textbf{PSI (Parallel SI)}  & $\text{CC} \wedge \text{NoConflict}$                 & 因果一致性 + 禁止丢失更新。        \\
-    \hline
-    \textbf{SI (Snapshot)}      & $\text{PC} \wedge \text{NoConflict}$                 & 经典快照隔离：一致性快照 + 禁止丢失更新。 \\
-    \hline
-    \textbf{SER (Serializable)} & $\text{SI} \wedge \text{TotalVis}$                   & 可串行化：所有前驱必须可见。         \\
-    \hline
-  \end{tabular}
+    \centering
+    \renewcommand{\arraystretch}{1.5}
+    \caption{隔离级别及其公理组合}
+    \label{tab:isolation_levels_axioms}
+    \begin{tabular}{|l|l|l|}
+        \hline
+        \textbf{隔离级别}               & \textbf{强制满足的公理组合}                                   & \textbf{核心语义说明}        \\
+        \hline
+        \textbf{RA (Read Atomic)}   & $\text{Int} \wedge \text{Ext} \wedge \text{Session}$ & 保证原子可见性，防止断裂读。         \\
+        \hline
+        \textbf{CC (Causal)}        & $\text{RA} \wedge \text{TransVis}$                   & 保证因果一致性。               \\
+        \hline
+        \textbf{PC (Prefix)}        & $\text{RA} \wedge \text{Prefix}$                     & 保证观察到的是全局序的一致前缀。       \\
+        \hline
+        \textbf{PSI (Parallel SI)}  & $\text{CC} \wedge \text{NoConflict}$                 & 因果一致性 + 禁止丢失更新。        \\
+        \hline
+        \textbf{SI (Snapshot)}      & $\text{PC} \wedge \text{NoConflict}$                 & 经典快照隔离：一致性快照 + 禁止丢失更新。 \\
+        \hline
+        \textbf{SER (Serializable)} & $\text{SI} \wedge \text{TotalVis}$                   & 可串行化：所有前驱必须可见。         \\
+        \hline
+    \end{tabular}
 \end{table}
 
 \subsection{实现内部一致性}
