@@ -14,7 +14,7 @@
 \begin{equation}
     \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
 \end{equation}
-它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{alg:hlc}所示：
+它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{algo:hlc}所示：
 
 \begin{algorithm}[htbp]
     \caption{混合逻辑时钟管理}
@@ -56,21 +56,343 @@
 
 选择该架构来实现混合隔离级别数据库原型具有以下合理性：首先，客户端路由架构实现了事务协调与数据存储的解耦，便于我们在路由层或客户端灵活实现不同的事务协调协议以支持多种隔离级别；其次，其基于混合逻辑时钟（HLC）的时间戳机制为分布式事务的定序提供了天然支持，契合本文的形式化模型；最后，分片架构使得系统能够通过增加节点线性提升吞吐量，能够验证混合隔离级别在大规模分布式环境下的性能表现。
 
-客户端主要负责接受用户请求，管理与路由服务器连接，执行负载均衡策略，并将请求路由到适当的分片服务器。路由服务器还负责维护集群的元数据缓存，以优化查询性能。分片服务器负责实际的数据存储和查询处理，支持数据的水平分片以实现高效的负载分担，除此以外还需要负责。配置服务器存储集群的配置信息和元数据，确保集群的一致性和协调性。
+客户端主要负责接受用户请求，管理与路由服务器连接，执行负载均衡策略，并将请求路由到适当的路由服务器。客户端需要维护事务到路由服务器的映射，确保同一事务的所有操作都路由到同一个路由服务器，以保证事务的一致性。如算法~\ref{algo:client-router-mgmt}所示，客户端通过后台线程持续从配置服务器拉取最新的路由服务器列表，并通过负载均衡策略为新事务选择合适的路由服务器，如~\ref{algo:client}所示。
 
+\begin{algorithm}[htbp]
+    \newcommand{\configserver}{$\text{configServer}$}
+    \newcommand{\routers}{$\text{routers}$}
+    \newcommand{\txnmap}{$\text{txnRouterMap}$}
+    \caption{客户端路由管理}
+    \label{algo:client-router-mgmt}
+    \begin{algorithmic}[1]
+        \Require 配置服务器地址 \configserver，路由服务器列表 \routers，事务路由映射 \txnmap。
+
+        \Procedure{UpdateRouterList}{}
+        \Comment{后台线程持续更新路由列表}
+        \Loop
+        \State $\text{newRouters} \gets \text{configServer}.\text{fetchRouters}()$ \Comment{从配置服务器拉取}
+        \State $\text{routers} \gets \text{newRouters}$ \Comment{更新本地路由列表}
+        \State $\text{sleep}(\Delta t)$ \Comment{定期拉取}
+        \EndLoop
+        \EndProcedure
+
+        \Procedure{SelectRouter}{$\text{txn\_id}$}
+        \Comment{为事务选择路由服务器}
+        \If{$\text{txnRouterMap}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\text{txnRouterMap}[\text{txn\_id}]$ \Comment{同一事务使用同一路由}
+        \EndIf
+        \State $\text{router} \gets \text{LoadBalance}(\text{routers})$ \Comment{负载均衡选择}
+        \State $\text{txnRouterMap}[\text{txn\_id}] \gets \text{router}$ \Comment{建立映射}
+        \State \Return $\text{router}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+在完成路由管理后，客户端通过算法~\ref{algo:client}所示的接口将事务操作转发给选定的路由服务器。
+
+\begin{algorithm}[htbp]
+    \caption{客户端事务操作}
+    \label{algo:client}
+    \begin{algorithmic}[1]
+
+        \Procedure{StartTransaction}{$\text{txn\_id}, \text{isolation\_level}$}
+        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{startTxn}(\text{txn\_id}, \text{isolation\_level})$
+        \EndProcedure
+
+        \Procedure{Read}{$\text{txn\_id}, \text{key}$}
+        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{read}(\text{txn\_id}, \text{key})$
+        \EndProcedure
+
+        \Procedure{Write}{$\text{txn\_id}, \text{key}, \text{value}$}
+        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{write}(\text{txn\_id}, \text{key}, \text{value})$
+        \EndProcedure
+
+        \Procedure{CommitOrAbort}{$\text{txn\_id}, \text{operation}$}
+        \Comment{提交或中止事务}
+        \State $\text{router} \gets \text{SelectRouter}(\text{txn\_id})$
+        \State $\text{result} \gets \text{router}.\text{operation}(\text{txn\_id})$
+        \State $\text{txnRouterMap}.\text{remove}(\text{txn\_id})$ \Comment{清理映射}
+        \State \Return $\text{result}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+配置服务器存储集群的配置信息和元数据，确保集群的一致性和协调性。它负责管理路由服务器的注册与心跳监控，维护分片信息，并响应客户端和路由服务器的元数据查询请求。如算法~\ref{algo:config}所示，配置服务器通过心跳机制维护活跃的路由服务器列表，并提供元数据的查询接口。
+
+\begin{algorithm}[htbp]
+    \newcommand{\routers}{$\text{routers}$}
+    \newcommand{\shards}{$\text{shards}$}
+    \newcommand{\metadata}{$\text{metadata}$}
+    \caption{配置服务器协议}
+    \label{algo:config}
+    \begin{algorithmic}[1]
+        \Require 路由服务器列表 \routers，分片服务器列表 \shards，元数据信息 \metadata。
+
+        \Procedure{RegisterRouter}{$\text{router\_id}, \text{address}$}
+        \Comment{路由服务器注册}
+        \State $\text{routers}[\text{router\_id}] \gets \{\text{address}, \text{lastHeartbeat}: \text{now}()\}$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Heartbeat}{$\text{router\_id}$}
+        \Comment{路由服务器心跳}
+        \If{$\text{routers}.\text{contains}(\text{router\_id})$}
+        \State $\text{routers}[\text{router\_id}].\text{lastHeartbeat} \gets \text{now}()$
+        \State \Return $\textsc{Success}$
+        \Else
+        \State \Return $\textsc{NotRegistered}$
+        \EndIf
+        \EndProcedure
+
+        \Procedure{CheckRouterHealth}{}
+        \Comment{后台线程检测路由服务器健康}
+        \Loop
+        \For{$\text{router\_id} \in \text{routers}.\text{keys}()$}
+        \If{$\text{now}() - \text{routers}[\text{router\_id}].\text{lastHeartbeat} > \text{timeout}$}
+        \State $\text{routers}.\text{remove}(\text{router\_id})$ \Comment{移除失效路由}
+        \EndIf
+        \EndFor
+        \State $\text{sleep}(\Delta t)$ \Comment{定期检测}
+        \EndLoop
+        \EndProcedure
+
+        \Procedure{FetchRouters}{}
+        \Comment{获取活跃路由服务器列表}
+        \State \Return $\text{routers}.\text{values}()$
+        \EndProcedure
+
+        \Procedure{RegisterShard}{$\text{shard\_id}, \text{address}, \text{keyRange}$}
+        \Comment{分片注册}
+        \State $\text{shards}[\text{shard\_id}] \gets \{\text{address}, \text{keyRange}\}$
+        \State $\text{metadata}.\text{updateShardInfo}(\text{shard\_id}, \text{keyRange})$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{GetShardByKey}{$\text{key}$}
+        \Comment{根据键查找所属分片}
+        \State \Return $\text{metadata}.\text{findShard}(\text{key})$
+        \EndProcedure
+
+        \Procedure{GetClusterMetadata}{}
+        \Comment{获取集群元数据}
+        \State \Return $\text{metadata}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+路由服务器作为客户端的接入点，根据配置服务器提供的信息负责将客户端请求路由到正确的分片服务器上。它需要维护事务的全局信息，包括事务开始时间戳、隔离级别以及涉及的分片集合，以便协调跨分片事务的执行。如算法~\ref{algo:router}所示，路由服务器通过混合逻辑时钟为事务分配时间戳，根据键的分布将读写请求路由到相应的分片，并在事务提交时协调所有参与分片完成两阶段提交。
+
+\begin{algorithm}[htbp]
+    \newcommand{\txninfo}{$\text{txnInfo}$}
+    \newcommand{\configserver}{$\text{configServer}$}
+    \newcommand{\hlc}{$\text{hlc}$}
+    \caption{路由服务器协议}
+    \label{algo:router}
+    \begin{algorithmic}[1]
+        \Require 事务全局信息 \txninfo，配置服务器 \configserver，混合逻辑时钟 \hlc。
+
+        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
+        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
+        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Read}{$\text{txn\_id}, \text{key}$}
+        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{NoTransaction}$ \Comment{事务不存在}
+        \EndIf
+        \State $\text{shard} \gets \text{configServer}.\text{getShardByKey}(\text{key})$ \Comment{查找分片}
+        \State $\text{txnInfo}[\text{txn\_id}].\text{shards}.\text{add}(\text{shard})$ \Comment{记录涉及分片}
+        \State $\text{ts} \gets \text{txnInfo}[\text{txn\_id}].\text{start\_ts}$
+        \State $\text{value} \gets \text{shard}.\text{read}(\text{key}, \text{txn\_id}, \text{ts})$ \Comment{转发到分片}
+        \State \Return $\text{value}$
+        \EndProcedure
+
+        \Procedure{Write}{$\text{txn\_id}, \text{key}, \text{value}$}
+        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{NoTransaction}$
+        \EndIf
+        \State $\text{shard} \gets \text{configServer}.\text{getShardByKey}(\text{key})$
+        \State $\text{txnInfo}[\text{txn\_id}].\text{shards}.\text{add}(\text{shard})$
+        \State $\text{result} \gets \text{shard}.\text{write}(\text{key}, \text{value}, \text{txn\_id})$ \Comment{转发到分片}
+        \State \Return $\text{result}$
+        \EndProcedure
+
+        \Procedure{Commit}{$\text{txn\_id}$}
+        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{NoTransaction}$
+        \EndIf
+        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+        \If{$|\text{shards}| = 1$}
+        \State $\text{result} \gets \text{shard}.\text{quickCommit}(\text{txn\_id})$ \Comment{单分片快速提交}
+        \Else
+        \State $\text{result} \gets \text{TwoPhaseCommit}(\text{txn\_id}, \text{shards})$
+        \EndIf
+        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$ \Comment{清理事务信息}
+        \State \Return $\text{result}$
+        \EndProcedure
+
+        \Procedure{TwoPhaseCommit}{$\text{txn\_id}, \text{shards}$}
+        \Comment{跨分片两阶段提交}
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{准备阶段}
+        \If{$\text{shard}.\text{prepare}(\text{txn\_id}) \neq \textsc{Success}$}
+        \For{$\text{s} \in \text{shards}$}
+        \State $\text{s}.\text{abort}(\text{txn\_id})$ \Comment{回滚所有分片}
+        \EndFor
+        \State \Return $\textsc{Conflict}$
+        \EndIf
+        \EndFor
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{提交阶段}
+        \State $\text{shard}.\text{commit}(\text{txn\_id})$
+        \EndFor
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Abort}{$\text{txn\_id}$}
+        \If{$\text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{通知所有分片中止}
+        \State $\text{shard}.\text{abort}(\text{txn\_id})$
+        \EndFor
+        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$
+        \EndIf
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+分片服务器负责实际的数据存储和查询处理，支持数据的水平分片以实现高效的负载分担。
+
+\begin{algorithm}[htbp]
+    \newcommand{\buff}{$\text{buff}$}
+    \newcommand{\storage}{$\text{storage}$}
+    \caption{分片服务器支持事务读写操作}
+    \label{algo:shard-rw}
+    \begin{algorithmic}[1]
+        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage。
+
+        \Procedure{Read}{$\text{key}, \text{txn\_id}, \text{ts}$}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
+        \EndIf
+        \If{$\text{buff}[\text{txn\_id}].\text{writeSet}.\text{contains}(\text{key})$}
+        \State \Return $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}]$ \Comment{读取本地写缓存}
+        \EndIf
+        \State $\text{value} \gets \text{storage}.\text{read}(\text{key}, \text{ts})$ \Comment{从 MVCC 读取版本}
+        \State $\text{buff}[\text{txn\_id}].\text{readSet}.\text{add}(\text{key}, \text{value}, \text{ts})$
+        \State \Return $\text{value}$
+        \EndProcedure
+
+        \Procedure{Write}{$\text{key}, \text{value}, \text{txn\_id}$}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
+        \EndIf
+        \State $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}] \gets \text{value}$ \Comment{缓存写操作}
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Delete}{$\text{key}, \text{txn\_id}$}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
+        \EndIf
+        \State $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}] \gets \textsc{Null}$ \Comment{标记删除}
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
 
 \begin{algorithm}[htbp]
     \newcommand{\buff}{$\text{buff}$}
     \newcommand{\storage}{$\text{storage}$}
     \newcommand{\hlc}{$\text{hlc}$}
-    \caption{shard protocal}
-    \label{algo:shard}
+    \caption{分片服务器支持事务提交}
+    \label{algo:shard-commit}
     \begin{algorithmic}[1]
         \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
-        \Procedure{Read}{}
+
+        \Procedure{Prepare}{$\text{txn\_id}$}
+        \Comment{两阶段提交准备阶段}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
+        \EndIf
+        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$
+        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
+        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
+        \Comment{冲突检测}
+        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
+        \State \Return $\textsc{Conflict}$ \Comment{存在读写冲突}
+        \EndIf
+        \EndFor
+        \State $\text{buff}[\text{txn\_id}].\text{preparedTs} \gets \text{commit\_ts}$ \Comment{记录准备时间戳}
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Commit}{$\text{txn\_id}$}
+        \Comment{两阶段提交的提交阶段}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{Success}$
+        \EndIf
+        \State $\text{commit\_ts} \gets \text{buff}[\text{txn\_id}].\text{preparedTs}$ \Comment{使用准备时的时间戳}
+        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
+        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
+        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
+        \EndFor
+        \State $\text{buff}.\text{remove}(\text{txn\_id})$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Abort}{$\text{txn\_id}$}
+        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
+        \State \Return $\textsc{Success}$
         \EndProcedure
     \end{algorithmic}
 \end{algorithm}
+
+
+在分布式事务处理中，跨分片事务通常需要采用两阶段提交协议（2PC）来保证原子性，但这会引入额外的协调开销和延迟。针对单分片事务这一常见场景，我们设计了“快速提交（QuickCommit）”优化机制。
+
+“快速提交” 的核心思想是：当路由服务器检测到一个事务的所有读写操作仅涉及单个分片时，无需执行完整的两阶段提交流程，而是直接由该分片独立完成冲突检测和提交决策。这种优化避免了准备阶段的额外网络往返，将提交延迟从原本的两轮网络通信降低为一轮，显著提升了单分片事务的性能。
+
+具体实现如算法~\ref{algo:quick-commit}所示。路由服务器在 Commit 过程中根据事务涉及的分片数量选择提交策略：当 $|\text{shards}| = 1$ 时，直接调用该分片的 \texttt{quickCommit} 接口。在分片服务器端，QuickCommit 过程将冲突检测和数据持久化合并在一次调用中完成，获取提交时间戳后立即执行冲突检测，若无冲突则直接将写集持久化到存储引擎，避免了两阶段提交中 Prepare 阶段的状态保存和后续的 Commit 阶段调用。
+
+\begin{algorithm}[htbp]
+    \newcommand{\buff}{$\text{buff}$}
+    \newcommand{\storage}{$\text{storage}$}
+    \newcommand{\hlc}{$\text{hlc}$}
+    \caption{QuickCommit 快速提交优化}
+    \label{algo:quick-commit}
+    \begin{algorithmic}[1]
+        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
+
+        \Procedure{QuickCommit}{$\text{txn\_id}$}
+        \Comment{分片服务器快速提交}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
+        \EndIf
+        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{获取提交时间戳}
+        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
+        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
+        \Comment{冲突检测}
+        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
+        \State \Call{Abort}{$\text{txn\_id}$}
+        \State \Return $\textsc{Conflict}$
+        \EndIf
+        \EndFor
+        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
+        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
+        \Comment{持久化写集}
+        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
+        \EndFor
+        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+这一优化在实际系统中具有重要意义。根据经验观察，分布式数据库中大部分事务仅访问单个分片的数据，QuickCommit 机制能够显著降低这些事务的提交延迟，同时保持跨分片事务的正确性保证。
 
 
 \section{面向混合隔离级别的形式语义}
