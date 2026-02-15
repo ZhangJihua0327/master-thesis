@@ -32,10 +32,6 @@
   }%
 }
 
-% chapter 3
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-\usepackage{etoolbox}
 
 % 算法命令定义
 \algrenewcommand\textproc{}
@@ -49,8 +45,14 @@
 \renewcommand{\Procedure}[2]{\vspace{0.2em}\OriginalProcedure{\textsc{#1}}{#2}}
 \renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.2em}}
 
+\let\OriginalFunction\Function
+\let\OriginalEndFunction\EndFunction
+\renewcommand{\Function}[2]{\vspace{0.2em}\OriginalFunction{\textsc{#1}}{#2}}
+\renewcommand{\EndFunction}{\OriginalEndFunction\vspace{0.2em}}
+
 % 算法行距设置
 \AtBeginEnvironment{algorithmic}{\setlength{\baselineskip}{15pt}}
+
 
 
 % 定义绘图样式
