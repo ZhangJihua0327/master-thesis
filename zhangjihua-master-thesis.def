@@ -155,8 +155,8 @@
 % 目录自身是否显示在目录条目中
 \njusetup{
     tableofcontents/toc-entry = true,
-    listoffigures/toc-entry   = true,
-    listoftables/toc-entry    = true
+    % listoffigures/toc-entry   = true,
+    % listoftables/toc-entry    = true
 }
 
 % 为目录中的章标题添加引导线
