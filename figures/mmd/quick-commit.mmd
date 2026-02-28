@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Client
+    participant Router as 全局协调者 (Router)
+    participant Shard1 as 参与数据分片 (Shard)
+    
+    Note over Client, Shard1: 场景 A: 跨分片事务 (标准两阶段提交)
+    Client->>Router: 提交跨片事务
+    Router->>Shard1: 阶段 1: RPC Prepare(TxID)
+    Shard1->>Shard1: 校验、写锁获取、写入 Pending 状态
+    Shard1-->>Router: 返回 VOTE_COMMIT
+    Router->>Shard1: 阶段 2: RPC Commit(TxID, commitTime)
+    Shard1->>Shard1: ConfirmPending 固化数据、清理锁和缓存
+    Shard1-->>Router: OK
+    Note left of Router: 至少需要 2 轮以上的 RPC 协商延迟
+    
+    Note over Client, Shard1: =========================================
+    
+    Note over Client, Shard1: 场景 B: 单分片事务 (QuickCommit 提交加速)
+    Client->>Router: 提交单片事务
+    Router->>Shard1: RPC QuickCommit(TxID, isoLevel)
+    Note over Shard1: Shard 内部直接完成闭环:<br>1. CAS 乐观/悲观版本校验冲突<br>2. 越过 Pending 直接写 MVCC<br>3. 原地释放锁和本地缓存记录
+    Shard1-->>Router: OK (返回本地决议时间)
+    Note left of Router: 无需 2PC 协商，仅 1 次 RPC 即完成提交，极大降低延迟

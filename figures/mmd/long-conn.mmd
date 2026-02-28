@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant Shard as 数据分片 (Shard节点)
+    participant Router as 协调者/配置中心 (Router节点)
+
+    Note over Shard, Router: 阶段一：长连接通道建立
+    Shard->>Router: 发起 Streaming RPC 调用 (WatchConfig)
+    Router-->>Shard: 协商成功，保持双向长连接不断开
+
+    Note over Shard, Router: 阶段二：心跳保活与状态监控
+    loop 周期性 KeepAlive
+        Shard->>Router: PING / 汇报本地负载状态与时钟
+        Router-->>Shard: PONG
+    end
+
+    Note over Router: 阶段三：配置变更与实时流式推送
+    Note right of Router: 管理员更新分片映射/全局时钟规则
+    Router->>Router: 触发变更事件，生成最新配置版本
+    Router--)Shard: [流式双向通道] 主动推送异步 Config Meta
+    Shard->>Shard: 内存热加载配置，原子更新本地路由引擎
+    Shard-->>Router: ACK (返回配置应用成功确认)

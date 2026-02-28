@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant Tx1 as 事务 A (写入方)
+    participant Shard as Shard (MVCC Store)
+    participant Tx2 as 事务 B (读取方)
+    
+    Note over Tx1, Shard: 事务 A 进入 2PC Prepare 阶段
+    Tx1->>Shard: Prepare()
+    Shard->>Shard: 分配 prepareTime (假设 T=10)
+    Shard->>Shard: MVCC 写入带 Pending 标记的临时版数据
+    Shard-->>Tx1: 预备成功 (返回 VOTE_COMMIT)
+    
+    Note over Tx2, Shard: Visibility Hole 场景：并发访问
+    Tx2->>Shard: TxRead(snapshotTime=11)
+    Note over Shard: 快照时间 11 >= prepareTime 10<br/>发现目标受阻于 Pending 标记
+    Shard-->>Tx2: 拦截读取并抛出 ErrPendingRead 
+    Note right of Tx2: 阻止 TxB 读取到早于 T=10 的旧版本<br/>调用方因此阻塞或重试，防范线性一致性被破坏
+    
+    Note over Tx1, Shard: 事务 A 进入 2PC Commit 阶段
+    Tx1->>Shard: Commit(commitTime=12)
+    Shard->>Shard: 执行 ConfirmPending() 去除 Pending 标记
+    Shard-->>Tx1: 提交完成 (数据正式可见)

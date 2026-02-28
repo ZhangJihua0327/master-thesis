@@ -1,0 +1,76 @@
+flowchart LR
+    direction LR
+    
+    User["用户 (User)"]
+    DBA["数据库管理员 (DBA)"]
+    
+    subgraph TxnControl["事务控制"]
+        direction TB
+        UC_Begin["开启事务 (Begin)"]
+        UC_Isolation["选择隔离级别"]
+        UC_Commit["提交 (Commit)"]
+        UC_Abort["中止 (Abort)"]
+    end
+    
+    subgraph DataOps["数据操作"]
+        direction TB
+        UC_Read["读取 (Read)"]
+        UC_Write["写入 (Write)"]
+        UC_Delete["删除 (Delete)"]
+    end
+    
+    subgraph Config["配置设置"]
+        direction TB
+        UC_ConnDuration["连接持续时间"]
+        UC_LBStrategy["负载均衡策略"]
+        UC_TxnTimeout["最长事务时间"]
+        UC_RetryPolicy["重试策略"]
+    end
+    
+    subgraph System["系统支撑"]
+        direction TB
+        UC_Validate["校验事务状态"]
+        UC_Status["查看集群状态"]
+    end
+
+    %% 用户连接事务控制、数据操作、系统支撑
+    User --> TxnControl
+    User --> DataOps
+    User --> System
+
+    %% 数据库管理员连接配置设置
+    DBA --> Config
+
+    %% 事务内部逻辑
+    UC_Isolation -.-> UC_Begin
+    UC_Begin ~~~ UC_Commit
+    UC_Begin ~~~ UC_Abort
+    
+    %% 数据操作依赖校验
+    UC_Read -.-> UC_Validate
+    UC_Write -.-> UC_Validate
+    UC_Delete -.-> UC_Validate
+    
+    %% 提交/中止也依赖校验
+    UC_Commit -.-> UC_Validate
+    UC_Abort -.-> UC_Validate
+    
+    %% 配置项与管理员关联
+    UC_ConnDuration -.-> DBA
+    UC_LBStrategy -.-> DBA
+    UC_TxnTimeout -.-> DBA
+    UC_RetryPolicy -.-> DBA
+
+    %% 样式定义
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style DBA fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style UC_Isolation fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,stroke-dasharray:5 5
+    style UC_Validate fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray:5 5
+    style UC_ConnDuration fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style UC_LBStrategy fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style UC_TxnTimeout fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style UC_RetryPolicy fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style TxnControl fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px
+    style DataOps fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px
+    style Config fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px
+    style System fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px

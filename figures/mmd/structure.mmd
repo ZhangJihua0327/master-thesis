@@ -1,0 +1,79 @@
+flowchart TB
+    %% 角色层
+    subgraph Roles["角色层"]
+        User["用户"]
+        DBA["数据库管理员"]
+    end
+
+    %% 客户端层
+    subgraph ClientLayer["客户端层"]
+        Console["Console 客户端"]
+        LB["负载均衡模块"]
+        MetaCache["元数据缓存"]
+        ConnPool["连接池管理"]
+    end
+
+    %% 配置层
+    subgraph ConfigLayer["配置层"]
+        Config["配置服务器"]
+        MetaDB[("元数据数据库")]
+    end
+
+    %% 路由层
+    subgraph RouterLayer["路由层"]
+        Router1["Router 节点 1"]
+        Router2["Router 节点 2"]
+    end
+
+    %% 分片层
+    subgraph ShardLayer["分片层"]
+        Shard1["Shard 节点 1"]
+        Shard2["Shard 节点 2"]
+        Shard3["Shard 节点 3"]
+        Shard4["Shard 节点 4"]
+    end
+
+    %% 角色到客户端连接
+    User --> Console
+    DBA --> Console
+
+    %% 客户端内部模块
+    Console --- LB
+    Console --- MetaCache
+    Console --- ConnPool
+
+    %% 客户端到 Config Server (长连接)
+    ConnPool ==>|长连接 | Config
+    Config --- MetaDB
+
+    %% 客户端到 Router (负载均衡)
+    LB --> Router1
+    LB --> Router2
+
+    %% Router 到 Shard (长连接 - 全连接表示任意路由可访问任意分片)
+    Router1 ==>|长连接 | Shard1
+    Router1 ==>|长连接 | Shard2
+    Router1 ==>|长连接 | Shard3
+    Router1 ==>|长连接 | Shard4
+    Router2 ==>|长连接 | Shard1
+    Router2 ==>|长连接 | Shard2
+    Router2 ==>|长连接 | Shard3
+    Router2 ==>|长连接 | Shard4
+
+    %% 样式定义
+    style Roles fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style ClientLayer fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style ConfigLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style RouterLayer fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style ShardLayer fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    style User fill:#ffffff,stroke:#333,stroke-width:1px
+    style DBA fill:#ffffff,stroke:#333,stroke-width:1px
+    style Console fill:#ffffff,stroke:#333,stroke-width:1px
+    style Config fill:#ffffff,stroke:#333,stroke-width:1px
+    style Router1 fill:#ffffff,stroke:#333,stroke-width:1px
+    style Router2 fill:#ffffff,stroke:#333,stroke-width:1px
+    style Shard1 fill:#ffffff,stroke:#333,stroke-width:1px
+    style Shard2 fill:#ffffff,stroke:#333,stroke-width:1px
+    style Shard3 fill:#ffffff,stroke:#333,stroke-width:1px
+    style Shard4 fill:#ffffff,stroke:#333,stroke-width:1px

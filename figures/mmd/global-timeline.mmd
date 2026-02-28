@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant Client
+    participant Router as 全局协调者 (Router)
+    participant Shard as 数据分片 (Shard)
+    
+    Client->>Router: 发起全局事务
+    activate Router
+    Router->>Router: 生成全局事务 TxID <br/> 获取全局快照时间戳 (snapshotTime)
+    Router->>Shard: TxStart(TxID, isoLevel, snapshotTime)
+    activate Shard
+    Shard->>Shard: 根据隔离级别计算并同步本地HLC
+    Note over Shard: 不立刻创建 TxBuffer<br>采用懒加载(Lazy Load)以节省内存
+    Shard-->>Router: 返回本地时钟状态
+    deactivate Shard
+    Router-->>Client: 事务初始化成功
+    deactivate Router

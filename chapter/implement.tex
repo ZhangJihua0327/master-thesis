@@ -48,7 +48,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=1.0\textwidth]{figures/usercase.pdf}
+    \includegraphics[width=1.0\textwidth]{figures/usercase_m.pdf}
     \caption{系统用例图}
     \label{fig:usercase}
 \end{figure}
@@ -121,19 +121,36 @@
 节点间通信采用异步 I/O 模型（如 RPC 或 TCP 长连接），以减少网络通信开销。消息定义采用 Protobuf 等序列化格式，确保高效传输。
 
 \section{实现}
-\subsection{通信协议与长连接管理}
+\subsection{基于高性能RPC的底层通信与长连接配置同步机制}
+
+在分布式数据库系统中，协调者（Router）与底层的各个存储分片（Shard）之间存在着高频且密集的内部通信。为了打破网络I/O带来的延迟瓶颈，系统底层摒弃了传统的 HTTP RESTful 架构，全面采用了基于 \lstinline|Protobuf|（如 \lstinline|shardpb| 包所示）的高性能 RPC 框架作为跨节点的通信基座。
+
+使用高性能 RPC 协议具有诸多显著的架构优势：首先，\lstinline|Protobuf| 采用紧凑的二进制编码格式，其序列化与反序列化速率远超 JSON 等文本协议，极大压缩了事务在预备（Prepare）、提交（Commit）以及快速提交（QuickCommit）链路中的请求负载；其次，底层的 RPC 框架依托 HTTP/2 协议的多路复用（Multiplexing）机制，允许海量并发事务的 RPC 请求共享同一条底层 TCP 物理链路，彻底消除了频繁三次握手带来的网络开销，并有效规避了队头阻塞（Head-of-Line Blocking）问题。
+
+在事务处理的数据面之外，集群控制面中全局路由表、分片拓扑状态以及隔离级别元数据的同步同样至关重要。为了使分片节点能够以极低延迟感知集群状态变更，系统在配置同步链路中抛弃了传统的客户端定时轮询（Polling）模型，转而引入了基于流式 RPC（Streaming RPC）的长连接实时主动推送机制，图~\ref{fig:config-sync}展示了其时序图。
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/long-conn_m.pdf}
+    \caption{长连接配置同步示意图}
+    \label{fig:config-sync}
+\end{figure}
+
+长连接配置同步策略具备极为突出的优势：其一，实现了配置状态的“毫秒级”触达。当全局元数据发生变更时，Router 可以利用常驻的下行数据流通路，主动将增量或全量配置即时下推至各个 Shard 节点，彻底杜绝了轮询机制带来的时间窗口延迟以及无变更时的无效探测网络损耗。其二，该长连接通道天然兼具心跳保活（KeepAlive）的探针功能。在实时下发配置的同时，节点间的 Ping-Pong 心跳使得 Router 能够极度灵敏地捕捉到某个底层分片的宕机或网络割裂异常，进而快速在协调者端触发路由重定向与故障摘除（Failover），从架构底层夯实了分布式事务系统运行的极高可用性与状态一致性。
+
+
 
 \subsection{存储分片与分布式事务的核心代码实现}
 
 在分布式数据库架构中，数据分片（Shard）组件不仅承担着数据实例的物理存储与多版本管理责任，同时也是执行全局或局部事务、保障隔离级别的核心流转节点。系统内部通过 \lstinline|shard| 包下的 \lstinline|Shard| 结构体实现了对底层状态机的封装。本小节将从高维角度对分片内多版本读写引擎、事务状态管理、两阶段提交（2PC）的可见性缺陷修复以及单分片优化机制的实现细节展开深入论述。
 
 \subsubsection{事务操作信息的分层与局部化管理}
-本系统采用了“全局协调计算，局部状态下推”的事务信息管理范式。在事务生命周期初始化阶段（\lstinline|TxStart|），事务的全局元数据（如事务ID、隔离级别和全局快照时间戳 \lstinline|snapshotTime|）由协调者（Router）统一获取并下发。这种设计能够让不同分片共享同一个全局时间基准，进而支持前缀一致性（PC）、快照隔离（SI）以及严格可串行化（SER）。
+本系统采用了“全局协调计算，局部状态下推”的事务信息管理范式。在事务生命周期初始化阶段（\lstinline|TxStart|），事务的全局元数据（如事务ID、隔离级别和全局快照时间戳 \lstinline|snapshotTime|）由协调者（Router）统一获取并下发。这种设计能够让不同分片共享同一个全局时间基准，进而支持前缀一致性（PC）、快照隔离（SI）以及严格可串行化（SER）。图~\ref{fig:global-timeline} 展示了全局事务信息的分发与下推流程，协调者在事务开始时通过 RPC 将全局元数据广播至所有相关分片，确保每个参与者节点都能基于同一时间线进行版本控制和并发调度。
 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/global-timeline.png}
+    \includegraphics[width=0.8\textwidth]{figures/global-timeline_m.pdf}
     \caption{组件交互时序图}
     \label{fig:global-timeline}
 \end{figure}
@@ -150,26 +167,39 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/2pc-hole.png}
+    \includegraphics[width=0.9\textwidth]{figures/2pc-hole_m.pdf}
     \caption{两阶段提交可见性漏洞示意图}
     \label{fig:2pc-hole}
 \end{figure}
 
-本组件借助未决状态（Pending Status）与时间戳推进解决了该漏洞：系统在 \lstinline|Prepare| 阶段，根据混合逻辑时钟（HLC）派生出本地的预备时间 \lstinline|prepareTime|。此时并未直接覆盖老数据，而是调用 \lstinline|store.Put| 打上 Pending 标记以及临时版本号。这一预写行为充当了并发读操作的前向屏障：倘若并发读查询的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$ 并且遇到了 Pending 标位，底层将抛出 \lstinline|ErrPendingRead|。这一拦截行为促使过早发起读取操作的调用方陷入阻塞或执行安全重试。直至最终协调者下达任务并在 \lstinline|Commit| 函数内通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将版本信息实化确立，系统的时钟推进即可闭环，可见性漏洞得以彻底消除。
+图~\ref{fig:2pc-hole}展示了本组件如何解决两阶段提交可见性漏洞的解决方式。本组件借助未决状态（Pending Status）与时间戳推进解决了该漏洞：系统在 \lstinline|Prepare| 阶段，根据混合逻辑时钟（HLC）派生出本地的预备时间 \lstinline|prepareTime|。此时并未直接覆盖老数据，而是调用 \lstinline|store.Put| 打上 Pending 标记以及临时版本号。这一预写行为充当了并发读操作的前向屏障：倘若并发读查询的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$ 并且遇到了 Pending 标位，底层将抛出 \lstinline|ErrPendingRead|。这一拦截行为促使过早发起读取操作的调用方陷入阻塞或执行安全重试。直至最终协调者下达任务并在 \lstinline|Commit| 函数内通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将版本信息实化确立，系统的时钟推进即可闭环，可见性漏洞得以彻底消除。
 
 \subsubsection{事务降级与单分片快速提交(QuickCommit)优化}
-当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销。
+当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销，如图~\ref{fig:quick-commit-implementation}。
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/quick-commit.png}
+    \includegraphics[width=0.8\textwidth]{figures/quick-commit_m.pdf}
     \caption{组件交互时序图}
-    \label{fig:global-timeline}
+    \label{fig:quick-commit-implementation}
 \end{figure}
 
 在 \lstinline|QuickCommit| 的实现逻辑中，由于剔除了 \lstinline|Prepare| 阶段，事务的操作直接收敛为单次原子变更：引擎首先基于 \lstinline|clock.Tick()| 获取即时的决议时间；随后的 CAS 校验模块针对 PSI/SI 以及 SER 隔离级别执行乐观并发验证，确保持有缓冲区数据的 \lstinline|OriginalVersion| 仍然是当前系统中的最新版本以防覆盖写入。在通过版本校验且获取必要的本地写锁之后，\lstinline|QuickCommit| 将直接跳过 Pending 预写入流程，把缓冲池内的数据带有完整的 \lstinline|commitTime| 非挂起标志（将 pending 设为 \lstinline|false|，原版本置为 \lstinline|0|）径直向 MVCC 底层固化。由于校验、写入、提交与释放锁在单一分片层级形成了一个闭环，在保障 ACID 语义不被破坏的前提下，极大提升了单分片事务的并发吞吐能力。
 
 \subsection{路由节点事务状态机实现}
 
-\subsection{系统容错与可观测性}
+\subsection{系统日志与操作可观测性的多维实现}
+
+分布式数据库的性能调优与架构论证高度依赖于底层运行状态的透明化。本系统在分片（Shard）组件中内置了结构化的操作日志流（\lstinline|OpLog| 与 \lstinline|NoOpLog| 的灵活切换），并在事务执行的核心路径上无侵入地埋点了多维度的时间戳与状态指标。以此为基础，系统通过暴露核心指标构建了完整的可观测性监控体系，旨在以详实的实测数据支撑并验证系统在并发调度上的架构优势。
+
+本项目的一个核心论证目标在于“探究混合隔离级别相比单一隔离级别在执行性能上的优势”。为了使这一命题可被量化，可观测性层面进行了针对性的精细粒度设计：
+系统中每一阶段的生命周期事件（包括跨分片的 \lstinline|Prepare| 和 \lstinline|Commit|，以及单分片优化的 \lstinline|QuickCommit|）均会显式记录其绑定的隔离级别（\lstinline|IsolationLevel|）元数据以及对应的操作耗时（RRT, Round-Trip Time）。不仅如此，系统还通过 \lstinline|LockManager| 精确记录了高并发场景下悲观锁（尤其是 SER 隔离级别引发的共享读锁与排他写锁）排队阶段的跨事务真实锁等待耗时（Lock Wait Time）；同时在乐观并发控制（如 SI 级别）通过版本比对的 CAS 执行域内，也对因写写冲突导致回滚（Abort Rate）和触发由于遇到 Pending 标志而被异常拦截的读取（\lstinline|ErrPendingRead| 拦截率）进行了频率统计。
+
+通过对上述多源探针数据的采集与聚合并引入可视化监控大盘，系统能够精确重现各种并发负载下的微观执行轨迹。实测大盘直观地证实了论点：当业务流量引入混合隔离负载——即将金融级核心链路配置为严格可串行化（SER），而将后台批处理与只读分析放宽至快照隔离（SI）或前缀一致性（PSI）时，依靠底层 MVCC 引擎非阻塞的快照历史版本读取机制，可以有效规避 SER 隔离级别因强制加锁而带来的锁争用与队伍积压。客观的基准测试监控数据切实验证了，混合隔离架构不仅以极细粒度地保障了核心业务的事务串行安全性，更凭借低级别隔离的并发读取打破了全库极严管治的“性能护城河”，显著缩小了读写排队开销，使得整体分布式集群系统吞吐率（TPS）和请求长尾延迟（P99 Latency）获得了实质性的优化与飞跃。
 
 \section{本章小结}
+
+本章详细阐述了用于验证混合隔离级别性能优势的分布式数据库原型系统的设计与实现过程。首先，通过需求分析确立了系统在基本数据读写、分布式集群管理、跨分片事务处理等方面的核心功能，重点明确了对并发提交（PC）、并行快照隔离（PSI）、快照隔离（SI）和可串行化（SER）四种隔离级别混合运行的系统级支持。随后，在系统总体架构设计阶段，确立了包含路由节点、配置节点和分片节点的无共享（Shared-nothing）架构，并详细设计了全内存的多版本并发控制（MVCC）存储引擎机制与基于混合逻辑时钟（HLC）的分布式事务并发控制协议。
+
+在系统核心模块的高效工程实现环节，本章深入剖析了底层关键技术点的落地细节：采用了基于 Protobuf 的高性能流式 RPC 框架与长连接配置同步机制，打破了集群状态通信与协同的网络延迟瓶颈；在分布式存储分片内部，实现了事务状态信息的局部化下推与无锁化的多版本请求流转，借助未决状态（Pending Status）时钟推进机制彻底消除了两阶段提交（2PC）中的可见性漏洞（Visibility Hole）；同时，针对执行域较小的单分片事务引入了无 Prepare 阶段的快速提交（QuickCommit）优化路径，大幅提升了局部事务并行度。最后，系统在核心路径上构建了覆盖锁等待、处理耗时与冲突回滚等多维度的可观测性监控探针。本章所述的原型系统落地，从工程和架构角度为后续章节全面评测和论证混合隔离级别在提升集群并发吞吐量与降低长尾读写延迟方面的优势，提供了坚实的实验测试基座。
+
+
