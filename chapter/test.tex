@@ -1,1 +1,49 @@
 \chapter{基于数据库原型的测试与验证}
+本文中的数据库原型基于本地和公有云环境进行混合隔离级别操作语义的性能测试，以验证其相较于单一隔离级别操作语义在性能上的优势。本章将介绍测试环境的搭建和配置，引入测试用例集，并基于测试集合的测试结果进行分析。
+
+\section{测试环境概述}
+数据库原型系统基于Golang进行开发，我们使用Docker容器来模拟分布式数据库的运行环境，测试环境包括本地环境和公有云环境两部分。测试时，集群使用两种规模配置：小规模下使用2个Router节点和4个Shard节点，大规模下使用4个Router节点和8个Shard节点。因为Config节点的集群化部署的意义在于提高系统的容灾能力，对性能的影响较小。因此，对于两种规模的测试，在测试中都只部署单一Config节点。
+
+在本地环境中，以便于快速部署和测试。测试环境的配置如表\ref{tab:local-env-config}所示。
+
+\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.25}
+    \caption{本地测试环境配置}
+    \label{tab:local-env-config}
+    \begin{tabular}{c c}
+        \toprule
+        组件            & 配置参数                                    \\
+        \midrule
+        处理器 (CPU)     & AMD Ryzen 5 5600X (6 Cores, 12 Threads) \\
+        内存 (RAM)      & 36GB DDR4 3600MHz                       \\
+        操作系统 (OS)     & Windows 11 Home 25H2                    \\
+        容器资源限制        & 1 vCPU, 2GB RAM                         \\
+        编程语言 (Golang) & 1.24-alpine                             \\
+        容器基础镜像        & alpine:3.19                             \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+在公有云环境中，我们使用腾讯云提供的云服务器实例作为宿主机，同样基于Docker进行容器化部署。每个容器的资源限制与本地环境保持一致，即1 vCPU和2GB内存。为了模拟真实的跨可用区部署场景，我们将Router和Shard节点分散部署在不同的可用区中。具体地，每个可用区（Availability Zone）部署1个Router节点和2个Shard节点，一个Router和一个Shard部署在一个宿主机上，另外一个Shard部署在同一个可用区内的另一个宿主机上，以保证系统的高可用性和容灾能力。大规模测试（4 Router, 8 Shard）将跨越4个可用区，而小规模测试（2 Router, 4Shard）将部署在2个可用区内。云环境的详细配置如表\ref{tab:cloud-env-config}所示。
+
+\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.25}
+    \caption{公有云测试环境配置}
+    \label{tab:cloud-env-config}
+    \begin{tabular}{c c}
+        \toprule
+        组件     & 配置参数                             \\
+        \midrule
+        云服务提供商 & 腾讯云 (Tencent Cloud)              \\
+        实例规格   & 标准型S5 (2 vCPU, 4GB RAM)          \\
+        操作系统   & Ubuntu 20.04 LTS                 \\
+        部署方式   & Docker 容器化部署                     \\
+        容器资源限制 & 1 vCPU, 2GB RAM                  \\
+        网络拓扑   & 跨可用区部署 (1 Router + 2 Shard / AZ) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
