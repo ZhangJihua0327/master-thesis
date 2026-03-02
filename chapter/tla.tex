@@ -26,11 +26,10 @@ TLC既是对\TLAPlus 规约的模型检查工具，也是一个面向规约的�
 TLC可以通过使用超过32个计算机线程以获得近乎线性的加速。它可以通过在分布式部署的计算机网络上运行来进一步加速模型检查，并提供在云系统上的轻松部署。
 
 \section{基于 \TLAPlus 的混合隔离级别验证架构}
-\label{sec:verification_framework}
 
-在前文中，我们已经介绍了 \TLAPlus 规范语言及 TLC 模型检查器的基本概念。虽然 \TLAPlus 非常擅长描述并发系统的状态机，但对于复杂的现代分布式数据库而言，如果仅仅通过硬编码去枚举各种隔离级别的冲突检查规则，模型将变得异常庞大且难以维护。
+在前文中，我们已经介绍了 \TLAPlus 规范语言及 TLC 模型检查器的基本概念。
 
-受到近期数据库形式化建模研究的启发，我们在本章提出了一种解耦的验证架构：首先构建一个通用的、记录详细操作历史的底层数据库操作引擎（Operational Engine），然后在此之上提取抽象执行图（Abstract Execution），最后通过前文定义的声明式数学公理（Axiomatic Framework）来旁路验证（Bypass Check）系统状态。这种设计使得我们的 \texttt{MixedIsolation} 模块可以作为一个黑盒引擎，无缝接入各类基准测试进行快速验证。
+我们在本章提出了一种解耦的验证架构：首先构建一个通用的、记录详细操作历史的底层数据库操作引擎（Operational Engine），然后在此之上提取抽象执行图（Abstract Execution），最后通过前文定义的声明式数学公理（Axiomatic Framework）来旁路验证（Bypass Check）系统状态。这种设计使得我们的 \texttt{MixedIsolation} 模块可以作为一个黑盒引擎，无缝接入各类基准测试进行快速验证。
 
 \subsection{操作语义的 \TLAPlus 状态机建模}
 \label{subsec:operational_semantics}

@@ -1,1 +1,13 @@
 \chapter{\TLAPlus }
+
+\newlength{\temptrim}
+\setlength{\temptrim}{0.05\paperheight}
+
+\foreach \i in {1,...,7} {
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.9\textwidth, trim=0 \temptrim 0 0, clip]{figures/tla/MixedIsolation-\i-crop.pdf}
+            \caption{TLA+ Spec part \i}
+            \label{fig:tla-spec-\i}
+        \end{figure}
+    }
