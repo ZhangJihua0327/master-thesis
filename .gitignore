@@ -329,4 +329,5 @@ TSWLatexianTemp*
 *zhangjihua-master-thesis.pdf
 
 *_m.pdf
-# Generated PDF figures from codecode/*.pdf
+# Generated PDF figures from code
+figures/code/*.pdf

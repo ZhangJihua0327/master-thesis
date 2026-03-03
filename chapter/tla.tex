@@ -29,96 +29,34 @@ TLC可以通过使用超过32个计算机线程以获得近乎线性的加速。
 
 在前文中，我们已经介绍了 \TLAPlus 规范语言及 TLC 模型检查器的基本概念。
 
-我们在本章提出了一种解耦的验证架构：首先构建一个通用的、记录详细操作历史的底层数据库操作引擎（Operational Engine），然后在此之上提取抽象执行图（Abstract Execution），最后通过前文定义的声明式数学公理（Axiomatic Framework）来旁路验证（Bypass Check）系统状态。这种设计使得我们的 \texttt{MixedIsolation} 模块可以作为一个黑盒引擎，无缝接入各类基准测试进行快速验证。
+在本节中，我们将展示如何利用 \TLAPlus 来构建一个针对混合隔离级别的验证架构，附录~\ref{app:tla}展示了完整的代码。基于前文章节的内容，代码可以分为三部分，第一部分是对抽象执行（Abstract Execution）的建模，第二部分是对一致性公理和隔离级别约束的建模，第三部分是对操作语义的形式化表达。
 
-\subsection{操作语义的 \TLAPlus 状态机建模}
-\label{subsec:operational_semantics}
+\subsection{抽象执行}
 
-操作语义界定了系统在每一个离散时间步可以通过哪些动作（Actions）改变状态。为了捕捉混合隔离级别下复杂的并发交互，我们在 \texttt{MixedIsolation.tla} 中设计了一个支持多版本数据和会话因果追踪的状态机。
 
-系统的核心状态元组由以下几类变量组成：
-\begin{itemize}
-    \item \textbf{存储与时钟}：\texttt{store} 模拟了底层的数据分片，它是一个支持多版本并发控制（MVCC）的键值对集合，每个版本除了值之外，还记录了提交时间戳（\texttt{cts}）和对应的写入事务（\texttt{writer}）。\texttt{shard\_ct} 则作为逻辑时间戳提供版本定序。
-    \item \textbf{因果依赖追踪}：\texttt{client\_dep} 与 \texttt{client\_last\_commit} 维护了每个客户端会话（Session）的逻辑水印，确保了例如 CC（Causal Consistency）和 RA（Read Committed）等基于客户端状态的弱隔离级别所需的会话一致性。
-    \item \textbf{事务本地上下文}：\texttt{tx\_status} 记录事务状态；\texttt{tx\_snapshot} 决定事务的读取可见域；\texttt{tx\_buffer} 保存事务尚未提交的私有写集（Write Buffer）；\texttt{tx\_checkset} 动态追踪事务生命周期内涉及的键，用于在提交阶段执行跨事务的读写/写写冲突检测。
-    \item \textbf{操作历史记录}：\texttt{op\_seq} 是连接操作语义与公理化验证的桥梁。它严格按时间序列记录了每个事务执行的每一次 \texttt{"R"}（读）和 \texttt{"W"}（写）的具体内容。
-\end{itemize}
+\subsection{一致性公理和隔离级别约束}
 
-事务的生命周期由 \texttt{Next} 关系驱动，表现为三个极其原子化的阶段：
-\begin{verbatim}
-Next == \E t \in TxnIds : StartTx(t) \/ ExecuteOp(t) \/ CommitTx(t)
-\end{verbatim}
+\subsection{事务操作语义}
 
-\begin{enumerate}
-    \item \textbf{\texttt{StartTx(t)}}: 引擎根据事务申明的具体级别分配读快照 \texttt{tx\_snapshot}。若要求高性能的序列化（SER）或快照隔离（SI），快照取全局最新；若是会话一致性，则取会话依赖的水印。
-    \item \textbf{\texttt{ExecuteOp(t)}}: 引擎通过内部函数 \texttt{MaxVersion} 结合该事务的快照时间戳，为其返回符合当前隔离级别的合法记录。写操作则暂存入 \texttt{tx\_buffer} 以屏蔽脏读。同时，引擎向 \texttt{op\_seq} 列表中追加本次操作的变更轨迹。
-    \item \textbf{\texttt{CommitTx(t)}}: 这一步浓缩了并发冲突仲裁（Concurrency Control Arbitration）。通过遍历其它并发且已提交的事务（\texttt{IsConcurrent}），并探测它们与自身 \texttt{tx\_checkset} 的重叠（\texttt{HasConflict}）。若判定安全，引擎会将 \texttt{tx\_buffer} 中的新版本合并进 \texttt{store} 中，完成数据的演进。
-\end{enumerate}
 
-\subsection{在 \TLAPlus 中提取抽象执行图}
-\label{subsec:abstract_execution}
-
-如前文所述，为了验证事务级别的隔离属性，我们需要依赖抽象执行（Abstract Execution）图理论来关注事务与事务之间的依赖关系图。
-
-在 \TLAPlus 模型中，我们利用提取器（Extractor）基于操作记录 \texttt{op\_seq} 和事务提交状态，动态推导出了两个贯穿全局的核心有向关系集：\textbf{仲裁顺序（AR, Arbitration Order）} 和 \textbf{可见性顺序（VIS, Visibility Order）}。
-
-\begin{verbatim}
-Derived_AR ==
-    { <<t1, t2>> \in CommittedTxns \X CommittedTxns : 
-        tx_commit_time[t1] < tx_commit_time[t2] }
-\end{verbatim}
-\texttt{AR} 揭示了事务在系统中的绝对生效先后顺序。
-
-而 \texttt{VIS} 则是混合隔离的核心灵魂。它决定了一个事务产生的新数据对后续哪个事务可见。不同的隔离级别在这里被统一抽象为对 \texttt{VIS} 边的修剪：
-\begin{verbatim}
-Derived_VIS ==
-    { <<t1, t2>> \in CommittedTxns \X CommittedTxns :
-        \/ /\ t2 /= InitTx 
-           /\ Workload[t2].level \in {"RA", "CC", "PC", "PSI", "SI"}
-           /\ tx_commit_time[t1] <= tx_snapshot[t2]
-        \/ /\ (t2 = InitTx \/ Workload[t2].level = "SER")
-           /\ <<t1, t2>> \in Derived_AR }
-\end{verbatim}
-如上定义展示了该引擎的兼容力：对于 SER 事务，系统将所有符合物理提交序 \texttt{AR} 的更改向其开放；而对于 SI 及其延申变种，仅开放那些在为其分配 \texttt{tx\_snapshot} 之前完成提交的数据。
-
-\subsection{公理化验证框架的 \TLAPlus 实现}
-\label{subsec:axiomatic_framework}
-
-有了抽象执行图，复杂的系统并发安全问题就转化为图论中的路径性质验证。如同我们在前一章介绍的那样，该框架的核心是将隔离级别的约束声明为严格的一阶谓词逻辑公理。在 \TLAPlus 中，TLC 的静态不变式（Invariant）机制会在每次状态推演后，评估当前生成的追踪图是否满足这些底层数学公理。在模型中，这些公理体现为如下谓词：
-
-\begin{itemize}
-    \item \textbf{\texttt{IntAxiom} (内部一致性):} 事务必定优先读取自己在 \texttt{tx\_buffer} 中覆盖的值。
-    \item \textbf{\texttt{ExtAxiom} (外部一致性):} 一个读操作获得的值必须正好对应由 \texttt{VIS} 和 \texttt{AR} 关系网络解析出的“对其可见的最新版本” (\texttt{T\_writes(MaxAR(vis\_writes, AR), x, v)})。
-    \item \textbf{\texttt{TransVisAxiom}, \texttt{PrefixAxiom} (传递与前缀公理):} 保证因果关系不丢帧，以及限制快照的隔离使得事务不会读到“撕破”（Torn）的数据状态。
-    \item \textbf{\texttt{NoConflictAxiom}, \texttt{TotalVisAxiom} (无写冲突与全可见公理):} 分别用于消灭广义快照隔离下的写写异常（WW-Conflicts）并加固严格可串行化的绝对单线程等价视角。
-\end{itemize}
-
-混合隔离的特色在判定引擎 \texttt{IsConsistentExecution} 中得到了完美体现：它会识别并发图谱中的任意事务 $t$，随后根据 $t$ 在负载配置中申明的隔离类型 (\texttt{Workload[t].level})，动态“按需”进行公理的捆绑约束验证。这也是该框架能验证并存着 SER、PSI、CC 等多种异构级别事务安全性的基础理论基石。
-
-\subsection{模块化测试与验证引擎}
-\label{subsec:benchmark_testing}
-
-传统的 \TLAPlus 并发验证模型通常将业务逻辑、状态机变换规则和检测规则强耦合在一个文件中。得益于前述的操作语义和公理化检查解耦设计，我们在项目中将 \texttt{MixedIsolation} 设计成了一个通用的\textbf{模块化验证引擎}。它将键、值或事务形式作为 \texttt{CONSTANTS} 开放配置：
-\begin{verbatim}
-CONSTANTS Keys, Values, InitVal, Workload
-\end{verbatim}
-
-任何基准测试（Benchmarks）、极边缘用例或业务逻辑切片，都可以通过简单的实例化声明将其引入，例如模拟银行业务的 \texttt{Benchmark\_SmallBank.tla}：
-\begin{verbatim}
-Workload == <<
-    \* T1: 并行快照隔离级别(PSI)下的存款转移事务
-    [ session |-> "client_1", level |-> "PSI", 
-      ops |-> << [type |-> "R", key |-> "checking"],
-                 [type |-> "R", key |-> "savings"],
-                 [type |-> "W", key |-> "savings", val |-> 1] >> ],
-    \* T2: 严格可串行化(SER)下的写支票检查事务
-    [ session |-> "client_2", level |-> "SER", 
-      ops |-> << [type |-> "R", key |-> "checking"], 
-                 [type |-> "R", key |-> "savings"],
-                 [type |-> "W", key |-> "checking", val |-> 2] >> ]
->>
-\end{verbatim}
+\subsection{测试方式和测试结果}
 
 测试用例只需通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入负载，引擎即可启动运转。在进行验证时，TLC 模型检查器探索所有通过 \texttt{Next} 产生的合法状态转移路径。TLC 的穷举能力确保了网络延迟、乱序提交与快照交错情形都将被覆盖。一旦发现在某个微观并发下，生成的图违反了 \texttt{OperationalSafety == IsConsistentExecution} 断言，就会停止并抛出精准的反例路径追踪报告（Error Trace File），协助开发者定位修缮并发漏洞。
+
+附录~\ref{app:example} 展示了一个针对 SmallBank 负载的测试用例。通过注入 SmallBank 负载，TLC 模型检查器能够验证在该负载下系统是否满足定义的安全属性，并且能够发现潜在的并发问题。
+通过测试可以看到，在 SmallBank 负载下，系统满足定义的安全属性，并且没有发现潜在的并发问题。这表明在该负载下，系统的操作语义是正确的，并且能够满足一致性要求。
+
+图~\ref{fig:tla_bash} 展示了 TLC 模型检查器的终端输出示例，其中包含了模型检查的进度、状态生成和发现的状态数量，以及最终的检查结果。通过测试结果可以知道，TLC 模型检查器成功地完成了模型检查，并且没有发现任何违反安全属性的状态。这表明在 SmallBank 负载下，系统的操作语义是正确的，并且能够满足一致性要求。
+
+按照同样的方式，我们可以在众多测试集合中进行测试，验证当前操作语义满足定义的安全属性，并且没有发现潜在的并发问题。这表明在这些负载下，系统的操作语义是正确的，并且能够满足各个事务的一致性要求。
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/code/tla_bash.pdf}
+    \caption{TLC 模型检查器的终端输出示例}
+    \label{fig:tla_bash}
+\end{figure}
+
+\section{}
 
 
