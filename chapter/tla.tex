@@ -29,15 +29,95 @@ TLC可以通过使用超过32个计算机线程以获得近乎线性的加速。
 
 在前文中，我们已经介绍了 \TLAPlus 规范语言及 TLC 模型检查器的基本概念。
 
-在本节中，我们将展示如何利用 \TLAPlus 来构建一个针对混合隔离级别的验证架构，附录~\ref{app:tla}展示了完整的代码。基于前文章节的内容，代码可以分为三部分，第一部分是对抽象执行（Abstract Execution）的建模，第二部分是对一致性公理和隔离级别约束的建模，第三部分是对操作语义的形式化表达。
+在本节中，我们将展示如何利用 \TLAPlus 来构建一个针对混合隔离级别的验证架构，附录~\ref{app:tla}展示了完整的代码。基于前文章节的内容，代码可以分为两部分：第一部分是事务操作语义的定义，第二部分是一致性公理以及隔离级别约束的定义。
+\subsection{事务操作语义}
+\subsubsection{状态模型}
 
-\subsection{抽象执行}
+定义操作语义的第一步是定义状态模型。我们使用一个状态变量来表示系统的当前状态，这个状态变量可以包含多个组件，例如事务的状态、数据项的值、锁的状态等。通过定义这些组件，我们可以准确地描述系统在任意时刻的状态。
 
+重要的变量有：
+\begin{itemize}
+    \item \texttt{store}: 全局键值存储，模拟数据库的持久化状态。它是一个映射，键是 Keys，值是版本历史（包含值、提交时间戳 cts、写入者）。
+    \item \texttt{tx\_buffer}: 事务的本地写缓冲，模拟事务在提交前对数据的本地修改。
+    \item \texttt{tx\_snapshot}: 事务的读取快照版本，决定了事务能看到哪些数据。
+    \item \texttt{op\_seq}: 记录操作的历史序列，用于后续的公理化验证。
+\end{itemize}
+
+通过以上变量，我们可以构建一个完整的状态模型，准确地描述系统在状态。在这样的基础上，我们可以继续形式化地描述操作语义。
+
+\subsubsection{核心状态转换动作 (Transition Actions)}
+操作语义的核心逻辑封装在三个主要的 \TLAPlus  动作定义中：
+
+\textbf{A. 事务开始 ($StartTx(t)$)}
+
+形式化描述了事务如何获取其读取视图（Read View）：
+\begin{itemize}
+    \item 根据事务的隔离级别 ($Workload[t].level$)，决定 $tx\_snapshot[t]$ 的值。
+    \item 例如：SI (Snapshot Isolation) 获取当前的全局 $shard\_ct$（时间戳）。
+    \item RA (Read Atomicity) 获取客户端上一次提交的时间 $client\_last\_commit$。
+    \item 将事务状态 $tx\_status$ 设为 "Active"。
+\end{itemize}
+
+\textbf{B. 执行操作 ($ExecuteOp(t)$)}
+
+这是读写操作的具体语义描述。它根据 $Workload$ 中预定义的操作类型进行分支：
+
+\begin{enumerate}
+    \item \textbf{读操作 ($op.type = "R"$):}
+          \begin{itemize}
+              \item \textbf{本地优先读取:} 首先检查 $tx\_buffer[t][op.key]$（即写后读 Read-Your-Writes 语义）。
+              \item \textbf{快照读取:} 如果本地没有，则调用辅助算子 $MaxVersion(store[op.key], tx\_snapshot[t])$。这意味着它会在全局存储的版本历史中，找到提交时间戳小于等于事务快照的最新版本。
+              \item \textbf{记录历史:} 将读取结果追加到 $op\_seq$，用于验证。
+          \end{itemize}
+    \item \textbf{写操作 ($op.type = "W"$):}
+          \begin{itemize}
+              \item \textbf{写缓冲:} 并不会立即修改全局 $store$，而是更新 $tx\_buffer$。
+              \item \textbf{记录历史:} 将写操作追加到 $op\_seq$。
+          \end{itemize}
+\end{enumerate}
+
+\textbf{C. 提交事务 ($CommitTx(t)$)}
+
+形式化描述了提交协议，包括并发控制和原子性：
+
+\begin{enumerate}
+    \item \textbf{冲突检测 ($HasConflict$):}
+          \begin{itemize}
+              \item 定义了谓词 $IsConcurrent(t\_other)$ 来识别并发事务。
+              \item 检查是否存在其他并发已提交的事务，其写入集（Writes）与当前事务的检查集（Checkset/ReadSet）有冲突。这对应了乐观并发控制（OCC）的验证阶段。
+          \end{itemize}
+    \item \textbf{状态更新:}
+          \begin{itemize}
+              \item \textbf{Abort:} 如果有冲突，状态变为 "Aborted"。
+              \item \textbf{Commit:}
+                    \begin{itemize}
+                        \item 递增全局时间戳 $shard\_ct$。
+                        \item \textbf{原子写入:} 将 $tx\_buffer$ 中的数据合并到全局 $store$ 中，生成带有新时间戳的新版本。
+                        \item 更新客户端依赖 $client\_dep$。
+                    \end{itemize}
+          \end{itemize}
+\end{enumerate}
 
 \subsection{一致性公理和隔离级别约束}
 
-\subsection{事务操作语义}
+抽象执行$\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$，其中 $\mathcal{H}$ 是操作历史，在定义状态模型时，$\mathcal{H}$的内容已经被涉及到，此处不再需要研究，我们需要构建 $\text{VIS}$ 和 $\text{AR}$ 的形式化表达。图~\ref{fig:visar} 展示了 $\text{VIS}$ 和 $\text{AR}$ 的形式化表达，其内容是对前文~\ref{sec:visandar}的翻译。
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/VisAndAr_cropped.pdf}
+    \caption{关系VIS和AR的形式化表达}
+    \label{fig:visar}
+\end{figure}
 
+现在我们已经定义好抽象执行$\mathcal{X}$，接着我们只需要对公式~\ref{eq:consistency}中的公理进行形式化表达，就可以得到一致性公理的定义。图~\ref{fig:axioms} 展示了公理的形式化表达。通过这些公理，我们就可以定义不同隔离级别的约束。
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/axioms_cropped.pdf}
+    \caption{公理的形式化表达}
+    \label{fig:axioms}
+\end{figure}
+
+不同于面向具体业务逻辑的程序语言，\TLAPlus 的代码更关注的是状态转移的结果，在运行\TLAPlus 代码时，TLC 模型检查器会穷举所有可能的状态转移路径，并检查在这些路径上是否满足定义的安全属性。通过定义不同的安全属性，我们就可以验证系统在不同隔离级别下是否满足这些属性，从而验证系统的正确性。
 
 \subsection{测试方式和测试结果}
 
@@ -57,6 +137,11 @@ TLC可以通过使用超过32个计算机线程以获得近乎线性的加速。
     \label{fig:tla_bash}
 \end{figure}
 
-\section{}
+\section{本章小结}
+
+本章主要介绍了利用 \TLAPlus  形式化规约语言及其模型检查工具 TLC，对分布式事务系统的操作语义进行精确建模与验证的方法。
+首先，本章介绍了 \TLAPlus  的基本概念与 TLC 模型检查器的工作原理，说明了其在捕捉并发错误和验证分布式协议正确性方面的独特优势。
+其次，本章详细展开了基于 \TLAPlus  的混合隔离级别验证架构的构建过程。在事务操作语义部分，定义了包括全局存储、事务缓冲在内的核心状态模型，并形式化描述了事务从开始、执行读写操作到最终提交或中止的完整状态转换逻辑。在此基础上，进一步将抽象执行图中的可见性（VIS）和仲裁（AR）关系以及一致性公理转化为 \TLAPlus  谓词，从而能够对不同隔离级别进行严格的约束定义。
+最后，通过 SmallBank 负载的实际测试案例，展示了该验证架构如何利用 TLC 穷举状态空间的能力，自动检测并发冲突并验证系统的一致性。测试结果表明，该形式化模型能够正确反映预期的隔离级别行为，有力地证明了操作语义设计的正确性，为后续系统的工程实现提供了可靠的理论保障。
 
 

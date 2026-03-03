@@ -81,6 +81,7 @@ $S$ 为快照函数，将键映射到其对应的值。
 当两个事务的写集合交集不为空，即 $\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$ 时，称这两个事务存在写冲突（write-conflict），记为 $T_1 \bowtie T_2$。
 
 \subsection{VIS 和 AR 关系}
+\label{sec:visandar}
 由于事务的处理结果是原子化的，而多个事务的处理是并发的，因此描述事务隔离级别的关键在于描述任意两个事务之间的关系。这些关系是事务集合笛卡尔积 $\mathcal{T} \times \mathcal{T}$ 的子集。我们重点考虑两个核心关系：$\text{VIS}, \text{AR} \subseteq \mathcal{T} \times \mathcal{T}$。
 
 可见性关系（visibility relation）$\text{VIS} \subseteq \mathcal{T} \times \mathcal{T}$ 用于刻画“一个事务的执行结果对另一个事务是否可见”。
