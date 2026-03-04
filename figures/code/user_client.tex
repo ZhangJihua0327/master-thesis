@@ -18,14 +18,13 @@
 
 \begin{document}
 % 终端命令 + 输出内容（原样保留）
-\begin{minted}{plaintext}
+\begin{minted}{text}
 >start SER
 Tx_mulberry-server-2_1709561234890> read account-1 # read <key>
 <nil>
 Tx_mulberry-server-2_1709561234890> write account-1 100 # write <key> <value>
 OK
 Tx_mulberry-server-2_1709561234890> commit # commit
-Committed # 失败时 Error:失败原因
-
+Committed # when failed Error: Failed reason
 \end{minted}
 \end{document}

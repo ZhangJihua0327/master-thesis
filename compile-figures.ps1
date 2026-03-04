@@ -84,27 +84,29 @@ if (Test-Path -Path $codeDir -PathType Container) {
             
             Write-Host "正在编译：$texFile -> $pdfFile"
             
+            # 切换到文件所在目录进行编译
+            Push-Location $_.Directory.FullName
+            
             # 使用 xelatex 编译，启用 shell-escape (用于 minted)
-            # 输出目录设为 code 目录
             $latexArgs = @(
                 "-shell-escape",
                 "-interaction=nonstopmode",
-                "-output-directory=$codeDir",
-                $texFile
+                "$baseName.tex"
             )
 
             # 执行 xelatex，忽略标准输出以减少干扰，保留错误流
             & xelatex @latexArgs | Out-Null
 
-            if ($LASTEXITCODE -eq 0 -and (Test-Path -Path $pdfFile)) {
+            if ($LASTEXITCODE -eq 0 -and (Test-Path -Path "$baseName.pdf")) {
                 Write-Host "Success: $pdfFile"
                 # 清理辅助文件 (保留 .tex 和 .pdf)
-                Get-ChildItem -Path $codeDir -Filter "$baseName.*" | Where-Object { $_.Extension -ne ".tex" -and $_.Extension -ne ".pdf" } | Remove-Item -Force
+                Get-ChildItem -Filter "$baseName.*" | Where-Object { $_.Extension -ne ".tex" -and $_.Extension -ne ".pdf" } | Remove-Item -Force
                 # 清理 _minted-* 目录
-                if (Test-Path "$codeDir/_minted-$baseName") { Remove-Item "$codeDir/_minted-$baseName" -Recurse -Force }
+                if (Test-Path "_minted-$baseName") { Remove-Item "_minted-$baseName" -Recurse -Force }
             } else {
                 Write-Error "Failed: $texFile 编译失败！"
             }
+            Pop-Location
         }
     } else {
         Write-Warning "警告：未找到 xelatex 命令，无法转换 code 目录下的 .tex 文件。"
