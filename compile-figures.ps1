@@ -1,13 +1,13 @@
 ﻿<#
 .SYNOPSIS
-批量将 ./figures/mmd/ 下的 .mmd 文件渲染为 PDF，输出到 ./figures/（文件名格式：原文件名_m.pdf）
+批量将 ./figures/mmd/ 下的 .mmd 文件渲染为 PDF，
 .DESCRIPTION
 依赖 mermaid-cli (mmdc)，需提前全局安装
 #>
 
-# 定义目录：修正源目录为 ./figures/mmd，目标目录为 ./figures
-$sourceDir = "./figures/mmd"  # .mmd 源文件目录（你的要求）
-$targetDir = "./figures"      # PDF 输出目标目录（你的要求）
+# 定义目录：
+$sourceDir = "./figures/mmd"  # .mmd 源文件目录
+$targetDir = "./figures/mmd"  # PDF 输出目标目录
 
 # Docker 镜像名称（根据实际镜像名称修改）
 $dockerImage = "minlag/mermaid-cli"
@@ -39,8 +39,8 @@ Get-ChildItem -Path $sourceDir -Filter "*.mmd" | ForEach-Object {
     # 获取文件基本信息
     $inputFile = $_.FullName          # 完整输入路径（如 ./figures/mmd/test.mmd）
     $fileName = $_.BaseName           # 文件名（不含后缀，如 test）
-    # 输出路径：目标目录 + 原文件名_m.pdf（如 ./figures/test_m.pdf）
-    $outputFile = Join-Path -Path $targetDir -ChildPath "$fileName`_m.pdf"
+    # 输出路径：目标目录 + 原文件名.pdf
+    $outputFile = Join-Path -Path $targetDir -ChildPath "$fileName.pdf"
 
     Write-Host "正在渲染：$inputFile -> $outputFile"
 
@@ -52,7 +52,7 @@ Get-ChildItem -Path $sourceDir -Filter "*.mmd" | ForEach-Object {
         "-v", "${targetDirAbs}:/output",
         $dockerImage,
         "-i", "/input/$fileName.mmd",
-        "-o", "/output/$fileName`_m.pdf",
+        "-o", "/output/$fileName.pdf",
         "-f",             # --pdfFit 的简写，Scale PDF to fit chart
         "-w", "1200"
     )

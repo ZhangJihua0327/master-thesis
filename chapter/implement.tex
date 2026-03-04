@@ -48,7 +48,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\textwidth]{figures/usercase_m.pdf}
+    \includegraphics[width=0.75\textwidth]{figures/mmd/usercase.pdf}
     \caption{系统用例图}
     \label{fig:usercase}
 \end{figure}
@@ -131,7 +131,7 @@
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/long-conn_m.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/mmd/long-conn.pdf}
     \caption{长连接配置同步示意图}
     \label{fig:config-sync}
 \end{figure}
@@ -152,7 +152,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/global-timeline_m.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/mmd/global-timeline.pdf}
     \caption{组件交互时序图}
     \label{fig:global-timeline}
 \end{figure}
@@ -169,7 +169,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/2pc-hole_m.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/mmd/2pc-hole.pdf}
     \caption{两阶段提交可见性漏洞示意图}
     \label{fig:2pc-hole}
 \end{figure}
@@ -180,7 +180,7 @@
 当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销，如图~\ref{fig:quick-commit-implementation}。
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/quick-commit_m.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/mmd/quick-commit.pdf}
     \caption{组件交互时序图}
     \label{fig:quick-commit-implementation}
 \end{figure}
@@ -202,6 +202,13 @@
 
 用户客户端的实现相对简单，客户端连接到路由节点（Router）后，用户可以通过命令行交互的方式输入各种数据操作和事务管理命令，并且通过负载均衡策略选择合适的路由节点进行请求。
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/code/user_client.pdf}
+    \caption{用户客户端示例交互}
+    \label{fig:user-client}
+\end{figure}
+
 图~\ref{fig:user-client} 展示了一个基于命令行交互的用户客户端示例。用户可以通过输入简单的命令来执行数据操作和事务管理，如开启事务、读写数据、提交或中止事务等。客户端会将用户输入的命令解析为相应的 RPC 请求，并发送到路由节点（Router）进行处理。
 开启事务后，客户端会提示事务的ID，用户可以在事务上下文中继续执行读写操作，直到提交或中止事务。客户端还会显示操作的结果，如读取到的数据、写入是否成功、提交是否成功等。
 
@@ -213,14 +220,16 @@
     \item \textbf{并发安全且无排他锁}：底层复用的 gRPC \lstinline|ClientConn| 具有原生并发安全的特性且支持多路复用。因此，不同事务可以同时并发持有和使用池中的同一个 Client（路由节点通过 txID 严格区分不同事务），而无需采用低效的“借出-上锁-归还”排他模型。这种非排他设计保证了测试机的并发上限不会被客户端池数量所限，进而可提供极高的测试吞吐。
 \end{enumerate}
 
-简而言之，基于 ClientPool 的设计兼顾了 gRPC 架构下的连接复用与极高的并发能力，在有效保证分布式环境下事务路由的正确性与上下文一致性的前提下，充分实现了跨路由节点的负载平衡，从而更真实地模拟了生产环境中规模庞大、高度并发的客户端操作行为。
-
 \begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/code/user_client.pdf}
-    \caption{用户客户端示例交互}
-    \label{fig:user-client}
+    \includegraphics[width=0.8\textwidth]{figures/mmd/client-pool.pdf}
+    \caption{ClientPool 机制示意图}
+    \label{fig:client-pool}
 \end{figure}
+
+
+图~\ref{fig:client-pool} 展示了基于 ClientPool 的机制。简而言之，基于 ClientPool 的设计兼顾了 gRPC 架构下的连接复用与极高的并发能力，有效保证分布式环境下事务路由的正确性与上下文一致性的前提。
+
 
 \subsection{系统日志与操作可观测性的多维实现}
 
