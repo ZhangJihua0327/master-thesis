@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant W as Worker
+    participant P as ClientPool
+    participant C1 as Client→Router1
+    participant C2 as Client→Router2
+
+    W->>P: Acquire() [start]
+    P-->>W: 返回 Client→Router1 (round-robin)
+    W->>C1: StartTransaction
+    C1-->>W: txID
+    W->>C1: Read(txID, key)
+    W->>C1: Write(txID, key, val)
+    W->>C1: Commit(txID)
+    Note over W,C1: 事务结束，释放绑定
+
+    W->>P: Acquire() [下一个start]
+    P-->>W: 返回 Client→Router2 (round-robin)
+    W->>C2: StartTransaction
+    C2-->>W: txID

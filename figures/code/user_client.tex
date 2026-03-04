@@ -1,0 +1,31 @@
+% tla_bash.tex - 生成TLC终端输出的PDF图片（最终完美版）
+% 核心：添加varwidth选项，支持多行内容，解决LR mode报错
+\documentclass[varwidth]{standalone}
+\usepackage{minted}  % 终端输出语法高亮
+\usepackage{xcolor}  % 颜色配置
+\usepackage[T1]{fontenc} % 字体编码兼容
+\usepackage{lmodern} % 现代字体兼容
+
+% 仅保留所有版本通用的核心配置，避免任何兼容问题
+\setminted{
+    fontsize=\small,       % 字体大小适配论文
+    linenos=false,         % 终端输出不显示行号
+    breaklines=true,       % 自动换行，避免内容溢出
+    bgcolor=gray!5,        % 浅灰背景，美观且不影响打印
+    fontfamily=courier,    % 终端等宽字体，字符对齐
+    encoding=utf8          % 支持UTF-8编码
+}
+
+\begin{document}
+% 终端命令 + 输出内容（原样保留）
+\begin{minted}{plaintext}
+>start SER
+Tx_mulberry-server-2_1709561234890> read account-1 # read <key>
+<nil>
+Tx_mulberry-server-2_1709561234890> write account-1 100 # write <key> <value>
+OK
+Tx_mulberry-server-2_1709561234890> commit # commit
+Committed # 失败时 Error:失败原因
+
+\end{minted}
+\end{document}
