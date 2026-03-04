@@ -186,7 +186,7 @@
     \newcommand{\txninfo}{$\text{txnInfo}$}
     \newcommand{\configserver}{$\text{configServer}$}
     \newcommand{\hlc}{$\text{hlc}$}
-    \caption{路由服务器协议}
+    \caption{路由服务器协议：事务读写}
     \label{algo:router}
     \begin{algorithmic}[1]
         \Require 事务全局信息 \txninfo，配置服务器 \configserver，混合逻辑时钟 \hlc。
@@ -217,6 +217,15 @@
         \State $\text{result} \gets \text{shard}.\text{write}(\text{key}, \text{value}, \text{txn\_id})$ \Comment{转发到分片}
         \State \Return $\text{result}$
         \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+    \newcommand{\txninfo}{$\text{txnInfo}$}
+    \caption{路由服务器协议：提交与回滚}
+    \label{algo:router-commit}
+    \begin{algorithmic}[1]
+        \Require 事务全局信息 \txninfo。
 
         \Procedure{Commit}{$\text{txn\_id}$}
         \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
