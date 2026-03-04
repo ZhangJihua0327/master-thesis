@@ -117,7 +117,7 @@
     \end{algorithmic}
 \end{algorithm}
 
-配置服务器存储集群的配置信息和元数据，确保集群的一致性和协调性。它负责管理路由服务器的注册与心跳监控，维护分片信息，并响应客户端和路由服务器的元数据查询请求。如算法~\ref{algo:config}所示，配置服务器通过心跳机制维护活跃的路由服务器列表，并提供元数据的查询接口。
+
 
 \begin{algorithm}[htbp]
     \newcommand{\routers}{$\text{routers}$}
@@ -179,6 +179,7 @@
         \EndProcedure
     \end{algorithmic}
 \end{algorithm}
+配置服务器存储集群的配置信息和元数据，确保集群的一致性和协调性。它负责管理路由服务器的注册与心跳监控，维护分片信息，并响应客户端和路由服务器的元数据查询请求。如算法~\ref{algo:config}所示，配置服务器通过心跳机制维护活跃的路由服务器列表，并提供元数据的查询接口。
 
 路由服务器作为客户端的接入点，根据配置服务器提供的信息负责将客户端请求路由到正确的分片服务器上。它需要维护事务的全局信息，包括事务开始时间戳、隔离级别以及涉及的分片集合，以便协调跨分片事务的执行。如算法~\ref{algo:router}所示，路由服务器通过混合逻辑时钟为事务分配时间戳，根据键的分布将读写请求路由到相应的分片，并在事务提交时协调所有参与分片完成两阶段提交。
 
@@ -191,11 +192,7 @@
     \begin{algorithmic}[1]
         \Require 事务全局信息 \txninfo，配置服务器 \configserver，混合逻辑时钟 \hlc。
 
-        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
-        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
-        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
+
 
         \Procedure{Read}{$\text{txn\_id}, \text{key}$}
         \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
@@ -222,10 +219,16 @@
 
 \begin{algorithm}[htbp]
     \newcommand{\txninfo}{$\text{txnInfo}$}
-    \caption{路由服务器协议：提交与回滚}
+    \caption{路由服务器协议：开始、提交与回滚}
     \label{algo:router-commit}
     \begin{algorithmic}[1]
         \Require 事务全局信息 \txninfo。
+
+        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
+        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
+        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
 
         \Procedure{Commit}{$\text{txn\_id}$}
         \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
