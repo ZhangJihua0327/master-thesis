@@ -328,6 +328,8 @@ TSWLatexianTemp*
 # ignore output pdf
 *zhangjihua-master-thesis.pdf
 
-*_m.pdf
 # Generated PDF figures from code
 figures/code/*.pdf
+
+# Generated mermaid outputs
+figures/mmd/*.pdf
