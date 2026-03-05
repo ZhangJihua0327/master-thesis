@@ -1,0 +1,24 @@
+graph TB
+    Client([客户端]) --> R1 & R2
+
+    subgraph AZ1["可用区 AZ1"]
+        subgraph Host1A["宿主机 1"]
+            R1[Router 1]
+            S1[Shard 1]
+        end
+        subgraph Host1B["宿主机 2"]
+            S2[Shard 2]
+        end
+    end
+
+    subgraph AZ2["可用区 AZ2"]
+        subgraph Host2A["宿主机 3"]
+            R2[Router 2]
+            S3[Shard 3]
+        end
+        subgraph Host2B["宿主机 4"]
+            S4[Shard 4]
+        end
+    end
+
+    R1 & R2 --> S1 & S2 & S3 & S4

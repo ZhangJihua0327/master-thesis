@@ -25,7 +25,7 @@
     \end{tabular}
 \end{table}
 
-在公有云环境中，我们使用腾讯云提供的云服务器实例作为宿主机，同样基于Docker进行容器化部署。每个容器的资源限制与本地环境保持一致，即1 vCPU和2GB内存。为了模拟真实的跨可用区部署场景，我们将Router和Shard节点分散部署在不同的可用区中。具体地，每个可用区（Availability Zone）部署1个Router节点和2个Shard节点，一个Router和一个Shard部署在一个宿主机上，另外一个Shard部署在同一个可用区内的另一个宿主机上，以保证系统的高可用性和容灾能力。大规模测试（4 Router, 8 Shard）将跨越4个可用区，而小规模测试（2 Router, 4Shard）将部署在2个可用区内。云环境的详细配置如表\ref{tab:cloud-env-config}所示。
+在公有云环境中，我们使用腾讯云提供的云服务器实例作为宿主机，同样基于Docker进行容器化部署。每个容器的资源限制与本地环境保持一致，即1 vCPU和2GB内存。为了模拟真实的跨可用区部署场景，我们将Router和Shard节点分散部署在不同的可用区中。具体地，每个可用区（Availability Zone）部署1个Router节点和2个Shard节点，一个Router和一个Shard部署在一个宿主机上，另外一个Shard部署在同一个可用区内的另一个宿主机上，以保证系统的高可用性和容灾能力。大规模测试（4 Router, 8 Shard）将跨越4个可用区，而小规模测试（2 Router, 4Shard）将部署在2个可用区内。云环境的详细配置如表\ref{tab:cloud-env-config}所示，拓扑图如图\ref{fig:cloud-topology}所示。
 
 \begin{table}[htbp]
     \centering
@@ -46,4 +46,9 @@
     \end{tabular}
 \end{table}
 
-
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/mmd/cloud-deploy.pdf}
+    \caption{公有云测试环境拓扑图}
+    \label{fig:cloud-topology}
+\end{figure}
