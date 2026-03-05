@@ -129,7 +129,7 @@
 
 在事务处理的数据面之外，集群控制面中全局路由表、分片拓扑状态以及隔离级别元数据的同步同样至关重要。为了使分片节点能够以极低延迟感知集群状态变更，系统在配置同步链路中抛弃了传统的客户端定时轮询（Polling）模型，转而引入了基于流式 RPC（Streaming RPC）的长连接实时主动推送机制，图~\ref{fig:config-sync}展示了其时序图。
 
-\begin{figure}
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/mmd/long-conn.pdf}
     \caption{长连接配置同步示意图}
@@ -202,7 +202,7 @@
 
 用户客户端的实现相对简单，客户端连接到路由节点（Router）后，用户可以通过命令行交互的方式输入各种数据操作和事务管理命令，并且通过负载均衡策略选择合适的路由节点进行请求。
 
-\begin{figure}
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/code/user_client.pdf}
     \caption{用户客户端示例交互}
@@ -220,7 +220,7 @@
     \item \textbf{并发安全且无排他锁}：底层复用的 gRPC \lstinline|ClientConn| 具有原生并发安全的特性且支持多路复用。因此，不同事务可以同时并发持有和使用池中的同一个 Client（路由节点通过 txID 严格区分不同事务），而无需采用低效的“借出-上锁-归还”排他模型。这种非排他设计保证了测试机的并发上限不会被客户端池数量所限，进而可提供极高的测试吞吐。
 \end{enumerate}
 
-\begin{figure}
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/mmd/client-pool.pdf}
     \caption{ClientPool 机制示意图}
