@@ -1,0 +1,66 @@
+
+\documentclass[varwidth]{standalone}
+\usepackage{minted}  % 终端输出语法高亮
+\usepackage{xcolor}  % 颜色配置
+\usepackage[T1]{fontenc} % 字体编码兼容
+\usepackage{lmodern} % 现代字体兼容
+
+% 仅保留所有版本通用的核心配置，避免任何兼容问题
+\setminted{
+    fontsize=\small,       % 字体大小适配论文
+    linenos=false,         % 终端输出不显示行号
+    breaklines=true,       % 自动换行，避免内容溢出
+    bgcolor=gray!5,        % 浅灰背景，美观且不影响打印
+    fontfamily=courier,    % 终端等宽字体，字符对齐
+    encoding=utf8          % 支持UTF-8编码
+}
+
+\begin{document}
+\noindent
+\begin{minipage}[t]{0.48\linewidth}
+\begin{minted}{text}
+3
+worker1:
+start SI
+write account_A 1000
+write account_B 2000
+write account_C 500
+commit
+start SI
+read account_A
+read account_B
+write account_A 800
+write account_B 2200
+commit
+\end{minted}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\begin{minted}{text}
+worker2:
+start SER
+read account_A
+read account_C
+write account_C 300
+commit
+start SI
+read account_A
+read account_B
+read account_C
+delete account_C
+commit
+
+worker3:
+start PSI
+write order_1 pending
+write order_2 pending
+commit
+start SER
+read order_1
+write order_1 confirmed
+read order_2
+write order_2 confirmed
+commit
+\end{minted}
+\end{minipage}
+\end{document}
