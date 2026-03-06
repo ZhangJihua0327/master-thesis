@@ -10,7 +10,7 @@
 
 \subsection{\TLAPlus 形式规约语言}
 
-\TLAPlus\footnote{\url{https://lamport.azurewebsites.net/tla/tla.html}}是由图灵奖得主 Leslie Lamport 主导开发的一种高级规约语言，基于动作时序逻辑（Temporal Logic of Actions, TLA）。它在计算机程序和系统建模领域具有广泛应用，尤其适用于对并发系统和分布式系统进行建模。\TLAPlus 的设计理念是使用简洁的数学语言来精确描述系统的行为。因此，它的表达方式不同于传统的编程语言，而更贴近数学语言的严谨性。\TLAPlus 本质上不是一种用于执行的编程语言，而是一种规约语言（Specification Language）。它不关注协议或系统的底层实现细节，而是允许开发者从更高的抽象层次审视程序的整体设计。因此，\TLAPlus 及其配套工具在排查和消除分布式系统中极难发现且纠错成本高昂的并发逻辑错误方面，发挥着不可替代的作用。
+\TLAPlus\footnote{\url{https://lamport.azurewebsites.net/tla/tla.html}}是由图灵奖得主 Leslie Lamport 主导开发的一种高级规约语言，基于动作时序逻辑（Temporal Logic of Actions, TLA）\cite{Lamport1994}。它在计算机程序和系统建模领域具有广泛应用\cite{newcombe2014use,vergamini1988verification,hackett2023understanding}，尤其适用于对并发系统和分布式系统进行建模。\TLAPlus 的设计理念是使用简洁的数学语言来精确描述系统的行为。因此，它的表达方式不同于传统的编程语言，而更贴近数学语言的严谨性。\TLAPlus 本质上不是一种用于执行的编程语言，而是一种规约语言（Specification Language）。它不关注协议或系统的底层实现细节，而是允许开发者从更高的抽象层次审视程序的整体设计。因此，\TLAPlus 及其配套工具在排查和消除分布式系统中极难发现且纠错成本高昂的并发逻辑错误方面，发挥着不可替代的作用。
 
 需要指出的是，\TLAPlus 旨在帮助规约开发者更好地表达协议或系统的设计，而非专门为寻找归纳不变式（Inductive Invariants）而设计。尽管如此，凭借其丰富的语法、直观的表达方式以及在工业界的广泛应用，\TLAPlus 在自动化生成归纳不变式的研究领域同样展现出了广阔的应用前景。
 

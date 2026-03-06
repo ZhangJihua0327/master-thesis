@@ -448,3 +448,94 @@
   pages   = {277--288},
   year    = {2013}
 }
+
+@article{Lamport1994,
+  author     = {Lamport, Leslie},
+  title      = {The temporal logic of actions},
+  year       = {1994},
+  issue_date = {May 1994},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {16},
+  number     = {3},
+  issn       = {0164-0925},
+  url        = {https://doi.org/10.1145/177492.177726},
+  doi        = {10.1145/177492.177726},
+  abstract   = {The temporal logic of actions (TLA) is a logic for specifying and reasoning about concurrent systems. Systems and their properties are represented in the same logic, so the assertion that a system meets its specification and the assertion that one system implements another are both expressed by logical implication. TLA is very simple; its syntax and complete formal semantics are summarized in about a page. Yet, TLA is not just a logician's toy; it is extremely powerful, both in principle and in practice. This report introduces TLA and describes how it is used to specify and verify concurrent algorithms. The use of TLA to specify and reason about open systems will be described elsewhere.},
+  journal    = {ACM Trans. Program. Lang. Syst.},
+  month      = may,
+  pages      = {872–923},
+  numpages   = {52},
+  keywords   = {safety properties, liveness properties, concurrent programming}
+}
+
+@article{newcombe2014use,
+  title   = {Use of formal methods at Amazon Web Services},
+  author  = {Newcombe, Chris and Rath, Tim and Zhang, Fan and Munteanu, Bogdan and Brooker, Marc and Deardeuff, Michael},
+  journal = {See http://research. microsoft. com/en-us/um/people/lamport/tla/formal-methods-amazon. pdf},
+  pages   = {16},
+  year    = {2014}
+}
+
+@incollection{vergamini1988verification,
+  title     = {Verification of distributed systems: an experiment},
+  author    = {Vergamini, Didier},
+  booktitle = {LITP Spring School on Theoretical Computer Science},
+  pages     = {249--259},
+  year      = {1988},
+  publisher = {Springer}
+}
+
+@inproceedings{hackett2023understanding,
+  title        = {Understanding inconsistency in Azure Cosmos DB with TLA+},
+  author       = {Hackett, Finn and Rowe, Joshua and Kuppe, Markus Alexander},
+  booktitle    = {2023 IEEE/ACM 45th International Conference on Software Engineering: Software Engineering in Practice (ICSE-SEIP)},
+  pages        = {1--12},
+  year         = {2023},
+  organization = {IEEE}
+}
+
+@inproceedings{bouajjani2025complexity,
+  title        = {On the Complexity of Checking Mixed Isolation Levels for SQL Transactions},
+  author       = {Bouajjani, Ahmed and Enea, Constantin and Rom{\'a}n-Calvo, Enrique},
+  booktitle    = {International Conference on Computer Aided Verification},
+  pages        = {315--337},
+  year         = {2025},
+  organization = {Springer}
+}
+
+@inproceedings{fastcommit,
+  author    = {Thomson, Alexander and Diamond, Thaddeus and Weng, Shu-Chun and Ren, Kun and Shao, Philip and Abadi, Daniel J.},
+  title     = {Calvin: fast distributed transactions for partitioned database systems},
+  year      = {2012},
+  isbn      = {9781450312479},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/2213836.2213838},
+  doi       = {10.1145/2213836.2213838},
+  abstract  = {Many distributed storage systems achieve high data access throughput via partitioning and replication, each system with its own advantages and tradeoffs. In order to achieve high scalability, however, today's systems generally reduce transactional support, disallowing single transactions from spanning multiple partitions. Calvin is a practical transaction scheduling and data replication layer that uses a deterministic ordering guarantee to significantly reduce the normally prohibitive contention costs associated with distributed transactions. Unlike previous deterministic database system prototypes, Calvin supports disk-based storage, scales near-linearly on a cluster of commodity machines, and has no single point of failure. By replicating transaction inputs rather than effects, Calvin is also able to support multiple consistency levels---including Paxos-based strong consistency across geographically distant replicas---at no cost to transactional throughput.},
+  booktitle = {Proceedings of the 2012 ACM SIGMOD International Conference on Management of Data},
+  pages     = {1–12},
+  numpages  = {12},
+  keywords  = {transaction processing, replication, distributed database systems, determinism},
+  location  = {Scottsdale, Arizona, USA},
+  series    = {SIGMOD '12}
+}
+
+@article{fastcommit2,
+  author     = {Bailis, Peter and Fekete, Alan and Franklin, Michael J. and Ghodsi, Ali and Hellerstein, Joseph M. and Stoica, Ion},
+  title      = {Coordination avoidance in database systems},
+  year       = {2014},
+  issue_date = {November 2014},
+  publisher  = {VLDB Endowment},
+  volume     = {8},
+  number     = {3},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/2735508.2735509},
+  doi        = {10.14778/2735508.2735509},
+  abstract   = {Minimizing coordination, or blocking communication between concurrently executing operations, is key to maximizing scalability, availability, and high performance in database systems. However, uninhibited coordination-free execution can compromise application correctness, or consistency. When is coordination necessary for correctness? The classic use of serializable transactions is sufficient to maintain correctness but is not necessary for all applications, sacrificing potential scalability. In this paper, we develop a formal framework, invariant confluence, that determines whether an application requires coordination for correct execution. By operating on application-level invariants over database states (e.g., integrity constraints), invariant confluence analysis provides a necessary and sufficient condition for safe, coordination-free execution. When programmers specify their application invariants, this analysis allows databases to coordinate only when anomalies that might violate invariants are possible. We analyze the invariant confluence of common invariants and operations from real-world database systems (i.e., integrity constraints) and applications and show that many are invariant confluent and therefore achievable without coordination. We apply these results to a proof-of-concept coordination-avoiding database prototype and demonstrate sizable performance gains compared to serializable execution, notably a 25-fold improvement over prior TPC-C New-Order performance on a 200 server cluster.},
+  journal    = {Proc. VLDB Endow.},
+  month      = nov,
+  pages      = {185–196},
+  numpages   = {12}
+}

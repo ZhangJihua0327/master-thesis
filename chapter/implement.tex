@@ -177,7 +177,7 @@
 图~\ref{fig:2pc-hole}展示了本组件如何解决两阶段提交可见性漏洞的解决方式。本组件借助未决状态（Pending Status）与时间戳推进解决了该漏洞：系统在 \lstinline|Prepare| 阶段，根据混合逻辑时钟（HLC）派生出本地的预备时间 \lstinline|prepareTime|。此时并未直接覆盖老数据，而是调用 \lstinline|store.Put| 打上 Pending 标记以及临时版本号。这一预写行为充当了并发读操作的前向屏障：倘若并发读查询的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$ 并且遇到了 Pending 标位，底层将抛出 \lstinline|ErrPendingRead|。这一拦截行为促使过早发起读取操作的调用方陷入阻塞或执行安全重试。直至最终协调者下达任务并在 \lstinline|Commit| 函数内通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将版本信息实化确立，系统的时钟推进即可闭环，可见性漏洞得以彻底消除。
 
 \subsubsection{单分片快速提交(QuickCommit)优化}
-当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销，如图~\ref{fig:quick-commit-implementation}。
+当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销\cite{fastcommit,fastcommit2}，如图~\ref{fig:quick-commit-implementation}。
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/mmd/quick-commit.pdf}
