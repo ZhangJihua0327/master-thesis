@@ -69,7 +69,7 @@
     secret-level = {公开},
     % 密级
     %
-    defend-date = {2022-05-21},
+    defend-date = {2026-05-20},
     % 答辩日期
     % 格式为 yyyy-mm-dd
     % 不填就是编译当天日期
@@ -80,10 +80,10 @@
     %
     %
     % 以下用于国家图书馆封面
-    confer-date = {2022-05-22},
+    confer-date = {2026-05-22},
     % 学位授予日期
     %
-    bottom-date = {2022-05-23},
+    bottom-date = {2026-06-23},
     % 封面底部日期
     %
     supervisor-contact = {
