@@ -539,3 +539,40 @@
   pages      = {185–196},
   numpages   = {12}
 }
+
+@inproceedings{thomson2012calvin,
+  title     = {Calvin: Fast Distributed Transactions for Partitioned Database Systems},
+  author    = {Thomson, Alexander and Diamond, Thaddeus and Weng, Shu-Chun and Ren, Kun and Shao, Philip and Abadi, Daniel J},
+  booktitle = {Proceedings of the 2012 ACM SIGMOD International Conference on Management of Data},
+  pages     = {1--12},
+  year      = {2012},
+  doi       = {10.1145/2213836.2213838}
+}
+
+@article{rethinkmvcc,
+  author     = {Faleiro, Jose M. and Abadi, Daniel J.},
+  title      = {Rethinking serializable multiversion concurrency control},
+  year       = {2015},
+  issue_date = {July 2015},
+  publisher  = {VLDB Endowment},
+  volume     = {8},
+  number     = {11},
+  issn       = {2150-8097},
+  url        = {https://doi.org/10.14778/2809974.2809981},
+  doi        = {10.14778/2809974.2809981},
+  abstract   = {Multi-versioned database systems have the potential to significantly increase the amount of concurrency in transaction processing because they can avoid read-write conflicts. Unfortunately, the increase in concurrency usually comes at the cost of transaction serializability. If a database user requests full serializability, modern multi-versioned systems significantly constrain read-write concurrency among conflicting transactions and employ expensive synchronization patterns in their design. In main-memory multi-core settings, these additional constraints are so burdensome that multi-versioned systems are often significantly outperformed by single-version systems.We propose Bohm, a new concurrency control protocol for main-memory multi-versioned database systems. Bohm guarantees serializable execution while ensuring that reads never block writes. In addition, Bohm does not require reads to perform any bookkeeping whatsoever, thereby avoiding the overhead of tracking reads via contended writes to shared memory. This leads to excellent scalability and performance in multi-core settings. Bohm has all the above characteristics without performing validation based concurrency control. Instead, it is pessimistic, and is therefore not prone to excessive aborts in the presence of contention. An experimental evaluation shows that Bohm performs well in both high contention and low contention settings, and is able to dramatically outperform state-of-the-art multi-versioned systems despite maintaining the full set of serializability guarantees.},
+  journal    = {Proc. VLDB Endow.},
+  month      = jul,
+  pages      = {1190–1201},
+  numpages   = {12}
+}
+
+@article{skeen1983formal,
+  title     = {A formal model of crash recovery in a distributed system},
+  author    = {Skeen, Dale and Stonebraker, Michael},
+  journal   = {IEEE Transactions on Software Engineering},
+  number    = {3},
+  pages     = {219--228},
+  year      = {1983},
+  publisher = {IEEE}
+}
