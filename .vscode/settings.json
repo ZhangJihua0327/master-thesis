@@ -31,6 +31,7 @@
   // latexindent 全局配置
   "latex-workshop.latexindent.local": "",
   "latex-workshop.latexindent.modify": true,
+
   "files.watcherExclude": {
     "**/target": true
   }
