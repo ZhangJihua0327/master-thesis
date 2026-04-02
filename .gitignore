@@ -1,4 +1,4 @@
-## Core latex/pdflatex auxiliary files:
+﻿## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
 *.log
@@ -333,3 +333,7 @@ figures/code/*.pdf
 
 # Generated mermaid outputs
 figures/mmd/*.pdf
+
+# Generated benchmark figure outputs
+figures/test-result/*.pdf
+

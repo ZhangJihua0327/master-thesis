@@ -113,4 +113,34 @@ if (Test-Path -Path $codeDir -PathType Container) {
     }
 }
 
+# 6. figures/test-result 目录下的 CSV 绘制为 PDF
+$testResultDir = "./figures/test-result"
+$plotScript = Join-Path -Path $testResultDir -ChildPath "plot_throughput_bar.py"
+if (Test-Path -Path $plotScript -PathType Leaf) {
+    Write-Host "`n正在处理 figures/test-result 目录下的吞吐量柱状图..."
+
+    if (Get-Command -Name python -ErrorAction SilentlyContinue) {
+        $testResultDirAbs = (Resolve-Path -Path $testResultDir).Path
+        $mplConfigDir = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "master-thesis-mplconfig"
+        if (-not (Test-Path -Path $mplConfigDir -PathType Container)) {
+            New-Item -Path $mplConfigDir -ItemType Directory | Out-Null
+        }
+
+        Push-Location $testResultDirAbs
+        $env:MPLCONFIGDIR = $mplConfigDir
+        & python "plot_throughput_bar.py"
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Success: test-result figures generated."
+        } else {
+            Write-Error "Failed: test-result figures generation failed!"
+        }
+        Pop-Location
+    } else {
+        Write-Warning "警告：未找到 python 命令，无法生成 test-result 目录下的 PDF 图。"
+    }
+}
+
 Write-Host "Done! 所有任务已完成。"
+
+
