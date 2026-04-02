@@ -1,10 +1,10 @@
-\chapter{基于分布式KV数据库原型的系统测试与验证}
-本文中的数据库原型基于本地和公有云环境进行混合隔离级别操作语义的性能测试，以验证其相较于单一隔离级别操作语义在性能上的优势。本章将介绍测试环境的搭建和配置，引入测试用例集，并基于测试集合的测试结果进行分析。
+﻿\chapter{基于分布式KV数据库原型的系统测试与验证}
+本文基于前述原型系统，对不同隔离级别配置下的事务执行性能进行测试，以验证混合隔离级别机制相较于单一强隔离级别方案在吞吐量上的优势。本章首先介绍测试环境与评测方法，然后给出三个数据集在两种部署拓扑下的吞吐量结果，并据此分析不同隔离级别配置的性能差异。
 
 \section{测试环境概述}
-数据库原型系统基于Golang进行开发，我们使用Docker容器来模拟分布式数据库的运行环境，测试环境包括本地环境和公有云环境两部分。测试时，集群使用两种规模配置：小规模下使用2个Router节点和4个Shard节点，大规模下使用4个Router节点和8个Shard节点。因为Config节点的集群化部署的意义在于提高系统的容灾能力，对性能的影响较小。因此，对于两种规模的测试，在测试中都只部署单一Config节点。
+数据库原型系统基于 Golang 开发，并通过 Docker 容器模拟分布式数据库集群。测试均在本地环境中完成，容器的 CPU 与内存配额保持一致，以避免资源分配差异对结果造成额外干扰。集群由 Router、Shard 与 Config 三类节点组成，其中 Config 节点仅保留单节点部署，因为其主要承担元数据管理职责，对吞吐量影响较小。
 
-在本地环境中，以便于快速部署和测试。测试环境的配置如表\ref{tab:local-env-config}所示，机器性能不是系统性能的瓶颈。
+本文重点考察两种部署拓扑：\textbf{single-az} 表示系统组件集中部署在单一逻辑域内，\textbf{pair-az} 表示系统组件分散在两个逻辑域内。这里沿用实验数据中的命名，以便与统计结果和生成图保持一致。两种拓扑使用相同的事务负载与资源限制，因而测试结果的差异主要反映部署分散程度对分布式事务协调开销的影响。
 
 \begin{table}[htbp]
     \centering
@@ -13,62 +13,47 @@
     \label{tab:local-env-config}
     \begin{tabular}{c c}
         \toprule
-        组件            & 配置参数                                    \\
+        组件 & 配置参数 \\
         \midrule
-        处理器 (CPU)     & AMD Ryzen 5 5600X (6 Cores, 12 Threads) \\
-        内存 (RAM)      & 36GB DDR4 3600MHz                       \\
-        操作系统 (OS)     & Windows 11 Home 25H2                    \\
-        容器资源限制        & 1 vCPU, 2GB RAM                         \\
-        编程语言 (Golang) & 1.24-alpine                             \\
-        容器基础镜像        & alpine:3.19                             \\
+        处理器 (CPU) & AMD Ryzen 5 5600X (6 Cores, 12 Threads) \\
+        内存 (RAM) & 36GB DDR4 3600MHz \\
+        操作系统 (OS) & Windows 11 Home 25H2 \\
+        容器资源限制 & 1 vCPU, 2GB RAM \\
+        编程语言 (Golang) & 1.24-alpine \\
+        容器基础镜像 & alpine:3.19 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-在公有云环境中，我们使用腾讯云提供的云服务器实例作为宿主机，同样基于Docker进行容器化部署。每个容器的资源限制与本地环境保持一致，即1 vCPU和2GB内存。为了模拟真实的跨可用区部署场景，我们将Router和Shard节点分散部署在不同的可用区中。具体地，每个可用区（Availability Zone）部署1个Router节点和2个Shard节点，一个Router和一个Shard部署在一个宿主机上，另外一个Shard部署在同一个可用区内的另一个宿主机上，以保证系统的高可用性和容灾能力。大规模测试（4 Router, 8 Shard）将跨越4个可用区，而小规模测试（2 Router, 4Shard）将部署在2个可用区内，拓扑图如图\ref{fig:cloud-topology}所示。云环境的详细配置如表\ref{tab:cloud-env-config}所示机器性能不是系统性能的瓶颈。
+\section{测试负载与评价指标}
+为了更全面地考察系统在不同业务模式下的表现，本文选取了 Courseware、SmallBank 和 TPCC 三个数据集。三个数据集分别覆盖课程管理、银行转账和订单处理等不同类型的事务访问模式，能够反映混合隔离级别在多种典型负载下的适用性。
 
-\begin{table}[htbp]
-    \centering
-    \renewcommand{\arraystretch}{1.25}
-    \caption{公有云测试环境配置}
-    \label{tab:cloud-env-config}
-    \begin{tabular}{c c}
-        \toprule
-        组件     & 配置参数                             \\
-        \midrule
-        云服务提供商 & 腾讯云 (Tencent Cloud)              \\
-        实例规格   & 标准型S5 (2 vCPU, 4GB RAM)          \\
-        操作系统   & Ubuntu 20.04 LTS                 \\
-        部署方式   & Docker 容器化部署                     \\
-        容器资源限制 & 1 vCPU, 2GB RAM                  \\
-        网络拓扑   & 跨可用区部署 (1 Router + 2 Shard / AZ) \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/mmd/cloud-deploy.pdf}
-    \caption{公有云测试环境拓扑图}
-    \label{fig:cloud-topology}
-\end{figure}
+测试中比较了三种隔离级别配置：\textbf{SER} 表示所有事务均采用可串行化隔离级别；\textbf{SI-SER} 表示事务在快照隔离与可串行化之间混合执行；\textbf{MIAED} 则表示在满足正确性约束的前提下，由混合隔离级别分配策略为事务选择更低成本的执行级别。评价指标采用平均吞吐量（transactions per second, tx/s），用于衡量系统在稳定运行阶段的整体处理能力。
 
 \section{测试结果与分析}
-SmallBank 是一个经典的分布式数据库基准测试套件\cite{thomson2012calvin, diab2013oltpbench}，我们使用 SmallBank 进行测试，配置10\%的热点数据。
+图~\ref{fig:throughput-single-az} 和图~\ref{fig:throughput-pair-az} 分别展示了 single-az 与 pair-az 两种拓扑下，三个数据集在不同隔离级别配置中的吞吐量结果。每个数据集均包含三根柱子，对应 SER、SI-SER 与 MIAED 三种方案。
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/test-result.pdf}
-    \caption{测试结果}
-    \label{fig:smallbank-result}
+    \includegraphics[width=0.82\textwidth]{figures/test-result/throughput_single-az.pdf}
+    \caption{single-az 拓扑下不同隔离级别配置的吞吐量对比}
+    \label{fig:throughput-single-az}
 \end{figure}
 
-图中的MIA是本课题组的一项工作\footnote{该工作尚未发表 (Unpublished Manuscript)}，MIA旨在保证数据库负载整体满足“串行化”正确性的前提下，为每个事务分配性能最优的最低隔离级别。MIA通过静态分析事务模板的读写集合并构建静态依赖图（SDG），依据论文提出的安全分配规则，精准识别出可从昂贵的串行化（SER）或快照隔离（SI）降级到更轻量级（如RA、CC或PC）的事务。相比传统方案，MIA实现了更细粒度的降级策略，其处理万级事务实例仅需一秒。实验证明，在TPC-C等测试中，MIA能将92\%以上的事务安全分配到比SI更弱的级别，在不破坏一致性的同时，将系统吞吐量提升最高达300\%，实现了性能与正确性的最优平衡。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figures/test-result/throughput_pair-az.pdf}
+    \caption{pair-az 拓扑下不同隔离级别配置的吞吐量对比}
+    \label{fig:throughput-pair-az}
+\end{figure}
 
-在各种部署条件下，可以看到经过MIA优化过后的事务执行序列在执行时间上相较于基础的SI隔离级别优化约30\%左右的提升，大规模部署相较于小规模部署有20\%左右的性能下降，可能的原因来自于因为分片过多导致的跨分片事务增多，增加了分布式事务的协调开销。公有云环境相较于本地环境有10\%左右的性能下降，可能的原因来自于网络延迟和云环境中资源共享带来的性能波动。总体来说，MIA处理后的事务在不同部署条件下都能显著提升系统性能，同时保持事务的一致性和正确性。
+从图~\ref{fig:throughput-single-az} 可以看出，在 single-az 拓扑下，SER 的平均吞吐量为 69.36 tx/s，SI-SER 提升到 74.51 tx/s，平均增幅约为 7.42\%。这说明即使只在 SI 和 SER 两个较强隔离级别之间进行混合调度，也已经能够缓解一部分由全局串行化带来的并发约束。相比之下，MIAED 的平均吞吐量达到 206.19 tx/s，相较于 SER 提升约 197.28\%，相较于 SI-SER 进一步提升约 176.74\%。在三个数据集上，这一趋势都十分稳定：Courseware 上 MIAED 相比 SER 提升约 197.94\%，SmallBank 上提升约 196.81\%，TPCC 上提升约 197.10\%。
 
-综合以上测试结果，我们可以得到结论，在保证事务的一致性和正确性的前提下，不论在本地环境还是公有云环境，分布式混合隔离级别操作语义能够显著提升系统性能。对混合事务隔离级别进行建模、设计和开发一套合理的混合隔离级别操作语义、并基于此开发一套支持混合隔离级别操作语义的数据库系统，能够在分布式数据库系统中实现性能和一致性的最优平衡，对数据库的研究和应用具有重要意义。
+在 pair-az 拓扑下，整体吞吐量显著下降，但不同隔离级别之间的相对关系保持不变。SER 的平均吞吐量为 7.13 tx/s，SI-SER 为 7.62 tx/s，平均增幅约为 6.85\%；MIAED 则达到 21.17 tx/s，相较于 SER 提升约 196.81\%，相较于 SI-SER 提升约 177.78\%。分数据集来看，MIAED 在 Courseware、SmallBank 和 TPCC 上相较于 SER 的提升分别为 195.40\%、194.87\% 和 200.18\%。这表明，尽管部署拓扑更加分散会放大分布式事务的协调成本，但混合隔离级别机制仍然能够持续带来接近 3 倍的吞吐量收益。
+
+进一步比较两种拓扑可以发现，从 single-az 切换到 pair-az 后，三种策略的平均吞吐量均下降到原来的约 10\% 左右：SER 下降约 89.72\%，SI-SER 下降约 89.77\%，MIAED 下降约 89.73\%。这说明部署分散程度会显著拉长事务的提交路径，并放大跨节点协调与通信等待的开销。不过，更重要的是，不同策略之间的相对优势在两类拓扑中几乎保持一致。换言之，MIAED 带来的性能改善并非特定部署条件下的偶然现象，而是来源于其本身对事务隔离强度进行按需分配的机制优势。
+
+综合三组数据可以得到两个结论。第一，单一 SER 虽然提供了最强的一致性保证，但其保守的并发控制会明显压制系统吞吐量；将部分事务放宽到 SI-SER 后，可以取得有限但稳定的性能提升。第二，基于更细粒度事务分类的 MIAED 能够在不破坏正确性前提下显著降低不必要的强同步开销，因此在三个数据集、两种拓扑下都取得了最优吞吐量结果。这表明，混合隔离级别并不是局部优化，而是一种能够在多类工作负载上稳定发挥作用的系统级优化手段。
 
 \section{本章小结}
-本章详细描述了数据库原型系统的测试环境和测试流程，展示了在本地环境与公有云环境下的性能测试结果。实验证明，支持混合隔离级别的操作语义能在保障核心一致性的前提下，实现分布式事务的高效处理与系统吞吐量的大幅提升。
+本章基于分布式 KV 数据库原型，对 Courseware、SmallBank 和 TPCC 三个数据集进行了吞吐量测试，并比较了 SER、SI-SER 与 MIAED 三种隔离级别配置在 single-az 与 pair-az 两种拓扑下的表现。实验结果表明，混合隔离级别配置能够在不同数据集上稳定提升系统吞吐量，其中 MIAED 在两类拓扑下均获得了最优结果。测试结果验证了本文所设计的混合隔离级别机制能够在保持事务正确性的同时，显著提升分布式事务处理性能。
