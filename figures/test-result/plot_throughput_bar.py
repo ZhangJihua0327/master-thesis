@@ -73,14 +73,13 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
     ax.set_xticklabels(BENCHMARK_ORDER)
     ax.set_ylabel("Throughput (tx/s)")
     ax.set_xlabel("Benchmark")
-    ax.set_title(f"Throughput Comparison Across Isolation Levels ({input_name})")
     ax.grid(axis="y", linestyle="--", linewidth=0.6, alpha=0.45)
     ax.set_axisbelow(True)
-    ax.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.12))
+    ax.legend(frameon=False, ncol=1, loc="lower left", bbox_to_anchor=(1.02, 0.02), borderaxespad=0.0)
     ax.set_ylim(0, max_value * 1.22)
 
     output_path = SCRIPT_DIR / f"throughput_{input_name}.pdf"
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 0.88, 1))
     fig.savefig(output_path, format="pdf", bbox_inches="tight")
     plt.close(fig)
     return output_path
