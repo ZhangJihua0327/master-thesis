@@ -16,7 +16,7 @@
         组件            & 配置参数                                    \\
         \midrule
         处理器 (CPU)     & AMD Ryzen 5 5600X (6 Cores, 12 Threads) \\
-        内存 (RAM)      & 36GB DDR4 3600MHz                       \\
+        内存 (RAM)      & 32GB DDR4 3600MHz                       \\
         操作系统 (OS)     & Windows 11 Home 25H2                    \\
         容器资源限制        & 1 vCPU, 2GB RAM                         \\
         编程语言 (Golang) & 1.24-alpine                             \\
@@ -31,7 +31,7 @@
 测试中比较了三种隔离级别配置：\textbf{SER} 表示所有事务均采用可串行化隔离级别；\textbf{SI-SER} 表示事务在快照隔离与可串行化之间混合执行；\textbf{MIAED} 则表示引入 MIA 策略后的混合隔离级别分配结果。MIA 是本组另一项工作，主要根据事务内容分析结果，在保证事务正确性的前提下尽量匹配满足要求的最低隔离级别；本文仅将其作为对照策略，不展开其内部方法。评价指标采用平均吞吐量（transactions per second, tx/s），用于衡量系统在稳定运行阶段的整体处理能力。
 
 \section{测试结果与分析}
-图~\ref{fig:throughput-single-az} 和图~\ref{fig:throughput-pair-az} 展示了三组数据集在两种部署方式下、不同隔离级别配置中的吞吐量结果。每个数据集均包含三根柱子，对应 SER、SI-SER 与 MIAED 三种方案。
+图~\ref{fig:throughput-single-az} 和图~\ref{fig:throughput-pair-az} 展示了三组数据集在两种部署方式下、不同隔离级别配置中的吞吐量结果。
 
 \begin{figure}[htbp]
     \centering
