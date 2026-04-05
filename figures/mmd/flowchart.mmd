@@ -1,0 +1,31 @@
+%%{init: {'theme': 'default', 'flowchart': {'nodeSpacing': 16, 'rankSpacing': 22, 'curve': 'linear'}}}%%
+flowchart LR
+    A["开始事务<br/>StartTxn"] --> B["选择路由<br/>SelectRouter"]
+    B --> C["路由初始化事务<br/>分配 start_ts<br/>记录隔离级别与分片集合"]
+    C --> D{"执行操作"}
+
+    D -->|"Read"| E["按键定位分片<br/>GetShardByKey"]
+    E --> F["分片读取<br/>命中本地写集则直接返回<br/>否则按 MVCC 读取并记录 readSet"]
+    F --> D
+
+    D -->|"Write"| G["按键定位分片<br/>转发写请求"]
+    G --> H["分片缓存写入<br/>记录 writeSet"]
+    H --> D
+
+    D -->|"Abort"| I["通知相关分片中止<br/>清理事务状态"]
+    I --> J["返回中止"]
+
+    D -->|"Commit"| K{"单分片事务?"}
+    K -->|"是"| L["QuickCommit<br/>获取 commit_ts<br/>冲突检测"]
+    L --> M{"检测通过?"}
+    M -->|"否"| I
+    M -->|"是"| N["持久化写集<br/>清理缓冲区"]
+    N --> O["返回提交成功"]
+
+    K -->|"否"| P["2PC Prepare<br/>各分片分配时间戳并检测冲突"]
+    P --> Q{"全部 Prepare 成功?"}
+    Q -->|"否"| R["广播 Abort<br/>各分片回滚并清理"]
+    R --> J
+    Q -->|"是"| S["2PC Commit<br/>广播 Commit"]
+    S --> T["各分片持久化 writeSet<br/>删除事务缓冲区"]
+    T --> O
