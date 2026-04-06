@@ -12,6 +12,11 @@ matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 matplotlib.rcParams["axes.spines.top"] = False
 matplotlib.rcParams["axes.spines.right"] = False
+matplotlib.rcParams["font.size"] = 14
+matplotlib.rcParams["axes.labelsize"] = 15
+matplotlib.rcParams["xtick.labelsize"] = 14
+matplotlib.rcParams["ytick.labelsize"] = 14
+matplotlib.rcParams["legend.fontsize"] = 13
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,7 +49,7 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
     positions = np.arange(len(BENCHMARK_ORDER))
     width = 0.22
 
-    fig, ax = plt.subplots(figsize=(8.2, 4.6))
+    fig, ax = plt.subplots(figsize=(8.8, 5.2))
     max_value = max(values[benchmark][strategy] for benchmark in BENCHMARK_ORDER for strategy in STRATEGY_ORDER)
 
     for offset_index, strategy in enumerate(STRATEGY_ORDER):
@@ -66,7 +71,7 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
                 f"{value:.1f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
+                fontsize=13,
             )
 
     ax.set_xticks(positions)
