@@ -1,7 +1,26 @@
-%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '23px', 'noteFontSize': '21px'}}}%%
+%%{init: {
+'theme': 'default',
+'themeVariables': {
+'fontSize': '25px',
+'fontFamily': 'sans-serif, Arial',
+'actorFontSize': '25px',
+'messageFontSize': '25px',
+'noteFontSize': '23px'
+},
+'sequence': {
+'messageMargin': 2,      // 箭头行间距 → 更小
+'noteMargin': 2,         // Note 块上下间距 → 更小
+'actorMargin': 20,       // 最顶部参与者间距压缩
+'boxMargin': 3,          // 文字到边框内边距压到最小（不撑高）
+'loopMargin': 2,         // loop 内部间距极度压缩（关键！压高度）
+'bottomMarginAdj': 0,    // 去掉底部空白
+'topMarginAdj': 0,       // 去掉顶部多余空白
+'maxWidth': 900          // 宽度完全固定不变
+}
+}}%%
 sequenceDiagram
-    participant Shard as 数据分片 (Shard节点)
-    participant Router as 协调者/配置中心 (Router节点)
+    participant Shard as 数据分片(Shard节点)
+    participant Router as 协调者/配置中心(Router节点)
 
     Note over Shard, Router: 阶段一：长连接通道建立
     Shard->>Router: 发起 Streaming RPC 调用 (WatchConfig)
@@ -14,7 +33,6 @@ sequenceDiagram
     end
 
     Note over Router: 阶段三：配置变更与实时流式推送
-    Note right of Router: 管理员更新分片映射/全局时钟规则
     Router->>Router: 触发变更事件，生成最新配置版本
     Router--)Shard: [流式双向通道] 主动推送异步 Config Meta
     Shard->>Shard: 内存热加载配置，原子更新本地路由引擎

@@ -1,4 +1,24 @@
-%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '23px', 'noteFontSize': '21px'}}}%%
+
+%%{init: {
+'theme': 'default',
+'themeVariables': {
+'fontSize': '25px',
+'fontFamily': 'sans-serif, Arial',
+'actorFontSize': '25px',
+'messageFontSize': '25px',
+'stateLabelFontSize': '25px',
+'classText': '25px',
+'noteFontSize': '23px'
+},
+'sequence': {
+'messageMargin': 3,       /* 箭头行间距 ↓ 变小 */
+'noteMargin': 3,          /* 备注块间距 ↓ 变小 */
+'actorMargin': 25,        /* 参与者上下间距 ↓ 变小 */
+'boxMargin': 4,           /* 盒子内边距 ↓ 大幅压缩 */
+'bottomMarginAdj': 0,     /* 底部留白 ↓ 去掉 */
+'maxWidth': 900           /* 宽度固定，避免高度膨胀 */
+}
+}}%%
 sequenceDiagram
     participant Client
     participant Router as 全局协调者 (Router)
@@ -10,7 +30,7 @@ sequenceDiagram
     Router->>Shard: TxStart(TxID, isoLevel, snapshotTime)
     activate Shard
     Shard->>Shard: 根据隔离级别计算并同步本地HLC
-    Note over Shard: 不立刻创建 TxBuffer<br>采用懒加载(Lazy Load)以节省内存
+    Note over Shard: 不立刻创建 TxBuffer采用懒加载(Lazy Load)以节省内存
     Shard-->>Router: 返回本地时钟状态
     deactivate Shard
     Router-->>Client: 事务初始化成功

@@ -1,0 +1,73 @@
+%%{init: {
+  'theme':'neutral',
+  'fontSize': 25,            /* 主字体 25px */
+  'nodeWidth': 130,          /* 方框宽度 保持不变 */
+  'nodeHeight': 40,          /* 方框高度 保持不变 */
+  'flowchart': {
+    'nodeSpacing': 50,       /* 左右节点间距 */
+    'rankSpacing': 18,       /* 上下层间距（变小）*/
+    'padding': 2             /* 文字到边框距离（极小，不撑框）*/
+  }
+}}%%
+graph TD
+    %% 定义节点样式
+    classDef user fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef client fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
+    classDef config fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef router fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
+    classDef shard fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    %% --- 角色层 ---
+    subgraph 角色层
+        User[用户]:::user
+        Admin[数据库管理员]:::user
+    end
+
+    %% --- 客户端层（Console内部 嵌套在这里）---
+    subgraph 客户端层
+        Console[Console 客户端]:::client
+        
+        %% Console内部模块（直接放在客户端层）
+        Pool[连接池管理]
+        Cache[元数据缓存]
+        LoadBalance[负载均衡模块]
+    end
+
+    %% --- 配置层 ---
+    subgraph 配置层
+        ConfigServer[配置服务器]:::config
+        MetaDB[(元数据数据库)]:::config
+    end
+
+    %% --- 路由层 ---
+    subgraph 路由层
+        Router1[Router 节点1]:::router
+        Router2[Router 节点2]:::router
+    end
+
+    %% --- 分片层 ---
+    subgraph 分片层
+        S1[Shard 节点1]:::shard
+        S2[Shard 节点2]:::shard
+        S3[Shard 节点3]:::shard
+        S4[Shard 节点4]:::shard
+    end
+
+    %% --- 连线 ---
+    User --> Console
+    Admin --> Console
+    
+    Console --> Pool
+    Console --> Cache
+    Console --> LoadBalance
+
+    Pool --> ConfigServer
+    LoadBalance --> Router1
+    LoadBalance --> Router2
+    
+    ConfigServer -- 长连接 --> MetaDB
+    
+    Router1 -- 长连接 --> S1
+    Router1 -- 长连接 --> S2
+    Router2 -- 长连接 --> S3
+    Router2 -- 长连接 --> S4

@@ -61,7 +61,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=1.0\textwidth]{figures/architecture.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/mmd/architecture.pdf}
     \caption{系统总体架构图}
     \label{fig:architecture}
 \end{figure}
@@ -131,7 +131,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/mmd/long-conn.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/mmd/long-conn.pdf}
     \caption{长连接配置同步示意图}
     \label{fig:config-sync}
 \end{figure}
@@ -152,7 +152,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/mmd/global-timeline.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/mmd/global-timeline.pdf}
     \caption{组件交互时序图}
     \label{fig:global-timeline}
 \end{figure}
@@ -180,7 +180,7 @@
 当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销\cite{fastcommit,fastcommit2}，如图~\ref{fig:quick-commit-implementation}。
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/mmd/quick-commit.pdf}
+    \includegraphics[width=0.85\textwidth]{figures/mmd/quick-commit.pdf}
     \caption{组件交互时序图}
     \label{fig:quick-commit-implementation}
 \end{figure}
@@ -204,7 +204,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/code/user_client.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/code/user_client.pdf}
     \caption{用户客户端示例交互}
     \label{fig:user-client}
 \end{figure}
@@ -222,7 +222,7 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/mmd/client-pool.pdf}
+    \includegraphics[width=1.0\textwidth]{figures/mmd/client-pool.pdf}
     \caption{ClientPool 机制示意图}
     \label{fig:client-pool}
 \end{figure}

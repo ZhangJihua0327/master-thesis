@@ -1,12 +1,31 @@
-%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '23px', 'noteFontSize': '21px'}}}%%
+%%{init: {
+'theme': 'default',
+'themeVariables': {
+'fontSize': '25px',
+'fontFamily': 'sans-serif, Arial',
+'actorFontSize': '25px',
+'messageFontSize': '25px',
+'stateLabelFontSize': '25px',
+'classText': '25px',
+'noteFontSize': '23px'
+},
+'sequence': {
+'messageMargin': 3,       /* 箭头行间距 ↓ 变小 */
+'noteMargin': 3,          /* 备注块间距 ↓ 变小 */
+'actorMargin': 25,        /* 参与者上下间距 ↓ 变小 */
+'boxMargin': 4,           /* 盒子内边距 ↓ 大幅压缩 */
+'bottomMarginAdj': 0,     /* 底部留白 ↓ 去掉 */
+'maxWidth': 900           /* 宽度固定，避免高度膨胀 */
+}
+}}%%
 sequenceDiagram
     participant W as Worker
     participant P as ClientPool
-    participant C1 as Client→Router1
-    participant C2 as Client→Router2
+    participant C1 as Client.Router1
+    participant C2 as Client.Router2
 
     W->>P: Acquire() [start]
-    P-->>W: 返回 Client→Router1 (round-robin)
+    P-->>W: 返回 Client.Router1 (round-robin)
     W->>C1: StartTransaction
     C1-->>W: txID
     W->>C1: Read(txID, key)
@@ -15,6 +34,6 @@ sequenceDiagram
     Note over W,C1: 事务结束，释放绑定
 
     W->>P: Acquire() [下一个start]
-    P-->>W: 返回 Client→Router2 (round-robin)
+    P-->>W: 返回 Client.Router2 (round-robin)
     W->>C2: StartTransaction
     C2-->>W: txID

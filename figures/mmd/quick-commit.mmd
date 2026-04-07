@@ -1,4 +1,23 @@
-%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '23px', 'noteFontSize': '21px'}}}%%
+%%{init: {
+'theme': 'default',
+'themeVariables': {
+'fontSize': '25px',
+'fontFamily': 'sans-serif, Arial',
+'actorFontSize': '25px',
+'messageFontSize': '25px',
+'stateLabelFontSize': '25px',
+'classText': '25px',
+'noteFontSize': '23px'
+},
+'sequence': {
+'messageMargin': 3,       /* 箭头行间距 ↓ 变小 */
+'noteMargin': 3,          /* 备注块间距 ↓ 变小 */
+'actorMargin': 25,        /* 参与者上下间距 ↓ 变小 */
+'boxMargin': 4,           /* 盒子内边距 ↓ 大幅压缩 */
+'bottomMarginAdj': 0,     /* 底部留白 ↓ 去掉 */
+'maxWidth': 900           /* 宽度固定，避免高度膨胀 */
+}
+}}%%
 sequenceDiagram
     participant Client
     participant Router as 全局协调者 (Router)
@@ -19,6 +38,6 @@ sequenceDiagram
     Note over Client, Shard1: 场景 B: 单分片事务 (QuickCommit 提交加速)
     Client->>Router: 提交单片事务
     Router->>Shard1: RPC QuickCommit(TxID, isoLevel)
-    Note over Shard1: Shard 内部直接完成闭环:<br>1. CAS 乐观/悲观版本校验冲突<br>2. 越过 Pending 直接写 MVCC<br>3. 原地释放锁和本地缓存记录
+    Note over Shard1: Shard 内部直接完成闭环:<br>1. CAS 乐观/悲观版本校验冲突<br>2. 越过 Pending 直接写 MVC<br>3. 原地释放锁和本地缓存记录
     Shard1-->>Router: OK (返回本地决议时间)
     Note left of Router: 无需 2PC 协商，仅 1 次 RPC 即完成提交，极大降低延迟
