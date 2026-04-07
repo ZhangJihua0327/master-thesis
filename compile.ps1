@@ -8,6 +8,11 @@ Build figures and compile the thesis PDF.
 - Compile the main thesis document to PDF.
 #>
 
+param(
+    [string]$Target = $null,
+    [string]$OutputName = $null
+)
+
 $ErrorActionPreference = "Stop"
 
 $rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -29,6 +34,10 @@ function Test-Tool($name) {
 }
 
 function Invoke-MermaidCompilation {
+    param(
+        [string]$SingleFile = $null
+    )
+
     if (-not (Test-Path -Path $sourceDir -PathType Container)) {
         Write-Warning "Skip Mermaid compilation: directory $sourceDir does not exist."
         return
@@ -42,9 +51,19 @@ function Invoke-MermaidCompilation {
     $sourceDirAbs = (Resolve-Path -Path $sourceDir).Path
     $targetDirAbs = (Resolve-Path -Path $targetDir).Path
 
+    $files = Get-ChildItem -Path $sourceDir -Filter "*.mmd"
+    if ($SingleFile) {
+        $singleBase = [System.IO.Path]::GetFileNameWithoutExtension($SingleFile)
+        $matched = $files | Where-Object { $_.BaseName -eq $singleBase }
+        if (-not $matched) {
+            throw "Mermaid source file not found: $SingleFile"
+        }
+        $files = $matched
+    }
+
     Write-Host "Compiling Mermaid diagrams..."
 
-    Get-ChildItem -Path $sourceDir -Filter "*.mmd" | ForEach-Object {
+    $files | ForEach-Object {
         $inputFile = $_.FullName
         $fileName = $_.BaseName
         $outputFile = Join-Path -Path $targetDir -ChildPath "$fileName.pdf"
@@ -159,6 +178,10 @@ function Invoke-TestResultCompilation {
 }
 
 function Invoke-ThesisCompilation {
+    param(
+        [string]$DesiredOutputName = $null
+    )
+
     Write-Host "`nCompiling thesis PDF..."
 
     if (-not (Test-Path -Path $thesisMain -PathType Leaf)) {
@@ -178,6 +201,20 @@ function Invoke-ThesisCompilation {
 
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path -Path $thesisPdf)) {
             throw "latexmk failed to compile the thesis."
+        }
+
+        if ($DesiredOutputName) {
+            $outputFileName = [System.IO.Path]::GetFileName($DesiredOutputName)
+            if (-not $outputFileName.ToLower().EndsWith('.pdf')) {
+                $outputFileName += '.pdf'
+            }
+            $outputPath = Join-Path -Path $rootDir -ChildPath $outputFileName
+            if ((Test-Path -Path $outputPath) -and ($outputPath -ne (Join-Path -Path $rootDir -ChildPath $thesisPdf))) {
+                Remove-Item -Path $outputPath -Force
+            }
+            Move-Item -Path (Join-Path -Path $rootDir -ChildPath $thesisPdf) -Destination $outputPath -Force
+            Write-Host "Success: $outputPath"
+            return
         }
 
         Write-Host "Success: $thesisPdf"
@@ -220,9 +257,24 @@ function Invoke-ThesisCompilation {
     Write-Host "Success: $thesisPdf"
 }
 
+if ($Target -and -not $OutputName) {
+    Invoke-MermaidCompilation -SingleFile $Target
+    Write-Host "`nDone! Single Mermaid diagram compiled."
+    return
+}
+
+if ($Target -and $OutputName) {
+    Invoke-MermaidCompilation
+    Invoke-CodeFigureCompilation
+    Invoke-TestResultCompilation
+    Invoke-ThesisCompilation -DesiredOutputName $OutputName
+    Write-Host "`nDone! Project compiled to $OutputName."
+    return
+}
+
+# Default: compile only figures, not the full thesis PDF
 Invoke-MermaidCompilation
 Invoke-CodeFigureCompilation
 Invoke-TestResultCompilation
-Invoke-ThesisCompilation
 
-Write-Host "`nDone! Figures and thesis PDF are up to date."
+Write-Host "`nDone! Figures are up to date. Use '.\compile.ps1 project <outputname>' to compile the full thesis PDF."

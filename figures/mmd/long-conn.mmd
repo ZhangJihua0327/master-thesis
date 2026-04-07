@@ -1,21 +1,21 @@
 %%{init: {
 'theme': 'default',
 'themeVariables': {
-'fontSize': '25px',
+'fontSize': '24px',
 'fontFamily': 'sans-serif, Arial',
-'actorFontSize': '25px',
-'messageFontSize': '25px',
-'noteFontSize': '23px'
+'actorFontSize': '24px',
+'messageFontSize': '24px',
+'noteFontSize': '21px'
 },
 'sequence': {
-'messageMargin': 2,      // 箭头行间距 → 更小
-'noteMargin': 2,         // Note 块上下间距 → 更小
-'actorMargin': 20,       // 最顶部参与者间距压缩
-'boxMargin': 3,          // 文字到边框内边距压到最小（不撑高）
-'loopMargin': 2,         // loop 内部间距极度压缩（关键！压高度）
-'bottomMarginAdj': 0,    // 去掉底部空白
-'topMarginAdj': 0,       // 去掉顶部多余空白
-'maxWidth': 900          // 宽度完全固定不变
+'messageMargin': 0,
+'noteMargin': 4,
+'actorMargin': 100,
+'boxMargin': 8,
+'loopMargin': 0,
+'bottomMarginAdj': -10,
+'topMarginAdj': -10,
+'maxWidth': 1200
 }
 }}%%
 sequenceDiagram
@@ -35,5 +35,6 @@ sequenceDiagram
     Note over Router: 阶段三：配置变更与实时流式推送
     Router->>Router: 触发变更事件，生成最新配置版本
     Router--)Shard: [流式双向通道] 主动推送异步 Config Meta
-    Shard->>Shard: 内存热加载配置，原子更新本地路由引擎
+    %% 关键优化：长文字放到右侧，不占用纵向高度
+    Shard-)Shard: 内存热加载配置原子更新本地路由引擎
     Shard-->>Router: ACK (返回配置应用成功确认)
