@@ -66,7 +66,7 @@ TLC 既是针对 \TLAPlus 规约的模型检查工具，也可作为规约的模
     \item \textbf{读操作 ($op.type = "R"$):}
           \begin{itemize}
               \item \textbf{本地优先读取:} 首先检查 $tx\_buffer[t][op.key]$（即写后读 Read-Your-Writes 语义）。
-              \item \textbf{快照读取:} 如果本地没有，则调用辅助算子 $MaxVersion(store[op.key], tx\_snapshot[t])$。这意味着它会在全局存储的版本历史中，找到提交时间戳小于等于事务快照的最新版本。
+              \item \textbf{快照读取:} 如果本地没有，则调用辅助算子\\ $MaxVersion(store[op.key], tx\_snapshot[t])$。这意味着它会在全局存储的版本历史中，找到提交时间戳小于等于事务快照的最新版本。
               \item \textbf{记录历史:} 将读取结果追加到 $op\_seq$，用于验证。
           \end{itemize}
     \item \textbf{写操作 ($op.type = "W"$):}

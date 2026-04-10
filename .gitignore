@@ -337,3 +337,4 @@ figures/mmd/*.pdf
 # Generated benchmark figure outputs
 figures/test-result/*.pdf
 
+docs/*/node_modules/

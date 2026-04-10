@@ -8,7 +8,7 @@
 
 % 仅保留所有版本通用的核心配置，避免任何兼容问题
 \setminted{
-    fontsize=\small,       % 字体大小适配论文
+    fontsize=\large,       % 放大终端字体，便于论文中阅读
     linenos=false,         % 终端输出不显示行号
     breaklines=true,       % 自动换行，避免内容溢出
     bgcolor=gray!5,        % 浅灰背景，美观且不影响打印
@@ -20,11 +20,11 @@
 % 终端命令 + 输出内容（原样保留）
 \begin{minted}{text}
 >start SER
-Tx_mulberry-server-2_1709561234890> read account-1 # read <key>
+Tx_mulberry-server-2_1709561234890> read account-1
 <nil>
-Tx_mulberry-server-2_1709561234890> write account-1 100 # write <key> <value>
+Tx_mulberry-server-2_1709561234890> write account-1 100
 OK
-Tx_mulberry-server-2_1709561234890> commit # commit
-Committed # when failed Error: Failed reason
+Tx_mulberry-server-2_1709561234890> commit
+Committed
 \end{minted}
 \end{document}
