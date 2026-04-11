@@ -283,7 +283,7 @@ $S$ 为快照函数，将键映射到其对应的值。
 基于上述一致性公理的定义，接下来我们讨论各个隔离级别的特点。为了在一致性、可扩展性和可用性之间取得平衡，现代数据库系统提供了一系列不同强度的隔离级别。这些级别根据其提供的可见性保证和所能防止的异常现象，构成了一个从最弱的“原子读”到最强的“可串行化”的层级体系。
 \\
 
-\noindent\textbf{读原子性（Read Atomic，RA）}\cite{bailis2016ramp}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 、 $\mathsf{Ext}$ 和 $\mathsf{Session}$ 三条基础性公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~3(a) 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
+\noindent\textbf{读原子性（Read Atomic，RA）}\cite{bailis2016ramp}是最弱的一致性级别，仅满足 $\mathsf{Int}$ 、 $\mathsf{Ext}$ 和 $\mathsf{Session}$ 三条基础性公理。它保证事务的更新对外呈现为原子效果：要么观察到同一事务的全部写入，要么完全观察不到该事务。由于 RA 不对事务间可见性施加额外约束，除破碎读与脏读被 $\mathsf{Ext}$ 排除外，其余多类异常仍可能发生。例如图~\ref{fig:anomaly-causality} 的因果违背（Causality Violation）：$T_2$ 看到 $T_1$ 的写入，$T_3$ 看到 $T_2$ 的写入，但 $T_3$ 却未看到 $T_1$ 的相关更新，从而打破直观的因果链。
 
 \noindent\textbf{因果一致性（Causal Consistency，CC）}\cite{akkoorath2016cure}在 RA 基础上增加 $\mathsf{TransVis}$ 公理，要求可见性关系 $\text{VIS}$ 具有传递性：若 $T_3$ 看到了 $T_2$，且 $T_2$ 看到了 $T_1$，则 $T_3$ 也必须看到 $T_1$。因此 CC 能排除因果违背异常。需要注意的是，CC 并不要求对同一对象的并发写进行强制排序或互斥处理，因此丢失更新（Lost Update）等写冲突相关异常仍可能发生。
 
@@ -316,10 +316,10 @@ $S$ 为快照函数，将键映射到其对应的值。
                & $\times$                                                             & $\times$            & $\times$     & $\checkmark$ & $\checkmark$ \\
         \midrule
         PC     & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},\ \mathsf{Prefix}$
-               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\checkmark$ \\
+               & $\times$                                                             & $\times$            & $\checkmark$ & $\times$     & $\checkmark$ \\
         \midrule
         SI     & \makecell[l]{$\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},$                                                                          \\$\mathsf{Prefix},\ \mathsf{NoConflict}$}
-               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\times$     \\
+               & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\checkmark$ \\
         \midrule
         SER    & $\mathsf{Int},\ \mathsf{Ext},\ \mathsf{Session},\ \mathsf{TotalVis}$
                & $\times$                                                             & $\times$            & $\times$     & $\times$     & $\times$     \\
@@ -336,7 +336,7 @@ $S$ 为快照函数，将键映射到其对应的值。
 
 从图~\ref{fig:isolevels} 和表~\ref{tab:consistency-models} 给出了每个隔离级别所允许和阻止的异常，并基于对异常的选择，讨论了各个隔离级别之间的关系，用偏序关系表示，本文讨论的六个隔离级别在一致性约束上形成了一条从弱到强的偏序链。
 
-记 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$ 为一个抽象执行。对任意事务 $T \in \mathcal{T}$，有
+记 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$ 为一个抽象执行。对任意事务 $T \in \mathcal{T}$，有如下包含关系：
 \begin{equation}
     \label{eq:contain}
     \begin{aligned}
@@ -344,6 +344,7 @@ $S$ 为快照函数，将键映射到其对应的值。
         \mathrm{SI}(T)  & \Rightarrow \mathrm{PC}(T) \Rightarrow \mathrm{CC}(T).
     \end{aligned}
 \end{equation}
+公式~\ref{eq:contain} 说明了本文讨论的各隔离级别在公理约束上的蕴含关系，也是后续混合隔离级别一致性判定的基础。
 
 \section{混合事务隔离级别}
 对于一个抽象执行 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，若对其中任意事务 $T \in \mathcal{T}$，其隔离级别 $\text{level}(T)$ 所要求的公理均被满足，则称 $\mathcal{X}$ 在该隔离级别配置下是一致的。若一个历史 \History[i] 是一致的，则必然存在某个抽象执行 $\mathcal{X}= (\mathcal{H}_i, \text{VIS}, \text{AR})$ 与之对应且一致。
@@ -446,5 +447,3 @@ $S$ 为快照函数，将键映射到其对应的值。
 
 \section{本章小结}
 本章系统构建了分布式数据库一致性模型与隔离级别的形式化描述框架。首先论明了分布式环境下建立一致性模型的必要性，随后形式化定义了关键核心概念，并以可见性关系与仲裁关系建立 $(\text{VIS}, \text{AR})$ 规约核心约束。在此基础上，提出了六条一致性核心公理，并据此对各类主流数据异常现象进行抽象刻画。最后，利用该公理体系严格定义了六种隔离级别及混合事务隔离级别的判定模型，指明了并发事务正确性的评估边界。上述形式化框架为后文核心模块与混合隔离级别操作语义的设计、实现及验证奠定了坚实的理论基础。
-
-
