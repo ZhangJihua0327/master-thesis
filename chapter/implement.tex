@@ -11,7 +11,7 @@
     \item \textbf{基本数据操作}：本原型系统作为一个键值（Key-Value）数据库，需支持基本的读（Get）、写（Put）、增（Insert）、删（Delete）四种数据操作。数据模型以键值对（Key-Value）形式存储，不支持复杂的嵌套文档结构。
     \item \textbf{分布式集群管理}：
           \begin{itemize}
-              \item \textbf{分片（Sharding）}：支持将数据水平切分并分布在多个分片节点上。
+              \item \textbf{分片（sharding）}：支持将数据水平切分并分布在多个分片节点上。
               \item \textbf{路由（Routing）}：客户端通过路由节点访问数据，路由节点根据分片键将请求转发至正确的分片。
           \end{itemize}
     \item \textbf{事务管理}：
@@ -24,7 +24,7 @@
               \item \textbf{前缀一致性（Prefix Consistency, PC）}
               \item \textbf{并行快照隔离（Parallel Snapshot Isolation, PSI）}
               \item \textbf{快照隔离（Snapshot Isolation, SI）}
-              \item \textbf{可串行化（Serializable, SER）}
+              \item \textbf{可串行化（Serializable，SER）}
           \end{itemize}
           系统需要确保在上述隔离级别混合运行时，不仅能保证各自隔离级别的语义，还能保证数据的一致性和正确性。
 \end{enumerate}
