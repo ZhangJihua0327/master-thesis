@@ -1,56 +1,5 @@
 \chapter{面向混合隔离级别的系统操作语义设计}
 
-\section{混合逻辑时钟}
-在分布式系统中，时钟（Clock）是用于刻画事件发生顺序、界定事件间时序关系的核心抽象工具，其本质是为系统中的每一个事件分配一个可比较的标识（时间戳，Timestamp），通过时间戳的序关系映射事件的发生序，为分布式一致性、事件追踪与事务排序提供基础支撑。
-
-时钟的意义是区分事件发生的先后顺序，刻画事件间的因果关系，从而为分布式系统中的一致性协议、并发控制、故障恢复等机制提供时间基础。
-对于事件 $e_1$ 和 $e_2$，如果 $e_1$ 发生在 $e_2$ 之前，我们希望通过时钟分配的时间戳 $\operatorname{TS}(e_1)$ 和 $\operatorname{TS}(e_2)$ 满足 $\operatorname{TS}(e_1) < \operatorname{TS}(e_2)$。这种时间戳的序关系使得系统能够判断事件的先后顺序，进而实现一致性保证和正确的并发控制。
-
-从理论与工程分类来看，时钟主要分为两类：一类是物理时钟（Physical Clock），基于现实世界的物理时间（如UTC时间），通过网络时间协议（NTP）、精确时间协议（PTP）等实现分布式节点间的时钟同步，为事件分配具有人类可读语义的时间戳，但受网络延迟、时钟漂移等因素影响，节点间时钟无法实现完全同步，存在固有误差且可能出现时钟回拨；另一类是逻辑时钟（Logical Clock），不依赖物理时间，仅通过节点本地计数或消息交互更新时间戳，核心目标是捕获事件间的因果依赖关系，确保具有因果关联的事件拥有可比较的时间戳，但缺乏物理时间语义，无法支撑基于物理时间的系统需求。
-
-混合逻辑时钟（Hybrid Logical Clock, HLC）\cite{Kulkarni2014TR}结合了物理时钟和逻辑时钟的优点，能够在分布式系统中提供一个全局一致的时间戳。HLC 由物理时间和逻辑计数器组成，严格遵循时钟条件，有效弥补了纯物理时钟与纯逻辑时钟的固有缺陷，能够有效地处理网络延迟和节点故障带来的时间不一致问题。
-
-一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
-\begin{equation}
-    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
-\end{equation}
-它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{algo:hlc}所示：
-
-\begin{algorithm}[htbp]
-    \caption{混合逻辑时钟管理}
-    \label{algo:hlc}
-    \begin{algorithmic}[1]
-        \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
-        \Procedure{Now}{$\text{pt}$}
-        \Comment{生成本地时间戳}
-        \If{$\text{pt} > \text{wall}$}
-        \State $\text{wall} \gets \text{pt}$
-        \State $\text{logical} \gets 0$
-        \Else
-        \State $\text{logical} \gets \text{logical} + 1$
-        \EndIf
-        \State \Return $(\text{wall}, \text{logical})$
-        \EndProcedure
-
-        \Procedure{Update}{$\text{msg}, \text{pt}$}
-        \Comment{同步远程时间戳}
-        \State $\text{old\_wall} \gets \text{wall}$
-        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
-        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
-        \ElsIf{$\text{wall} = \text{old\_wall}$}
-        \State $\text{logical} \gets \text{logical} + 1$
-        \ElsIf{$\text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \text{msg.logical} + 1$
-        \Else
-        \State $\text{logical} \gets 0$
-        \EndIf
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-\lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取 本地时间、远程时间 和 当前物理时间 三者中的最大值，并相应地调整逻辑计数器。这是保证 因果关系（Happens-before） 的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC的这两个接口，在我们设计分布式数据库混合隔离级别下的事务操作语义至关重要。
-
 \section{系统架构建模}
 我们采用一个经典的分布式数据库的系统模型，遵循客户端路由架构，这种架构被如MongoDB分布式数据库广泛使用。MongoDB 采用分片集群（Sharded Cluster）架构，主要包含三个核心组件：分片服务器（Shard）、配置服务器（Config Server）和路由服务器（mongos）。分片服务器负责实际数据的存储；配置服务器存储集群的元数据和分片配置；路由服务器作为客户端的接入点，负责将请求路由到正确的分片上。这种架构具有卓越的水平扩展能力和高可用性。
 
@@ -276,7 +225,7 @@
     \end{algorithmic}
 \end{algorithm}
 
-分片服务器负责实际的数据存储和查询处理，支持数据的水平分片以实现高效的负载分担。采用多版本并发控制（MVCC）机制来管理数据版本\cite{rethinkmvcc}，支持事务的隔离性和一致性要求。分片服务器需要维护每个事务的读写集，以便在事务提交时进行冲突检测和版本验证；其提交阶段的具体流程见算法~\ref{algo:shard-commit}。
+分片服务器负责实际的数据存储和查询处理，支持数据的水平分片以实现高效的负载分担。采用多版本并发控制（MVCC）机制来管理数据版本\cite{rethinkmvcc}，支持事务在要求的隔离级别下成立。分片服务器需要维护每个事务的读写集，以便在事务提交时进行冲突检测和版本验证；其提交阶段的具体流程见算法~\ref{algo:shard-commit}。
 
 \begin{algorithm}[htbp]
     \newcommand{\buff}{$\text{buff}$}
@@ -406,8 +355,58 @@
 
 这一优化在实际系统中具有重要意义。根据经验观察，分布式数据库中大部分事务仅访问单个分片的数据，QuickCommit 机制能够显著降低这些事务的提交延迟，同时保持跨分片事务的正确性保证。
 
+\section{混合逻辑时钟}
+在分布式系统中，时钟（Clock）是用于刻画事件发生顺序、界定事件间时序关系的核心抽象工具，其本质是为系统中的每一个事件分配一个可比较的标识（时间戳，Timestamp），通过时间戳的序关系映射事件的发生序，为分布式一致性、事件追踪与事务排序提供基础支撑。
 
-\section{面向混合隔离级别的形式语义}
+时钟的意义是区分事件发生的先后顺序，刻画事件间的因果关系，从而为分布式系统中的一致性协议、并发控制、故障恢复等机制提供时间基础。对于事件 $e_1$ 和 $e_2$，如果 $e_1$ 发生在 $e_2$ 之前，我们希望通过时钟分配的时间戳 $\operatorname{TS}(e_1)$ 和 $\operatorname{TS}(e_2)$ 满足 $\operatorname{TS}(e_1) < \operatorname{TS}(e_2)$。这种时间戳的序关系使得系统能够判断事件的先后顺序，进而实现一致性保证和正确的并发控制。
+
+从理论与工程分类来看，时钟主要分为两类：一类是物理时钟（Physical Clock），基于现实世界的物理时间（如UTC时间），通过网络时间协议（NTP）、精确时间协议（PTP）等实现分布式节点间的时钟同步，为事件分配具有人类可读语义的时间戳，但受网络延迟、时钟漂移等因素影响，节点间时钟无法实现完全同步，存在固有误差且可能出现时钟回拨；另一类是逻辑时钟（Logical Clock），不依赖物理时间，仅通过节点本地计数或消息交互更新时间戳，核心目标是捕获事件间的因果依赖关系，确保具有因果关联的事件拥有可比较的时间戳，但缺乏物理时间语义，无法支撑基于物理时间的系统需求。
+
+混合逻辑时钟（Hybrid Logical Clock, HLC）\cite{Kulkarni2014TR}结合了物理时钟和逻辑时钟的优点，能够在分布式系统中提供一个全局一致的时间戳。HLC 由物理时间和逻辑计数器组成，严格遵循时钟条件，有效弥补了纯物理时钟与纯逻辑时钟的固有缺陷，能够有效地处理网络延迟和节点故障带来的时间不一致问题。
+
+一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
+\begin{equation}
+    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+\end{equation}
+它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{algo:hlc}所示：
+
+\begin{algorithm}[htbp]
+    \caption{混合逻辑时钟管理}
+    \label{algo:hlc}
+    \begin{algorithmic}[1]
+        \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
+        \Procedure{Now}{$\text{pt}$}
+        \Comment{生成本地时间戳}
+        \If{$\text{pt} > \text{wall}$}
+        \State $\text{wall} \gets \text{pt}$
+        \State $\text{logical} \gets 0$
+        \Else
+        \State $\text{logical} \gets \text{logical} + 1$
+        \EndIf
+        \State \Return $(\text{wall}, \text{logical})$
+        \EndProcedure
+
+        \Procedure{Update}{$\text{msg}, \text{pt}$}
+        \Comment{同步远程时间戳}
+        \State $\text{old\_wall} \gets \text{wall}$
+        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+        \ElsIf{$\text{wall} = \text{old\_wall}$}
+        \State $\text{logical} \gets \text{logical} + 1$
+        \ElsIf{$\text{wall} = \text{msg.wall}$}
+        \State $\text{logical} \gets \text{msg.logical} + 1$
+        \Else
+        \State $\text{logical} \gets 0$
+        \EndIf
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取本地时间、远程时间和当前物理时间三者中的最大值，并相应地调整逻辑计数器。这是保证因果关系（Happens-before）的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC 的这两个接口，在本文设计分布式数据库混合隔离级别下的事务操作语义时至关重要。
+
+
+\section{面向混合隔离级别的操作语义}
 在上一章，我们提到了各个隔离级别在需要满足的公理，以集合的视角看，它们存在着包含关系，如表~\ref{tab:isolation_levels_axioms}所示。对于不同隔离级别的事务，我们需要在系统中配置不同的组件以实现相应的公理组合，从而满足隔离级别的语义要求。更高一致性的隔离级别是低一致性隔离级别的子集，在实现阶段，可以通过对操作语义的某些过程中添加一些新的限制以实现新的公理，从而满足更高隔离级别的要求。
 
 \begin{table}[htbp]
@@ -463,18 +462,16 @@
 
 这一检查集机制确保了 SER 事务绝不会观察到“不一致”的中间状态。在形式化语义模型中，SER 事务具备完整的可见性，其可见性关系（VIS）被严格定义为包含所有的 AR 前驱。本文设计的分布式协议通过由读集验证触发的冲突中止（Abort）机制，确保了底层实际产生的事务历史严格符合这一形式化定义。任何可能破坏串行化顺序的前驱事务，最终要么早于当前事务 $sts$ 提交使得对当前事务透明可见，要么会触发上述冲突检测导致当前事务中止，从而强制满足了 $\text{NoConflict}$ 和 $\text{TotalVis}$ 公理，彻底消除了写偏斜（Write Skew）等并发异常现象，确立了分布式系统的最高等级隔离性。
 
-\section{本章小结}
-
-本章详细阐述了面向混合隔离级别的分布式数据库系统的操作语义设计与验证。首先结合HLC与组件交互模型，为分布式系统的事件定序与并发架构提供支持。其次深入剖析了混合隔离级别的形式化语义，将抽象的隔离级别解构为一组核心公理，并详细阐明了这些公理在系统层面的读写缓冲、依赖追踪、HLC等待和确认协议等核心实现机制。
-
 基于上述形式语义分析，本系统在各隔离级别的实现过程中在不同的系统层面采用了对应的定制化机制。表~\ref{tab:isolation_customization}总结了 CC、PC、PSI、SI 和 SER 这五个主要隔离级别的相对于RA的核心定制点。
 
-\begin{table}[htbp]
+\begin{table}[H]
     \centering
-    \renewcommand{\arraystretch}{2.5}
+    \small
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{1.15}
     \caption{隔离级别实现的核心定制点}
     \label{tab:isolation_customization}
-    \begin{tabular}{|m{1.5cm}|m{3.5cm}|m{3.5cm}|m{3.5cm}|}
+    \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.55cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
         \hline
         \textbf{隔离级别} & \textbf{客户端定制}                                                  & \textbf{路由层定制} & \textbf{分片层定制} \\
         \hline
@@ -508,7 +505,7 @@
                       & 检查集追踪（读键+写键）；严格读集认证；检查条件 $cts(T') > sts$ 且 $T'$ 与checkset有交集时中止
         \\
         \hline
-    \end{tabular}
+    \end{tabularx}
 \end{table}
 
 从表~\ref{tab:isolation_customization}可以看出，实现从弱隔离级别（CC）到强隔离级别（SER）的核心策略包括：
@@ -522,5 +519,9 @@
 
     \item \textbf{验证位置与时机精细化}：不同级别在Prepare、Commit、或Read阶段选择不同的验证策略，形成了从乐观并发控制到悲观读验证的完整谱系。
 \end{enumerate}
+
+\section{本章小结}
+
+本章详细阐述了面向混合隔离级别的分布式数据库系统操作语义设计。首先给出了原型系统的体系结构建模，明确客户端、路由节点、配置节点和分片节点之间的职责划分；随后介绍混合逻辑时钟在全局定序中的作用；最后围绕不同隔离级别所对应的公理组合，说明读写缓冲、依赖追踪、等待机制和冲突检测等核心语义约束如何在系统中落地。
 
 本章的探讨不仅弥合了理论与工程的鸿沟，还为后续系统原型的实现与TLA+验证奠定了基础。

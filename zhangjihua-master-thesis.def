@@ -5,9 +5,9 @@
 % info 类用于录入个人信息
 %   带*号的为对应英文字段
 \njusetup[info]{
-    title = {支持混合隔离级别的\\分布式KV数据库原型\\的设计与实现},
+    title = {支持混合隔离级别的\\分布式键值数据库原型\\的设计与实现},
     %
-    title* = {Design and Implementation of a Mixed-isolation-level Distributed KV database Prototype},
+    title* = {Design and Implementation of a Mixed-isolation-level Distributed Key-Value Database Prototype},
     %
     author = {张继华},
     %
@@ -32,10 +32,10 @@
     % major = {封面专业,摘要专业},
     % 研究生专业型学位可能遇到两处内容不一致的情况
     %
-    supervisor = {魏恒峰,副教授},
-    supervisor* = {Associate Professor Wei Hengfeng},
-    supervisor-ii = {葛季栋,副教授},
-    supervisor-ii*= {Associate Professor Ge Jidong},
+    supervisor = {葛季栋~副教授},
+    supervisor*= {Ge Jidong, Associate Professor},
+    supervisor-ii = {魏恒峰~特聘副研究员},
+    supervisor-ii* = {Wei Hengfeng, Associated Researcher},
     submit-date = {2026-03-20},
     %
     % 以下均为研究生项
@@ -226,7 +226,7 @@
 % 一些灵活调整
 % \njusetname{type}{本科毕业设计}                 % 我做的是毕业设计
 % \njusetname{notation}{术语表}                   % 更改符号表名称
-% \njusetlength{crulewd}{240pt}                   % 加长封面页下划线
+\njusetlength{crulewd}{280pt}                     % 加长封面页下划线
 % \njusetformat{subsection}{\normalfont\bfseries} % 修改 subsection 为小四号粗体宋体
 % \njusetformat{tabular}{\zihao{-4}\bfseries}     % 修改表格环境的字号
 % \EditInstance{nju}{u/cover/emblem-img}{align=l} % 左对齐的本科生封面校徽
