@@ -354,6 +354,18 @@ $S$ 为快照函数，将键映射到其对应的值。
 \section{\TLAPlus 与TLC基础}
 为对后续提出的事务操作语义进行严格论证，本文采用 \TLAPlus 作为形式化规约语言，并使用 TLC 模型检查器对关键性质进行自动化验证。\TLAPlus 适合描述并发系统与分布式系统的状态转移逻辑，能够以较高抽象层次表达系统状态、动作以及安全性质；TLC 则通过遍历可达状态空间，检验系统是否始终满足给定不变式与安全约束。将二者引入本文的研究框架，有助于在工程实现之前发现潜在的语义缺陷，并为后续原型系统设计提供形式化依据。
 
+\subsection{核心状态转换动作}\label{sec:tlc-apalache}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/client_server.pdf}
+    \caption{Client\_Server 规约}
+    \label{fig:client_server}
+\end{figure}
+
+图~\ref{fig:client_server} 给出了规约组织方式的一个示例。对于本文的事务系统而言，核心状态转换动作主要包括事务开始、读写执行、提交与中止等步骤。这些动作共同定义了系统从一个合法状态向下一个合法状态的演化规则，也是后续构建抽象执行关系与隔离级别约束的基础。
+
+不同于面向实现的程序代码，\TLAPlus 规约并不描述底层网络或存储接口的具体细节，而是聚焦于系统行为是否满足预期语义。因此，本文在规约表达阶段优先保留对事务可见性与提交顺序有决定作用的状态变量和动作约束，并将与实现无关的工程细节统一抽象掉，以保证模型具有可验证性和可解释性。
+
 \section{形式化判定基础}
 对于一个抽象执行 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，若对其中任意事务 $T \in \mathcal{T}$，其隔离级别 $\text{level}(T)$ 所要求的公理均被满足，则称 $\mathcal{X}$ 在相应隔离级别配置下成立。若一个历史 \History[i] 在相应隔离级别配置下成立，则必然存在某个抽象执行 $\mathcal{X}= (\mathcal{H}_i, \text{VIS}, \text{AR})$ 与之对应且成立。
 

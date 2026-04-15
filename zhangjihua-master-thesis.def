@@ -5,7 +5,7 @@
 % info 类用于录入个人信息
 %   带*号的为对应英文字段
 \njusetup[info]{
-    title = {支持混合隔离级别的\\分布式键值数据库原型\\的设计与实现},
+    title = {支持混合隔离级别的\\分布式键值数据库原型的设计与实现},
     %
     title* = {Design and Implementation of a Mixed-isolation-level Distributed Key-Value Database Prototype},
     %
