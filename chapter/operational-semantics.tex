@@ -10,355 +10,30 @@
 
 选择该架构来实现混合隔离级别数据库原型具有以下合理性：首先，客户端路由架构实现了事务协调与数据存储的解耦，便于我们在路由层或客户端灵活实现不同的事务协调协议以支持多种隔离级别；其次，其基于混合逻辑时钟（HLC）的时间戳机制为分布式事务的定序提供了天然支持，契合本文的形式化模型；最后，分片架构使得系统能够通过增加节点线性提升吞吐量，能够验证混合隔离级别在大规模分布式环境下的性能表现。
 
-客户端主要负责接受用户请求，管理与路由服务器连接，执行负载均衡策略，并将请求路由到适当的路由服务器。客户端需要维护事务到路由服务器的映射，确保同一事务的所有操作都路由到同一个路由服务器，以保证事务的一致性。如算法~\ref{algo:client-router-mgmt}所示，客户端通过后台线程持续从配置服务器拉取最新的路由服务器列表，并通过负载均衡策略为新事务选择合适的路由服务器，如图~\ref{algo:client}所示。
+客户端主要负责接受用户请求、维护与路由服务器的连接，并将同一事务的全部操作稳定地发送到同一个路由节点。这里的关键不是客户端本身执行复杂的并发控制，而是保证\emph{事务亲和性}：事务一旦开始，后续读、写、提交和中止都复用同一路由节点，从而使事务的全局元数据、隔离级别和参与分片集合能够被一致地维护。与此同时，客户端后台周期性地从配置服务器拉取可用路由节点集合，并在开启新事务时通过负载均衡策略选择入口节点。这一设计把“入口选择”和“事务执行”分离开来，避免了事务执行过程中发生无约束的路由漂移。
 
-\begin{algorithm}[htbp]
-    \newcommand{\configserver}{$\text{configServer}$}
-    \newcommand{\routers}{$\text{routers}$}
-    \newcommand{\txnmap}{$\text{txnRouterMap}$}
-    \caption{客户端路由管理}
-    \label{algo:client-router-mgmt}
-    \begin{algorithmic}[1]
-        \Require 配置服务器地址 \configserver，路由服务器列表 \routers，事务路由映射 \txnmap。
+配置服务器存储集群元数据，包括路由节点列表、分片键空间划分及节点健康状态。它一方面接收路由节点和分片节点的注册信息，另一方面通过心跳或租约机制判断节点是否仍然可用，并为客户端和路由节点提供最新的分片映射。对本文而言，配置服务器的作用并不在于参与事务语义本身，而在于为后续所有操作提供一个稳定、可查询的全局拓扑视图，使得键到分片的映射在事务执行期间是可解释的。
 
-        \Procedure{UpdateRouterList}{}
-        \Comment{后台线程持续更新路由列表}
-        \Loop
-        \State $\text{newRouters} \gets \text{configServer}.\text{fetchRouters}()$ \Comment{从配置服务器拉取}
-        \State $\text{routers} \gets \text{newRouters}$ \Comment{更新本地路由列表}
-        \State $\text{sleep}(\Delta t)$ \Comment{定期拉取}
-        \EndLoop
-        \EndProcedure
+路由服务器是本章操作语义的协调核心。每个活动事务在路由层都维护一份全局控制信息，至少包括事务标识、隔离级别、开始时间戳以及当前已经访问过的分片集合。当客户端发起读或写操作时，路由节点首先根据键查找目标分片，然后将请求连同事务上下文转发给对应分片；若该分片此前尚未参与该事务，则将其加入事务的参与分片集合。事务提交时，路由节点依据参与分片数选择提交路径：若事务仅访问一个分片，则可直接走单分片提交路径；若涉及多个分片，则由路由节点充当协调者，按准备与决议两个阶段组织提交。由此，事务的全局组织与本地执行被清晰地划分在不同层面。
 
-        \Procedure{SelectRouter}{$\text{txn\_id}$}
-        \Comment{为事务选择路由服务器}
-        \If{$\text{txnRouterMap}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\text{txnRouterMap}[\text{txn\_id}]$ \Comment{同一事务使用同一路由}
-        \EndIf
-        \State $\text{router} \gets \text{LoadBalance}(\text{routers})$ \Comment{负载均衡选择}
-        \State $\text{txnRouterMap}[\text{txn\_id}] \gets \text{router}$ \Comment{建立映射}
-        \State \Return $\text{router}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
+分片服务器负责实际的数据存储、版本管理和局部并发控制。每个分片维护一个基于 MVCC 的版本存储\cite{rethinkmvcc}，并为活动事务按需建立局部缓冲区，用于保存事务在该分片上的读集合、写集合以及必要的辅助元数据。读操作遵循“先读本地写集，再读已提交版本”的顺序：如果事务已经在本地写缓冲区中修改过某个键，则后续读操作直接返回缓冲区中的最新值；否则，系统根据事务快照时间戳从 MVCC 存储中选择一个满足可见性约束的已提交版本。写操作并不立即覆盖共享存储，而是先写入事务的本地缓冲区，待提交阶段统一验证并发布。这样的设计同时支撑了事务内部一致性和多版本快照读取。
 
-在完成路由管理后，客户端通过算法~\ref{algo:client}所示的接口将事务操作转发给选定的路由服务器。
+从体系结构与语义分工的角度看，客户端、路由节点和分片节点分别承担了三个不同层次的职责。客户端负责保持会话连续性和事务亲和性，使同一事务的上下文不会因入口漂移而被破坏；路由节点负责维护事务的全局控制信息，并把一次逻辑事务组织成若干面向具体分片的局部操作；分片节点则真正决定某个读是否可见、某个写是否能够被发布以及某次提交是否需要被中止。这样的分工使得系统既能够在全局层面统一处理时间戳、参与分片集合和提交路径，又能够在局部层面执行与数据项和版本链紧密相关的并发控制逻辑。对于混合隔离级别场景而言，这一点尤为重要，因为不同隔离级别的差异并不主要体现在客户端接口上，而是体现在事务在路由层如何获得快照、在分片层如何解释可见版本、以及在提交阶段如何接受不同强度的认证。
 
-\begin{algorithm}[htbp]
-    \caption{客户端事务操作}
-    \label{algo:client}
-    \begin{algorithmic}[1]
+\paragraph*{事务状态与关键元数据}
+为了把上述组件行为统一为可推理的操作语义，系统还需要为事务维护一组稳定的关键元数据。首先是\textbf{开始时间戳} $sts$，它决定了事务读取历史时所依据的初始快照边界；其次是\textbf{提交时间戳} $cts$，它在事务成功提交后用于确定该事务在全局仲裁序中的位置。对于因果相关的隔离级别，客户端还会维护\textbf{依赖时间戳} $dep$，用来刻画会话内已经建立的因果先后关系；对于 SER 事务，系统还需要维护\textbf{检查集}（checkset），以记录提交前必须重新验证的读写对象集合。
 
-        \Procedure{StartTransaction}{$\text{txn\_id}, \text{isolation\_level}$}
-        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{startTxn}(\text{txn\_id}, \text{isolation\_level})$
-        \EndProcedure
+除时间相关元数据外，事务在执行过程中还会逐步形成若干集合结构。其一是\textbf{参与分片集合}，由路由节点维护，用于记录当前事务已经访问过哪些分片，并据此决定最终采用单分片提交还是跨分片两阶段提交；其二是\textbf{读集合}与\textbf{写集合}，由分片节点维护，用于分别记录事务已经读取过哪些键以及尚未发布但准备提交的更新内容；其三是\textbf{准备状态}，用于描述事务在两阶段提交中是否已经通过局部验证并获得预分配时间戳。对操作语义而言，这些元数据并非附属实现细节，而是后续判定 $\text{VIS}$、$\text{AR}$ 以及各类一致性公理是否成立的直接依据。
 
-        \Procedure{Read}{$\text{txn\_id}, \text{key}$}
-        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{read}(\text{txn\_id}, \text{key})$
-        \EndProcedure
+从语义角度看，这些元数据承担的是“把一次运行中的事务解释为抽象执行元素”的桥梁作用。$sts$ 决定事务可见历史的上界，$cts$ 决定事务在仲裁序中的位置，$dep$ 决定会话依赖能否被后继事务继承，而读写集与检查集则分别决定事务在提交时需要接受哪一种冲突认证。因此，第三章虽然讨论的是系统协议，但其中真正被设计和约束的对象，始终是这些与抽象执行一一对应的状态量。也正因如此，后续第四章才能将本章的系统行为进一步翻译为 \TLAPlus 中的状态变量与状态转移。
 
-        \Procedure{Write}{$\text{txn\_id}, \text{key}, \text{value}$}
-        \State \Return $\text{SelectRouter}(\text{txn\_id}).\text{write}(\text{txn\_id}, \text{key}, \text{value})$
-        \EndProcedure
+从执行流程上看，本文的事务操作语义可以概括为四个相互衔接的阶段。第一，\textbf{事务启动阶段}：客户端指定事务隔离级别后，路由节点为事务建立全局上下文，并根据隔离级别确定初始快照时间戳的来源。第二，\textbf{读写执行阶段}：读操作根据事务上下文选择可见版本，写操作进入局部缓冲区，事务在此阶段逐步形成读写集与依赖信息。第三，\textbf{提交验证阶段}：系统根据隔离级别要求，对事务的读写集、检查集、依赖时间戳或准备状态进行验证，以判断当前执行是否仍然能够被解释为满足目标公理的抽象执行。第四，\textbf{结果发布阶段}：若验证通过，则为事务分配提交时间戳并将写集写入版本存储；若验证失败，则丢弃缓冲区并中止事务。与传统面向实现的伪代码相比，这种分阶段描述更能突出本文关注的语义主线，即一个事务如何从“获得快照”走向“形成历史”，并最终影响 $\text{VIS}$ 与 $\text{AR}$ 的构造。
 
-        \Procedure{CommitOrAbort}{$\text{txn\_id}, \text{operation}$}
-        \Comment{提交或中止事务}
-        \State $\text{router} \gets \text{SelectRouter}(\text{txn\_id})$
-        \State $\text{result} \gets \text{router}.\text{operation}(\text{txn\_id})$
-        \State $\text{txnRouterMap}.\text{remove}(\text{txn\_id})$ \Comment{清理映射}
-        \State \Return $\text{result}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
+在跨分片事务处理中，系统仍需依赖两阶段提交（2PC）\cite{skeen1983formal} 来保证原子性。路由节点在准备阶段向所有参与分片发起验证请求；任一分片报告冲突或验证失败，事务即整体中止；只有当全部分片均通过验证后，协调者才进入提交阶段并通知各分片发布写集。这里需要注意的是，两阶段提交在本文中的作用主要是保证多分片更新的原子发布，而真正决定某个事务是否满足目标隔离级别的，仍然是各分片在准备阶段执行的快照验证、依赖检查和冲突检测逻辑。
 
+针对单分片事务这一常见场景，本文引入了 QuickCommit 优化。其基本思想是：若事务自始至终只访问一个分片，则可以将“准备”和“提交”折叠为一次局部决策，在同一个分片上完成时间戳分配、冲突验证和写集发布。这样做不会改变语义判定条件，因为事务仍需接受与常规提交路径一致的可见性与冲突检查；它所节省的只是跨节点协调所引入的额外网络往返和中间状态维护开销。因此，QuickCommit 可以被理解为一种在不削弱语义约束前提下对提交流程进行的工程化优化，而不是对隔离语义本身的放宽。
 
-
-\begin{algorithm}[htbp]
-    \newcommand{\routers}{$\text{routers}$}
-    \newcommand{\shards}{$\text{shards}$}
-    \newcommand{\metadata}{$\text{metadata}$}
-    \caption{配置服务器协议}
-    \label{algo:config}
-    \begin{algorithmic}[1]
-        \Require 路由服务器列表 \routers，分片服务器列表 \shards，元数据信息 \metadata。
-
-        \Procedure{RegisterRouter}{$\text{router\_id}, \text{address}$}
-        \Comment{路由服务器注册}
-        \State $\text{routers}[\text{router\_id}] \gets \{\text{address}, \text{lastHeartbeat}: \text{now}()\}$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Heartbeat}{$\text{router\_id}$}
-        \Comment{路由服务器心跳}
-        \If{$\text{routers}.\text{contains}(\text{router\_id})$}
-        \State $\text{routers}[\text{router\_id}].\text{lastHeartbeat} \gets \text{now}()$
-        \State \Return $\textsc{Success}$
-        \Else
-        \State \Return $\textsc{NotRegistered}$
-        \EndIf
-        \EndProcedure
-
-        \Procedure{CheckRouterHealth}{}
-        \Comment{后台线程检测路由服务器健康}
-        \Loop
-        \For{$\text{router\_id} \in \text{routers}.\text{keys}()$}
-        \If{$\text{now}() - \text{routers}[\text{router\_id}].\text{lastHeartbeat} > \text{timeout}$}
-        \State $\text{routers}.\text{remove}(\text{router\_id})$ \Comment{移除失效路由}
-        \EndIf
-        \EndFor
-        \State $\text{sleep}(\Delta t)$ \Comment{定期检测}
-        \EndLoop
-        \EndProcedure
-
-        \Procedure{FetchRouters}{}
-        \Comment{获取活跃路由服务器列表}
-        \State \Return $\text{routers}.\text{values}()$
-        \EndProcedure
-
-        \Procedure{RegisterShard}{$\text{shard\_id}, \text{address}, \text{keyRange}$}
-        \Comment{分片注册}
-        \State $\text{shards}[\text{shard\_id}] \gets \{\text{address}, \text{keyRange}\}$
-        \State $\text{metadata}.\text{updateShardInfo}(\text{shard\_id}, \text{keyRange})$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{GetShardByKey}{$\text{key}$}
-        \Comment{根据键查找所属分片}
-        \State \Return $\text{metadata}.\text{findShard}(\text{key})$
-        \EndProcedure
-
-        \Procedure{GetClusterMetadata}{}
-        \Comment{获取集群元数据}
-        \State \Return $\text{metadata}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-配置服务器存储集群的配置信息和元数据，确保集群的一致性和协调性。它负责管理路由服务器的注册与心跳监控，维护分片信息，并响应客户端和路由服务器的元数据查询请求。如算法~\ref{algo:config}所示，配置服务器通过心跳机制维护活跃的路由服务器列表，并提供元数据的查询接口。
-
-路由服务器作为客户端的接入点，根据配置服务器提供的信息负责将客户端请求路由到正确的分片服务器上。它需要维护事务的全局信息，包括事务开始时间戳、隔离级别以及涉及的分片集合，以便协调跨分片事务的执行。如算法~\ref{algo:router}所示，路由服务器通过混合逻辑时钟为事务分配时间戳，根据键的分布将读写请求路由到相应的分片；而事务的开始、提交与回滚流程则如算法~\ref{algo:router-commit}所示，由路由服务器协调所有参与分片共同完成。
-
-\begin{algorithm}[htbp]
-    \newcommand{\txninfo}{$\text{txnInfo}$}
-    \newcommand{\configserver}{$\text{configServer}$}
-    \newcommand{\hlc}{$\text{hlc}$}
-    \caption{路由服务器协议：事务读写}
-    \label{algo:router}
-    \begin{algorithmic}[1]
-        \Require 事务全局信息 \txninfo，配置服务器 \configserver，混合逻辑时钟 \hlc。
-
-
-
-        \Procedure{Read}{$\text{txn\_id}, \text{key}$}
-        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{NoTransaction}$ \Comment{事务不存在}
-        \EndIf
-        \State $\text{shard} \gets \text{configServer}.\text{getShardByKey}(\text{key})$ \Comment{查找分片}
-        \State $\text{txnInfo}[\text{txn\_id}].\text{shards}.\text{add}(\text{shard})$ \Comment{记录涉及分片}
-        \State $\text{ts} \gets \text{txnInfo}[\text{txn\_id}].\text{start\_ts}$
-        \State $\text{value} \gets \text{shard}.\text{read}(\text{key}, \text{txn\_id}, \text{ts})$ \Comment{转发到分片}
-        \State \Return $\text{value}$
-        \EndProcedure
-
-        \Procedure{Write}{$\text{txn\_id}, \text{key}, \text{value}$}
-        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{NoTransaction}$
-        \EndIf
-        \State $\text{shard} \gets \text{configServer}.\text{getShardByKey}(\text{key})$
-        \State $\text{txnInfo}[\text{txn\_id}].\text{shards}.\text{add}(\text{shard})$
-        \State $\text{result} \gets \text{shard}.\text{write}(\text{key}, \text{value}, \text{txn\_id})$ \Comment{转发到分片}
-        \State \Return $\text{result}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[htbp]
-    \newcommand{\txninfo}{$\text{txnInfo}$}
-    \caption{路由服务器协议：开始、提交与回滚}
-    \label{algo:router-commit}
-    \begin{algorithmic}[1]
-        \Require 事务全局信息 \txninfo。
-
-        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
-        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
-        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Commit}{$\text{txn\_id}$}
-        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{NoTransaction}$
-        \EndIf
-        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
-        \If{$|\text{shards}| = 1$}
-        \State $\text{result} \gets \text{shard}.\text{quickCommit}(\text{txn\_id})$ \Comment{单分片快速提交}
-        \Else
-        \State $\text{result} \gets \text{TwoPhaseCommit}(\text{txn\_id}, \text{shards})$
-        \EndIf
-        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$ \Comment{清理事务信息}
-        \State \Return $\text{result}$
-        \EndProcedure
-
-        \Procedure{TwoPhaseCommit}{$\text{txn\_id}, \text{shards}$}
-        \Comment{跨分片两阶段提交}
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{准备阶段}
-        \If{$\text{shard}.\text{prepare}(\text{txn\_id}) \neq \textsc{Success}$}
-        \For{$\text{s} \in \text{shards}$}
-        \State $\text{s}.\text{abort}(\text{txn\_id})$ \Comment{回滚所有分片}
-        \EndFor
-        \State \Return $\textsc{Conflict}$
-        \EndIf
-        \EndFor
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{提交阶段}
-        \State $\text{shard}.\text{commit}(\text{txn\_id})$
-        \EndFor
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Abort}{$\text{txn\_id}$}
-        \If{$\text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{通知所有分片中止}
-        \State $\text{shard}.\text{abort}(\text{txn\_id})$
-        \EndFor
-        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$
-        \EndIf
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-分片服务器负责实际的数据存储和查询处理，支持数据的水平分片以实现高效的负载分担。采用多版本并发控制（MVCC）机制来管理数据版本\cite{rethinkmvcc}，支持事务在要求的隔离级别下成立。分片服务器需要维护每个事务的读写集，以便在事务提交时进行冲突检测和版本验证；其提交阶段的具体流程见算法~\ref{algo:shard-commit}。
-
-\begin{algorithm}[htbp]
-    \newcommand{\buff}{$\text{buff}$}
-    \newcommand{\storage}{$\text{storage}$}
-    \caption{分片服务器支持事务读写操作}
-    \label{algo:shard-rw}
-    \begin{algorithmic}[1]
-        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage。
-
-        \Procedure{Read}{$\text{key}, \text{txn\_id}, \text{ts}$}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
-        \EndIf
-        \If{$\text{buff}[\text{txn\_id}].\text{writeSet}.\text{contains}(\text{key})$}
-        \State \Return $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}]$ \Comment{读取本地写缓存}
-        \EndIf
-        \State $\text{value} \gets \text{storage}.\text{read}(\text{key}, \text{ts})$ \Comment{从 MVCC 读取版本}
-        \State $\text{buff}[\text{txn\_id}].\text{readSet}.\text{add}(\text{key}, \text{value}, \text{ts})$
-        \State \Return $\text{value}$
-        \EndProcedure
-
-        \Procedure{Write}{$\text{key}, \text{value}, \text{txn\_id}$}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
-        \EndIf
-        \State $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}] \gets \text{value}$ \Comment{缓存写操作}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Delete}{$\text{key}, \text{txn\_id}$}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State $\text{buff}[\text{txn\_id}] \gets \text{new TxnBuffer}()$ \Comment{懒加载创建缓存}
-        \EndIf
-        \State $\text{buff}[\text{txn\_id}].\text{writeSet}[\text{key}] \gets \textsc{Null}$ \Comment{标记删除}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[htbp]
-    \newcommand{\buff}{$\text{buff}$}
-    \newcommand{\storage}{$\text{storage}$}
-    \newcommand{\hlc}{$\text{hlc}$}
-    \caption{分片服务器支持事务提交}
-    \label{algo:shard-commit}
-    \begin{algorithmic}[1]
-        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
-
-        \Procedure{Prepare}{$\text{txn\_id}$}
-        \Comment{两阶段提交准备阶段}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
-        \EndIf
-        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$
-        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
-        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
-        \Comment{冲突检测}
-        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
-        \State \Return $\textsc{Conflict}$ \Comment{存在读写冲突}
-        \EndIf
-        \EndFor
-        \State $\text{buff}[\text{txn\_id}].\text{preparedTs} \gets \text{commit\_ts}$ \Comment{记录准备时间戳}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Commit}{$\text{txn\_id}$}
-        \Comment{两阶段提交的提交阶段}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{Success}$
-        \EndIf
-        \State $\text{commit\_ts} \gets \text{buff}[\text{txn\_id}].\text{preparedTs}$ \Comment{使用准备时的时间戳}
-        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
-        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
-        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
-        \EndFor
-        \State $\text{buff}.\text{remove}(\text{txn\_id})$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-
-        \Procedure{Abort}{$\text{txn\_id}$}
-        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-
-在分布式事务处理中，跨分片事务通常需要采用两阶段提交协议（2PC）来保证原子性\cite{skeen1983formal}，但这会引入额外的协调开销和延迟。针对单分片事务这一常见场景，我们设计了“快速提交（QuickCommit）”优化机制。
-
-“快速提交” 的核心思想是：当路由服务器检测到一个事务的所有读写操作仅涉及单个分片时，无需执行完整的两阶段提交流程，而是直接由该分片独立完成冲突检测和提交决策。这种优化避免了准备阶段的额外网络往返，将提交延迟从原本的两轮网络通信降低为一轮，显著提升了单分片事务的性能。
-
-具体实现如算法~\ref{algo:quick-commit}所示。路由服务器在 Commit 过程中根据事务涉及的分片数量选择提交策略：当 $|\text{shards}| = 1$ 时，直接调用该分片的 \texttt{quickCommit} 接口。在分片服务器端，QuickCommit 过程将冲突检测和数据持久化合并在一次调用中完成，获取提交时间戳后立即执行冲突检测，若无冲突则直接将写集持久化到存储引擎，避免了两阶段提交中 Prepare 阶段的状态保存和后续的 Commit 阶段调用。
-
-\begin{algorithm}[htbp]
-    \newcommand{\buff}{$\text{buff}$}
-    \newcommand{\storage}{$\text{storage}$}
-    \newcommand{\hlc}{$\text{hlc}$}
-    \caption{QuickCommit 快速提交优化}
-    \label{algo:quick-commit}
-    \begin{algorithmic}[1]
-        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
-
-        \Procedure{QuickCommit}{$\text{txn\_id}$}
-        \Comment{分片服务器快速提交}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
-        \EndIf
-        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{获取提交时间戳}
-        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
-        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
-        \Comment{冲突检测}
-        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
-        \State \Call{Abort}{$\text{txn\_id}$}
-        \State \Return $\textsc{Conflict}$
-        \EndIf
-        \EndFor
-        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
-        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
-        \Comment{持久化写集}
-        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
-        \EndFor
-        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
-\end{algorithm}
-
-这一优化在实际系统中具有重要意义。根据经验观察，分布式数据库中大部分事务仅访问单个分片的数据，QuickCommit 机制能够显著降低这些事务的提交延迟，同时保持跨分片事务的正确性保证。
+需要强调的是，本节虽然减少了逐接口展开的伪代码描述，但并不意味着系统行为被“抽象掉”了。相反，上述叙述把注意力从实现细节转移到更适合论文表达的语义要点上：事务何时获得快照、读取时依据什么规则选择版本、提交时依据什么条件决定成功或中止，以及这些条件如何随隔离级别增强而逐步收紧。对于学位论文而言，这种表述方式更有利于将操作语义与前文的一致性公理以及后文的形式化验证一一对应起来。
 
 \section{混合逻辑时钟}
 在分布式系统中，时钟（Clock）是用于刻画事件发生顺序、界定事件间时序关系的核心抽象工具，其本质是为系统中的每一个事件分配一个可比较的标识（时间戳，Timestamp），通过时间戳的序关系映射事件的发生序，为分布式一致性、事件追踪与事务排序提供基础支撑。
@@ -438,13 +113,34 @@
     \end{tabular}
 \end{table}
 
-实现各个隔离级别，本质上是实现表~\ref{tab:isolation_levels_axioms}中列出的公理组合。对于每个隔离级别，我们需要在系统的不同组件中添加相应的机制来满足这些公理。
+实现各个隔离级别，本质上是以统一事务流程为骨架，在不同阶段施加不同强度的约束。所有事务都共享相同的基本执行框架：启动时确定快照时间，执行期间维护局部读写信息，提交时完成验证与写集发布；而隔离级别之间的差异，则体现在快照如何选择、执行期间需要追踪哪些依赖、读请求是否需要等待、以及提交阶段需要检查哪些冲突。
 
-在本章第二节，我们详尽地介绍了各个组件服务器的职责。在介绍的过程中，我们研究了如何通过事务的缓存机制实现事务的内部一致性（Int）： \textsc{Read}(\Txc , $key$) 操作会首先检查 buff[\Txc ]，如果命中，则直接返回本地最新值，如算法~\ref{algo:shard-rw}第三行所示。这确保了事务总是能看到自己的写入。
+\paragraph*{各隔离级别的语义定位}
+为了避免不同隔离级别仅以表格形式出现而缺乏纵向展开，下面对 CC、PC、PSI、SI 和 SER 在本文系统中的语义定位分别作简要说明。
 
-在保证外部一致性（Ext）时，我们为每个事务匹配一个开始时间戳sts，并在读写操作中使用这个时间戳来访问数据版本，如算法~\ref{algo:shard-rw}第8行所示。通过这种方式，事务只能看到在其开始时间戳之前提交的版本，确保了外部一致性。
+\textbf{CC（Causal Consistency）} 关注的是因果相关事务之间的先后关系不被破坏。对 CC 事务而言，系统并不要求所有事务共享同一个全局快照，而是要求当前事务至少能够观察到其因果依赖链上的所有前驱。因此，CC 的关键不在于读取某个“统一时刻”的数据库状态，而在于通过依赖时间戳把先前会话中已经建立的因果顺序持续传递给后继事务。相较于更强的前缀型语义，CC 允许更高的并发自由度，但也意味着不同事务观察到的全局历史不必具有统一前缀结构。
 
-我们继续研究Session、TranVis、Prefix、NoConflict、TotalVis等公理的实现机制。
+\textbf{PC（Prefix Consistency）} 则将重点从因果传播转移到全局顺序的一致前缀。PC 不要求显式维护每条因果依赖，而是要求事务所见历史必须能够解释为某个全局仲裁序的前缀。因此，在系统实现中，PC 的关键在于快照时间的选取以及读取阶段对未决前驱事务的等待机制。通过这种方式，事务虽然可能看不到所有并发事务，但它所看到的提交历史不会出现“跳过前驱、直接观察后继”的空洞现象。与 CC 相比，PC 对全局观察结果施加了更强约束，但不追求因果依赖的精细传播。
+
+\textbf{PSI（Parallel Snapshot Isolation）} 可以看作在 CC 基础上加入 NoConflict 约束后的结果。它既保留了因果一致性场景下依赖传播的能力，又进一步要求并发写冲突不能同时成功提交。换言之，PSI 不仅关心“该看到的因果前驱是否可见”，也关心“是否存在会造成丢失更新的并发写入”。在系统层面，这意味着 PSI 事务既需要继承依赖时间戳，又需要在提交阶段接受写集认证。因此，PSI 在语义上位于“因果有序”与“写冲突受控”之间，是一种兼顾依赖传播与版本安全的混合机制。
+
+\textbf{SI（Snapshot Isolation）} 则更强调一致快照与写冲突禁止的结合。SI 事务在启动时获取一个统一快照，后续所有读操作都基于该快照解释版本可见性；同时，在提交时还必须通过写冲突认证，避免两个并发事务在彼此不可见的情况下同时覆盖同一数据项。与 PSI 不同，SI 并不以客户端依赖传播为基础，而是依赖全局快照时间和前缀一致读取来确保事务观察到的历史是自洽的。因此，SI 的核心特点可以概括为：读时读取统一快照，写时禁止冲突覆盖。
+
+\textbf{SER（Serializable）} 是本文讨论的最强隔离级别。它不仅要求事务读取某个自洽快照，也不仅要求并发写冲突被禁止，还要求事务的整个执行结果能够被解释为某个串行顺序中的一次合法执行。正因如此，SER 不能仅依赖写集认证，而必须把读集合也纳入提交前验证。系统需要进一步判断：事务在执行期间所依据的读结果，是否会因为并发事务在其后提交而失去串行化解释。SER 因而对应着最高的验证强度，也对应着最大的控制开销；但作为回报，它能够排除写偏斜等更弱隔离级别仍可能容忍的异常。
+
+\paragraph*{统一事务执行流程}
+对任意事务 $T$，本文采用如下统一的操作语义框架：
+\begin{enumerate}
+    \item \textbf{启动}：路由节点根据事务隔离级别为其分配初始上下文，包括快照时间戳 $sts$、隔离级别标记以及空的参与分片集合。
+    \item \textbf{读}：事务首先检查本地写缓冲区；若命中，则直接返回本事务尚未提交的最新值；否则根据 $sts$ 和当前隔离级别对应的可见性规则，从分片上的 MVCC 版本链中选择可见版本，并将读信息记录到本地读集合或检查集中。
+    \item \textbf{写}：事务把写入暂存到局部写缓冲区，而不是立即发布到共享存储；因此，执行阶段形成的是“暂存的候选更新”，而非已提交历史的一部分。
+    \item \textbf{提交}：系统在准备阶段检查当前事务是否仍与其快照和依赖信息相容。验证通过后，事务获得提交时间戳 $cts$ 并发布写集；验证失败则中止。提交成功后，$cts$ 参与定义抽象执行中的仲裁顺序，而事务的读结果与依赖关系共同决定其可见性关系。
+\end{enumerate}
+
+在这一框架下，事务内部一致性（Int）由“先查本地写集，再查共享版本”的读取规则保证，因此事务始终能够观察到自己的写入；外部一致性（Ext）则由快照读取规则保证，即事务只能读到不晚于其快照时间并满足相应隔离约束的已提交版本。基于这两个基础性质，系统再进一步叠加因果依赖、前缀顺序、写冲突禁止以及全前驱可见等更强约束，从而得到更高强度的隔离级别。
+
+\paragraph*{公理到机制的映射}
+在上述统一流程基础上，我们继续讨论 Session、TransVis、Prefix、NoConflict 和 TotalVis 等公理如何落入具体机制。
 
 对于 Session 和 TransVis 公理，其核心在于维护因果一致性。系统通过依赖追踪（Dependency Tracking）机制来实现这一目标。具体而言，客户端会维护一个依赖时间戳 $dep$，该时间戳是混合逻辑时钟（HLC）的一个实例。每当客户端成功提交一个事务或者读取到数据时，都会使用由于该操作产生的提交时间戳 $commit\_ts$ 来更新本地的依赖时间戳，即 $dep \leftarrow \max(dep, commit\_ts)$。当一个新的因果一致性（CC）或并行快照隔离（PSI）级别的事务 $T$启动时，系统将其快照时间戳 $T.sts$ 设置为当前的 $dep$。这一机制确保了当前事务的快照时间必定大于所有与其存在因果依赖关系的事务的提交时间，从而严格保证了因果相关的事务对当前事务可见。
 
@@ -452,20 +148,22 @@
 
 对于 NoConflict 公理，即防止写冲突，系统利用两阶段提交（2PC）中的写验证（Certification）机制来保证。在事务的 Prepare 阶段，分片服务器会检查事务的写集（WSet）。如果检测到在当前事务的执行区间 $[sts, cts]$ 内，存在另一个已经提交的事务修改了相同的键，则当前事务必须中止（Abort）。这一冲突检测逻辑确保了任何成功提交的事务都不仅观察到了与其冲突的、在抽象执行（Arbitration）序中排在前面的所有事务，而且没有被并发的冲突事务所覆盖，从而消除了丢失更新现象。
 
-最后，对于可串行化（SER）级别的特殊保证，为了强制满足 $\text{TotalVis}$ 和 $\text{NoConflict}$ 公理，确保 SER 事务之间及其与并发事务之间的串行化顺序，系统可以采用不同的协议机制加以保证。具体而言，主要有以下三种解决方案：
+最后，对于可串行化（SER）级别，需要额外满足 $\text{TotalVis}$ 公理，因此仅依赖 SI 式的写集认证是不够的。为了让成功提交的事务能够被解释为位于某个全序之中，同时又不遗漏其逻辑上的前驱事务，系统必须进一步约束读结果与全局顺序之间的关系。围绕这一目标，理论上至少可以考虑以下三类方案。
 
-第一种是基于集中式时间戳的验证协议。该机制主要依赖多版本并发控制（MVCC）与时间戳验证。在写冲突检查方面，如果在事务活跃期间有其他并发事务提交了写冲突数据，当前事务将发生中止。进一步地，由于要保证串行化，协议引入了严格的串行化检查：对于 SER 事务，如果在其活跃时间区间（即 $[T.sts, T.cts]$）内有任何其他并发事务提交（无论是否发生写冲突），该 SER 事务都必须中止。这一严格的拒绝策略在集中式环境下强制实现了 $\text{TotalVis}$ 和 $\text{NoConflict}$，确保了严格的串行化顺序。
+第一类方案是\textbf{基于集中式时间戳的验证协议}。该方案把可串行化判定集中到统一的时间戳序上：事务启动时获取快照时间，提交时检查其活跃区间内是否存在会破坏串行化解释的并发提交。若在 $[T.sts, T.cts]$ 区间内有新的冲突事务提交，则当前事务中止。该方法的优点是语义直接、分析相对简洁；但在分布式场景下，它通常要求较强的集中协调能力，容易把时间戳分配和提交验证汇聚到单一控制点，从而带来额外的协调瓶颈。
 
-第二种是混合锁机制协议。该机制结合了快照隔离（SI）协议与严格两阶段锁（S2PL）。在此机制下，SER 事务在进行写操作时必然获取排他锁（Exclusive Lock），在进行读操作时获取共享锁（Shared Lock），并且所有的锁都会被严格持有至事务提交后才释放。通过两阶段锁机制在物理层面强行保障事务间对于数据的串行化访问，天然地满足了 $\text{TotalVis}$ 和 $\text{NoConflict}$ 公理的要求。
+第二类方案是\textbf{基于锁的串行化协议}。该方案将快照读取与严格两阶段锁（S2PL）结合起来，通过共享锁和排他锁控制读写访问，并把锁持有到提交后统一释放。其优势在于串行化语义较为直观，许多冲突能够在执行阶段被直接阻止；但其代价也十分明显，即并发度下降、阻塞范围扩大，并且在跨分片事务场景中需要更复杂的分布式锁管理与死锁处理机制。因此，虽然该方案在理论上能够满足 $\text{TotalVis}$ 与 $\text{NoConflict}$，但与本文追求在混合隔离级别下兼顾并发性与可扩展性的目标并不完全一致。
 
-第三种是基于混合逻辑时钟与读检查集的分布式协议，这也是本文所提出架构中的核心实现方式。该分布式机制通过以下三个关键机制保证了 SER 公理：
+第三类方案是\textbf{基于混合逻辑时钟与读检查集的分布式验证机制}。这一方案保留了 MVCC 与时间戳驱动的整体框架，同时把 SER 所需的额外约束集中到“读集合的持续追踪与提交前认证”上。相比前两类方案，它不要求所有事务都转化为悲观锁协议，也不需要把全部可串行化判断集中到单一点完成，更适合本文采用的分片式分布式架构。因此，本文最终采用这一方案作为 SER 事务的实现基础。具体而言，该机制包含以下三个关键环节：
 \begin{itemize}
     \item \textbf{混合逻辑时钟（HLC）与仲裁顺序}：系统使用 HLC 为事务分配单调递增的时间戳，从而为所有事务提供了全局单调的仲裁顺序（Arbitration 关系，即 AR 关系），这为全局可见性与因果定序奠定了坚实的基础。
     \item \textbf{快照读与检查集（Checkset）追踪}：SER 事务在开启时会获取当前的集群全局 HLC 时间作为其快照时间（$sts$）。与弱隔离级别通常只跟踪写操作不同，SER 事务在执行过程中，会将其读取的所有键一并加入检查集中进行持续跟踪。
     \item \textbf{提交认证与冲突检测}：在两阶段提交的准备阶段（Prepare），分片服务器会执行严格的读集认证与冲突检测。服务器会检查是否存在已提交的并发事务 $T'$，使得其提交时间晚于当前事务的快照时间（即 $cts(T') > sts$），并且该事务 $T'$ 修改的数据与当前事务的检查集（同时包含读键和写键）产生了交集。如果检测到此类冲突，当前事务将被强制中止（Abort）。
 \end{itemize}
 
-这一检查集机制确保了 SER 事务绝不会观察到“不一致”的中间状态。在形式化语义模型中，SER 事务具备完整的可见性，其可见性关系（VIS）被严格定义为包含所有的 AR 前驱。本文设计的分布式协议通过由读集验证触发的冲突中止（Abort）机制，确保了底层实际产生的事务历史严格符合这一形式化定义。任何可能破坏串行化顺序的前驱事务，最终要么早于当前事务 $sts$ 提交使得对当前事务透明可见，要么会触发上述冲突检测导致当前事务中止，从而强制满足了 $\text{NoConflict}$ 和 $\text{TotalVis}$ 公理，彻底消除了写偏斜（Write Skew）等并发异常现象，确立了分布式系统的最高等级隔离性。
+这一检查集机制确保了 SER 事务不会在保留旧快照结果的同时忽略并发前驱的影响。在形式化语义模型中，SER 要求事务的可见性关系能够覆盖其应当观察到的全部 AR 前驱；而在系统实现中，这一要求被落实为“若存在晚于 $sts$ 提交、且与当前事务检查集发生交集的并发事务，则当前事务不得成功提交”。因此，SER 相比 SI 的额外代价，正是对读集合的持续维护和更严格的提交前认证；而它所获得的收益，则是能够排除写偏斜等仅靠写集认证无法禁止的异常。
+
+从比较的角度看，上述三类方案分别代表了“集中验证”“悲观锁控制”和“分布式读集认证”三种不同的实现思路。前两者在理论上都能支持 SER，但要么对集中控制依赖较强，要么会明显压缩系统并发度；而第三种方案能够更自然地与本文已经采用的 HLC、MVCC、两阶段提交和分片执行框架耦合起来。因此，把三种方案并列展开，不仅有助于说明 SER 语义本身的实现难点，也能够更清楚地解释本文为什么最终选择基于 HLC 与检查集的方案作为操作语义的落地路径。
 
 基于上述形式语义分析，本系统在各隔离级别的实现过程中在不同的系统层面采用了对应的定制化机制。表~\ref{tab:isolation_customization}总结了 CC、PC、PSI、SI 和 SER 这五个主要隔离级别的相对于RA的核心定制点。
 
@@ -512,6 +210,10 @@
         \hline
     \end{tabularx}
 \end{table}
+
+为了帮助读者更直观地理解这些定制点，可以把不同隔离级别下的事务执行差异概括为对同一条事务路径逐步增加约束。对 CC 而言，系统重点保证因果相关的先行事务不会被遗漏，因此关键在于客户端维护依赖时间戳并把它传播到后继事务；对 PC 而言，系统不追踪因果依赖，而是要求每次读取都落在某个全局一致前缀上，因此核心机制转化为基于 HLC 的快照选取和对未决前驱事务的等待；PSI 可以看作在 CC 的基础上增加写冲突认证，SI 则是在 PC 的基础上增加同类写冲突认证，因此二者分别把“因果一致快照”和“前缀一致快照”与 NoConflict 公理结合起来；SER 则进一步要求读集合在提交时仍与全局顺序相容，因此系统必须把读信息纳入认证范围，形成比 SI 更严格的提交条件。
+
+如果从事务生命周期的角度重新观察这一差异，还可以得到一个更细的结论：不同隔离级别并不是简单对应于“强或弱”的静态标签，而是对应于系统在不同阶段愿意承担多大验证成本。CC 和 PSI 把更多工作放在事务启动前后的依赖传播上，强调“与我因果相关的事务不能缺失”；PC 和 SI 则把重点放在读取阶段的快照解释和等待机制上，强调“我看到的历史必须是某个前缀”；SER 则进一步把压力推进到提交阶段，通过检查集认证保证“我所依据的读结果在最终全序下仍然成立”。这种视角有助于理解混合隔离级别系统的一个核心特点：系统并不是为所有事务统一执行最强的控制，而是根据事务的语义要求，把验证工作有选择地放到不同阶段、不同层面上执行。
 
 从表~\ref{tab:isolation_customization}可以看出，实现从弱隔离级别（CC）到强隔离级别（SER）的核心策略包括：
 
