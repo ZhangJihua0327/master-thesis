@@ -10,7 +10,7 @@
   doi       = {10.1145/223784.223785},
   abstract  = {ANSI SQL-92 [MS, ANSI] defines Isolation Levels in terms of phenomena: Dirty Reads, Non-Repeatable Reads, and Phantoms. This paper shows that these phenomena and the ANSI SQL definitions fail to properly characterize several popular isolation levels, including the standard locking implementations of the levels covered. Ambiguity in the statement of the phenomena is investigated and a more formal statement is arrived at; in addition new phenomena that better characterize isolation types are introduced. Finally, an important multiversion isolation type, called Snapshot Isolation, is defined.},
   booktitle = {Proceedings of the 1995 ACM SIGMOD International Conference on Management of Data},
-  pages     = {1–10},
+  pages     = {1--10},
   numpages  = {10},
   location  = {San Jose, California, USA},
   series    = {SIGMOD '95}
@@ -160,7 +160,7 @@
   address   = {New York, NY, USA},
   url       = {https://doi.org/10.1145/3335772.3335934},
   booktitle = {Concurrency: The Works of Leslie Lamport},
-  pages     = {179–196},
+  pages     = {179--196},
   numpages  = {18}
 }
 
@@ -208,7 +208,7 @@
   abstract   = {Cloud-native databases become increasingly important for the era of cloud computing, due to the needs for elasticity and on-demand usage by various applications. These challenges from cloud applications present new opportunities for cloud-native databases that cannot be fully addressed by traditional on-premise enterprise database systems. A cloud-native database leverages software-hardware co-design to explore accelerations offered by new hardware such as RDMA, NVM, kernel bypassing protocols such as DPDK. Meanwhile, new design architectures, such as shared storage, enable a cloud-native database to decouple computation from storage and provide excellent elasticity. For highly concurrent workloads that require horizontal scalability, a cloud-native database can leverage a shared-nothing layer to provide distributed query and transaction processing. Applications also require cloud-native databases to offer high availability through distributed consensus protocols.At Alibaba, we have explored a suite of technologies to design cloud-native database systems. Our storage engine, X-Engine and PolarFS, improves both write and read throughputs by using a LSM-tree design and self-adapted separation of hot and cold data records. Based on these efforts, we have designed and implemented POLARDB and its distributed version POLARDB-X, which has successfully supported the extreme transaction workloads during the 2018 Global Shopping Festival on November 11, 2018, and achieved commercial success on Alibaba Cloud. We have also designed an OLAP system called AnalyticDB (ADB in short) for enabling real-time interactive data analytics for big data. We have explored a self-driving database platform to achieve autoscaling and intelligent database management. We will report key technologies and lessons learned to highlight the technical challenges and opportunities for cloud-native database systems at Alibaba.},
   journal    = {Proc. VLDB Endow.},
   month      = aug,
-  pages      = {2263–2272},
+  pages      = {2263--2272},
   numpages   = {10}
 }
 
@@ -227,7 +227,7 @@
   abstract   = {The Communications Web site, http://cacm.acm.org, features more than a dozen bloggers in the BLOG@CACM community. In each issue of Communications, we publish selected posts or excerpts.twitterFollow us on Twitter at http://twitter.com/blogCACMhttp://cacm.acm.org/blogs/blog-cacmMichael Stonebraker expects a substantial increase in the number of New SQL engines using a variety of architectures in the near future.},
   journal    = {Commun. ACM},
   month      = nov,
-  pages      = {10–11},
+  pages      = {10--11},
   numpages   = {2}
 }
 
@@ -286,7 +286,7 @@
   abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
   journal    = {Proc. VLDB Endow.},
   month      = aug,
-  pages      = {5045–5058},
+  pages      = {5045--5058},
   numpages   = {14}
 }
 
@@ -304,7 +304,7 @@
   abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
   journal    = {Proc. VLDB Endow.},
   month      = aug,
-  pages      = {5045–5058},
+  pages      = {5045--5058},
   numpages   = {14}
 }
 
@@ -383,7 +383,7 @@
   abstract   = {Hybrid Transactional and Analytical Processing (HTAP) databases require processing transactional and analytical queries in isolation to remove the interference between them. To achieve this, it is necessary to maintain different replicas of data specified for the two types of queries. However, it is challenging to provide a consistent view for distributed replicas within a storage system, where analytical requests can efficiently read consistent and fresh data from transactional workloads at scale and with high availability.To meet this challenge, we propose extending replicated state machine-based consensus algorithms to provide consistent replicas for HTAP workloads. Based on this novel idea, we present a Raft-based HTAP database: TiDB. In the database, we design a multi-Raft storage system which consists of a row store and a column store. The row store is built based on the Raft algorithm. It is scalable to materialize updates from transactional requests with high availability. In particular, it asynchronously replicates Raft logs to learners which transform row format to column format for tuples, forming a real-time updatable column store. This column store allows analytical queries to efficiently read fresh and consistent data with strong isolation from transactions on the row store. Based on this storage system, we build an SQL engine to process large-scale distributed transactions and expensive analytical queries. The SQL engine optimally accesses row-format and column-format replicas of data. We also include a powerful analysis engine, TiSpark, to help TiDB connect to the Hadoop ecosystem. Comprehensive experiments show that TiDB achieves isolated high performance under CH-benCHmark, a benchmark focusing on HTAP workloads.},
   journal    = {Proc. VLDB Endow.},
   month      = aug,
-  pages      = {3072–3084},
+  pages      = {3072--3084},
   numpages   = {13}
 }
 
@@ -395,7 +395,7 @@
   address   = {USA},
   abstract  = {Updating an index of the web as documents are crawled requires continuously transforming a large repository of existing documents as new documents arrive. This task is one example of a class of data processing tasks that transform a large repository of data via small, independent mutations. These tasks lie in a gap between the capabilities of existing infrastructure. Databases do not meet the storage or throughput requirements of these tasks: Google's indexing system stores tens of petabytes of data and processes billions of updates per day on thousands of machines. MapReduce and other batch-processing systems cannot process small updates individually as they rely on creating large batches for efficiency.We have built Percolator, a system for incrementally processing updates to a large data set, and deployed it to create the Google web search index. By replacing a batch-based indexing system with an indexing system based on incremental processing using Percolator, we process the same number of documents per day, while reducing the average age of documents in Google search results by 50\%.},
   booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
-  pages     = {251–264},
+  pages     = {251--264},
   numpages  = {14},
   location  = {Vancouver, BC, Canada},
   series    = {OSDI'10}
@@ -464,7 +464,7 @@
   abstract   = {The temporal logic of actions (TLA) is a logic for specifying and reasoning about concurrent systems. Systems and their properties are represented in the same logic, so the assertion that a system meets its specification and the assertion that one system implements another are both expressed by logical implication. TLA is very simple; its syntax and complete formal semantics are summarized in about a page. Yet, TLA is not just a logician's toy; it is extremely powerful, both in principle and in practice. This report introduces TLA and describes how it is used to specify and verify concurrent algorithms. The use of TLA to specify and reason about open systems will be described elsewhere.},
   journal    = {ACM Trans. Program. Lang. Syst.},
   month      = may,
-  pages      = {872–923},
+  pages      = {872--923},
   numpages   = {52},
   keywords   = {safety properties, liveness properties, concurrent programming}
 }
@@ -515,7 +515,7 @@
   doi       = {10.1145/2213836.2213838},
   abstract  = {Many distributed storage systems achieve high data access throughput via partitioning and replication, each system with its own advantages and tradeoffs. In order to achieve high scalability, however, today's systems generally reduce transactional support, disallowing single transactions from spanning multiple partitions. Calvin is a practical transaction scheduling and data replication layer that uses a deterministic ordering guarantee to significantly reduce the normally prohibitive contention costs associated with distributed transactions. Unlike previous deterministic database system prototypes, Calvin supports disk-based storage, scales near-linearly on a cluster of commodity machines, and has no single point of failure. By replicating transaction inputs rather than effects, Calvin is also able to support multiple consistency levels---including Paxos-based strong consistency across geographically distant replicas---at no cost to transactional throughput.},
   booktitle = {Proceedings of the 2012 ACM SIGMOD International Conference on Management of Data},
-  pages     = {1–12},
+  pages     = {1--12},
   numpages  = {12},
   keywords  = {transaction processing, replication, distributed database systems, determinism},
   location  = {Scottsdale, Arizona, USA},
@@ -536,7 +536,7 @@
   abstract   = {Minimizing coordination, or blocking communication between concurrently executing operations, is key to maximizing scalability, availability, and high performance in database systems. However, uninhibited coordination-free execution can compromise application correctness, or consistency. When is coordination necessary for correctness? The classic use of serializable transactions is sufficient to maintain correctness but is not necessary for all applications, sacrificing potential scalability. In this paper, we develop a formal framework, invariant confluence, that determines whether an application requires coordination for correct execution. By operating on application-level invariants over database states (e.g., integrity constraints), invariant confluence analysis provides a necessary and sufficient condition for safe, coordination-free execution. When programmers specify their application invariants, this analysis allows databases to coordinate only when anomalies that might violate invariants are possible. We analyze the invariant confluence of common invariants and operations from real-world database systems (i.e., integrity constraints) and applications and show that many are invariant confluent and therefore achievable without coordination. We apply these results to a proof-of-concept coordination-avoiding database prototype and demonstrate sizable performance gains compared to serializable execution, notably a 25-fold improvement over prior TPC-C New-Order performance on a 200 server cluster.},
   journal    = {Proc. VLDB Endow.},
   month      = nov,
-  pages      = {185–196},
+  pages      = {185--196},
   numpages   = {12}
 }
 
@@ -555,7 +555,7 @@
   abstract   = {Multi-versioned database systems have the potential to significantly increase the amount of concurrency in transaction processing because they can avoid read-write conflicts. Unfortunately, the increase in concurrency usually comes at the cost of transaction serializability. If a database user requests full serializability, modern multi-versioned systems significantly constrain read-write concurrency among conflicting transactions and employ expensive synchronization patterns in their design. In main-memory multi-core settings, these additional constraints are so burdensome that multi-versioned systems are often significantly outperformed by single-version systems.We propose Bohm, a new concurrency control protocol for main-memory multi-versioned database systems. Bohm guarantees serializable execution while ensuring that reads never block writes. In addition, Bohm does not require reads to perform any bookkeeping whatsoever, thereby avoiding the overhead of tracking reads via contended writes to shared memory. This leads to excellent scalability and performance in multi-core settings. Bohm has all the above characteristics without performing validation based concurrency control. Instead, it is pessimistic, and is therefore not prone to excessive aborts in the presence of contention. An experimental evaluation shows that Bohm performs well in both high contention and low contention settings, and is able to dramatically outperform state-of-the-art multi-versioned systems despite maintaining the full set of serializability guarantees.},
   journal    = {Proc. VLDB Endow.},
   month      = jul,
-  pages      = {1190–1201},
+  pages      = {1190--1201},
   numpages   = {12}
 }
 
@@ -592,3 +592,4 @@
   publisher = {Springer},
   doi       = {10.1007/s002360050048}
 }
+
