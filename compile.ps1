@@ -28,7 +28,10 @@ $dockerImage = "minlag/mermaid-cli"
 
 $codeDir = "./figures/code"
 $testResultDir = "./figures/test-result"
-$plotScript = Join-Path -Path $testResultDir -ChildPath "plot_throughput_bar.py"
+$plotScripts = @(
+    "plot_throughput_bar.py",
+    "plot_abort_rate_bar.py"
+)
 $thesisMain = "zhangjihua-master-thesis.tex"
 $thesisPdf = "zhangjihua-master-thesis.pdf"
 
@@ -148,7 +151,11 @@ function Invoke-CodeFigureCompilation {
 }
 
 function Invoke-TestResultCompilation {
-    if (-not (Test-Path -Path $plotScript -PathType Leaf)) {
+    $availableScripts = @($plotScripts | Where-Object {
+        Test-Path -Path (Join-Path -Path $testResultDir -ChildPath $_) -PathType Leaf
+    })
+
+    if ($availableScripts.Count -eq 0) {
         return
     }
 
@@ -168,10 +175,12 @@ function Invoke-TestResultCompilation {
     Push-Location $testResultDirAbs
     try {
         $env:MPLCONFIGDIR = $mplConfigDir
-        & python "plot_throughput_bar.py"
+        foreach ($script in $availableScripts) {
+            & python $script
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "Benchmark chart generation failed."
+            if ($LASTEXITCODE -ne 0) {
+                throw "Benchmark chart generation failed: $script"
+            }
         }
 
         Write-Host "Success: benchmark charts generated."

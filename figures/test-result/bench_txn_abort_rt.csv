@@ -1,0 +1,13 @@
+benchmark,deploy-env,strategy,abort_rt
+Courseware,single-az,SER,1.1%
+Courseware,single-az,MIAED,1.2%
+Courseware,pair-az,SER,2.1%
+Courseware,pair-az,MIAED,2.2%
+SmallBank,single-az,SER,10.1%
+SmallBank,single-az,MIAED,10.5%
+SmallBank,pair-az,SER,13.5%
+SmallBank,pair-az,MIAED,14.0%
+TPCC,single-az,SER,5.0%
+TPCC,single-az,MIAED,5.3%
+TPCC,pair-az,SER,6.8%
+TPCC,pair-az,MIAED,7.2%
