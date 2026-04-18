@@ -31,7 +31,105 @@
 
 在跨分片事务处理中，系统仍需依赖两阶段提交（2PC）\cite{skeen1983formal} 来保证原子性。路由节点在准备阶段向所有参与分片发起验证请求；任一分片报告冲突或验证失败，事务即整体中止；只有当全部分片均通过验证后，协调者才进入提交阶段并通知各分片发布写集。这里需要注意的是，两阶段提交在本文中的作用主要是保证多分片更新的原子发布，而真正决定某个事务是否满足目标隔离级别的，仍然是各分片在准备阶段执行的快照验证、依赖检查和冲突检测逻辑。
 
+如果把上述跨分片控制路径进一步写成协议骨架，则可得到算法~\ref{algo:router-commit}。它保留了本章最关键的控制点：事务启动时建立全局上下文、提交时依据参与分片数在 QuickCommit 与 2PC 之间切换，以及中止时统一清理全局事务状态。
+
+\begin{algorithm}[htbp]
+    \newcommand{\txninfo}{$\text{txnInfo}$}
+    \newcommand{\hlc}{$\text{hlc}$}
+    \caption{路由服务器协议：开始、提交与回滚}
+    \label{algo:router-commit}
+    \begin{algorithmic}[1]
+        \Require 事务全局信息 \txninfo。
+
+        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
+        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
+        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Commit}{$\text{txn\_id}$}
+        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{NoTransaction}$
+        \EndIf
+        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+        \If{$|\text{shards}| = 1$}
+        \State $\text{result} \gets \text{shard}.\text{quickCommit}(\text{txn\_id})$ \Comment{单分片快速提交}
+        \Else
+        \State $\text{result} \gets \text{TwoPhaseCommit}(\text{txn\_id}, \text{shards})$
+        \EndIf
+        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$ \Comment{清理事务信息}
+        \State \Return $\text{result}$
+        \EndProcedure
+
+        \Procedure{TwoPhaseCommit}{$\text{txn\_id}, \text{shards}$}
+        \Comment{跨分片两阶段提交}
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{准备阶段}
+        \If{$\text{shard}.\text{prepare}(\text{txn\_id}) \neq \textsc{Success}$}
+        \For{$\text{s} \in \text{shards}$}
+        \State $\text{s}.\text{abort}(\text{txn\_id})$ \Comment{回滚所有分片}
+        \EndFor
+        \State \Return $\textsc{Conflict}$
+        \EndIf
+        \EndFor
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{提交阶段}
+        \State $\text{shard}.\text{commit}(\text{txn\_id})$
+        \EndFor
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+
+        \Procedure{Abort}{$\text{txn\_id}$}
+        \If{$\text{txnInfo}.\text{contains}(\text{txn\_id})$}
+        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+        \For{$\text{shard} \in \text{shards}$}
+        \Comment{通知所有分片中止}
+        \State $\text{shard}.\text{abort}(\text{txn\_id})$
+        \EndFor
+        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$
+        \EndIf
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
 针对单分片事务这一常见场景，本文引入了 QuickCommit 优化。其基本思想是：若事务自始至终只访问一个分片，则可以将“准备”和“提交”折叠为一次局部决策，在同一个分片上完成时间戳分配、冲突验证和写集发布。这样做不会改变语义判定条件，因为事务仍需接受与常规提交路径一致的可见性与冲突检查；它所节省的只是跨节点协调所引入的额外网络往返和中间状态维护开销。因此，QuickCommit 可以被理解为一种在不削弱语义约束前提下对提交流程进行的工程化优化，而不是对隔离语义本身的放宽。
+
+为了更清楚地说明这种折叠优化没有改变验证条件，算法~\ref{algo:quick-commit}给出了单分片快速提交的局部流程。可以看到，它仍然保留了基于读集合的冲突检测与基于提交时间戳的版本发布，只是将原本分离的 Prepare 与 Commit 两步合并为一次本地决策。
+
+\begin{algorithm}[htbp]
+    \newcommand{\buff}{$\text{buff}$}
+    \newcommand{\storage}{$\text{storage}$}
+    \newcommand{\hlc}{$\text{hlc}$}
+    \caption{QuickCommit 快速提交优化}
+    \label{algo:quick-commit}
+    \begin{algorithmic}[1]
+        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
+
+        \Procedure{QuickCommit}{$\text{txn\_id}$}
+        \Comment{分片服务器快速提交}
+        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
+        \EndIf
+        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{获取提交时间戳}
+        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
+        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
+        \Comment{冲突检测}
+        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
+        \State \Call{Abort}{$\text{txn\_id}$}
+        \State \Return $\textsc{Conflict}$
+        \EndIf
+        \EndFor
+        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
+        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
+        \Comment{持久化写集}
+        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
+        \EndFor
+        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
+        \State \Return $\textsc{Success}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
 
 需要强调的是，本节虽然减少了逐接口展开的伪代码描述，但并不意味着系统行为被“抽象掉”了。相反，上述叙述把注意力从实现细节转移到更适合论文表达的语义要点上：事务何时获得快照、读取时依据什么规则选择版本、提交时依据什么条件决定成功或中止，以及这些条件如何随隔离级别增强而逐步收紧。对于学位论文而言，这种表述方式更有利于将操作语义与前文的一致性公理以及后文的形式化验证一一对应起来。
 
