@@ -338,3 +338,14 @@ figures/mmd/*.pdf
 figures/test-result/*.pdf
 
 docs/*/node_modules/
+
+*.jar
+
+# TLA source/code figure workflow
+# Keep source snippets and final PDFs, ignore TLATeX intermediate artifacts.
+figures/tla-src-code/tla2tools.jar
+figures/tla-src-code/cut/*.aux
+figures/tla-src-code/cut/*.dvi
+figures/tla-src-code/cut/*.log
+figures/tla-src-code/cut/*.pdf
+figures/tla-src-code/cut/*.tex
