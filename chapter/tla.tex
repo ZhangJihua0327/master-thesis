@@ -115,18 +115,13 @@
 
 测试用例只需通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入负载，验证引擎即可启动运行。在验证过程中，TLC 模型检查器会探索所有通过 \texttt{Next} 产生的合法状态转移路径。TLC 的穷举能力使网络延迟、乱序提交与快照交错等情形均能够被覆盖。一旦在某个微观并发场景下发现生成的执行图违反 \texttt{OperationalSafety == IsConsistentExecution} 断言，模型检查器就会立即停止，并输出精确的反例路径追踪报告（Error Trace File），以协助开发者定位并修复并发漏洞。
 
-本文在实验阶段采用 SmallBank 负载对混合隔离级别模型进行实例化，原始测试用例如图~\ref{fig:tla-smallbank} 所示。通过注入该负载，TLC 模型检查器能够验证系统在该场景下是否满足所定义的安全属性，并据此发现潜在的并发问题。实验结果表明，在 SmallBank 负载下，系统满足预先定义的安全属性，且未发现违反一致性要求的潜在并发问题。这说明该操作语义在该负载下能够保证事务满足目标隔离级别的约束。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.92\textwidth]{figures/tla/Benchmark_SmallBank-crop.pdf}
-    \caption{SmallBank 负载测试用例}
-    \label{fig:tla-smallbank}
-\end{figure}
+本文在实验阶段采用 SmallBank 负载对混合隔离级别模型进行实例化，原始测试用例见附录~\ref{appendix:tla-smallbank}。通过注入该负载，TLC 模型检查器能够验证系统在该场景下是否满足所定义的安全属性，并据此发现潜在的并发问题。实验结果表明，在 SmallBank 负载下，系统满足预先定义的安全属性，且未发现违反一致性要求的潜在并发问题。这说明该操作语义在该负载下能够保证事务满足目标隔离级别的约束。
 
 该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
 
-\begin{figure}[H]
+该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不SmallBank 负载测试用例同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
+
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/code/tla_bash.pdf}
     \caption{TLC 模型检查器的终端输出示例}
