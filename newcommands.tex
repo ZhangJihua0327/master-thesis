@@ -41,20 +41,20 @@
 % 算法内部字号与基础行距设置
 \AtBeginEnvironment{algorithmic}{
   \small
-  \linespread{0.9}\selectfont % 进一步缩小基础行距
+  \linespread{1.08}\selectfont % 适当增大算法块行距，提升可读性
 }
 
 % 重定义 \Procedure 和 \EndProcedure 以增加 Procedure 之间的间距
 % 第一个参数自动使用 \textsc{} 包裹
 \let\OriginalProcedure\Procedure
 \let\OriginalEndProcedure\EndProcedure
-\renewcommand{\Procedure}[2]{\vspace{0.05\baselineskip}\OriginalProcedure{\textsc{#1}}{#2}}
-\renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.05\baselineskip}}
+\renewcommand{\Procedure}[2]{\vspace{0.12\baselineskip}\OriginalProcedure{\textsc{#1}}{#2}}
+\renewcommand{\EndProcedure}{\OriginalEndProcedure\vspace{0.12\baselineskip}}
 
 \let\OriginalFunction\Function
 \let\OriginalEndFunction\EndFunction
 % \renewcommand{\Function}[2]{\vspace{0.05\baselineskip}\OriginalFunction{\textsc{#1}}{#2}}
-\renewcommand{\EndFunction}{\OriginalEndFunction\vspace{0.05\baselineskip}}
+\renewcommand{\EndFunction}{\OriginalEndFunction\vspace{0.12\baselineskip}}
 
 
 

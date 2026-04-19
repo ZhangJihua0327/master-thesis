@@ -19,11 +19,9 @@
 
 若系统按串行顺序执行，则 $txn_3$ 读到评论时，也一定能读到对应的帖子。然而在分布式环境中，$txn_1$ 的更新可能先传播到执行 $txn_2$ 的节点，却尚未传播到执行 $txn_3$ 的节点，于是出现 $v=\text{null}, w=\text{comment}$ 的结果。这个结果并不违背单次读写语法，却违背了“评论依赖帖子”的因果关系。由此可以看出，仅保证单事务内部的读写正确还不够；系统还需要约束跨事务的可见性传播。较弱的隔离级别往往允许这类异常，而更强的隔离级别会显式禁止它。
 
-由以上三个案例可以看出，数据库异常并不是彼此孤立的“反例集合”，而是理解事务一致性问题的切入点。为了在后文中更精确地讨论这些异常，下面基于 $(\text{VIS}, \text{AR})$ 框架，对几类典型异常进行进一步刻画。
+由上述案例可以看出，数据库异常并不是彼此孤立的“反例集合”，而是理解事务一致性问题的切入点。为了在后文中更精确地讨论这些异常，下面基于 $(\text{VIS}, \text{AR})$ 框架，对几类典型异常进行进一步刻画。
 
-\subsection{典型数据库异常}
-
-\subsubsection{因果关系违背 (Causality Violation)}
+\subsection{因果关系违背 (Causality Violation)}
 因果一致性要求：若事务观察到某项更新，则也必须观察到该更新的因果前驱。如图~\ref{fig:anomaly-causality} 所示，\Txc[3] 观察到了 \Txc[2] 的评论，但没有观察到评论所依赖的 \Txc[1] 的帖子。这正对应前文“帖子与评论”案例中提到的异常。
 
 \begin{figure}[htbp]
@@ -48,7 +46,7 @@
     \label{fig:anomaly-causality}
 \end{figure}
 
-\subsubsection{破碎读 (Fractured Reads)}
+\subsection{破碎读 (Fractured Reads)}
 破碎读表示一个事务只看到了另一事务更新集合中的一部分，而没有看到同一事务的其余写入。如图~\ref{fig:anomaly-fractured} 所示，\Txc[2] 读到了 Alice 关注 Bob，却没有读到 Bob 关注 Alice，说明 \Txc[1] 的一组相关写入没有以“整体”方式对外可见。
 
 \begin{figure}[htbp]
@@ -63,7 +61,7 @@
     \label{fig:anomaly-fractured}
 \end{figure}
 
-\subsubsection{脏读 (Dirty Read)}
+\subsection{脏读 (Dirty Read)}
 脏读指事务读到了另一个事务尚未提交的中间状态。如图~\ref{fig:anomaly-dirtyread} 所示，\Txc[2] 在 \Txc[1] 提交前就读取了其写入结果。这种异常破坏了“只有提交结果才能对外生效”的事务语义。
 
 \begin{figure}[htbp]
@@ -90,7 +88,7 @@
     \label{fig:anomaly-dirtyread}
 \end{figure}
 
-\subsubsection{更新丢失 (Lost Update)}
+\subsection{更新丢失 (Lost Update)}
 更新丢失描述的是两个事务都基于同一个旧值做出修改，但最终只有其中一个更新在结果中保留下来。如图~\ref{fig:anomaly-lostupdate} 所示，这类异常的根源不在于读到了错误数据，而在于两个写事务之间缺少必要的冲突协调。
 
 \begin{figure}[htbp]
@@ -108,7 +106,7 @@
     \label{fig:anomaly-lostupdate}
 \end{figure}
 
-\subsubsection{长分叉异常 (Long Fork)}
+\subsection{长分叉异常 (Long Fork)}
 长分叉指不同事务观察到了彼此不兼容的历史前缀。如图~\ref{fig:anomaly-longfork} 所示，\Txc[3] 认为 \Txc[1] 在 \Txc[2] 之前，而 \Txc[4] 则观察到相反的顺序。这说明系统没有为事务提供统一的历史前缀视图。
 
 \begin{figure}[htbp]
@@ -126,7 +124,7 @@
     \label{fig:anomaly-longfork}
 \end{figure}
 
-\subsubsection{写偏斜 (Write Skew)}
+\subsection{写偏斜 (Write Skew)}
 写偏斜是快照类隔离级别中最典型、也最容易被忽视的异常。如图~\ref{fig:anomaly-writeskew} 所示，两个事务读取重叠数据，却分别更新不相交的数据项；由于二者都基于同一快照做出局部正确的判断，最终却可能共同破坏全局约束。这正对应前文“两个账户同时扣款”的案例。
 
 \begin{figure}[htbp]
