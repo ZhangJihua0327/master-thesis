@@ -29,63 +29,19 @@
 通过上述变量，可以构建一个较为完整的状态模型，并据此进一步形式化描述事务操作语义。
 
 \subsubsection{核心状态转换动作 (Transition Actions)}
-操作语义的核心逻辑可归纳为三个主要的 \TLAPlus 动作定义：
+操作语义的核心逻辑可归纳为三个主要的 \TLAPlus 动作定义，分别对应事务开始、操作执行与事务提交三个阶段。三类动作并不是彼此孤立的局部规则，而是共同构成了事务从建立可见快照、逐步消费操作序列，到最终完成校验与提交的完整状态演化过程。按照这一顺序展开说明，不仅能够更清楚地呈现模型中的状态转移链条，也有助于解释这些动作如何共同支撑后续的一致性公理验证。
 
-\textbf{A. 事务开始 ($StartTx(t)$)}
+\TopicTitle{A. 事务开始 ($StartTx(t)$)}
 
-该动作形式化描述了事务获取读取视图（Read View）的过程：
-\begin{itemize}
-    \item 根据事务的隔离级别 ($Workload[t].level$)，决定 $tx\_snapshot[t]$ 的值。
-    \item 例如：SI (Snapshot Isolation) 获取当前的全局 $shard\_ct$（时间戳）。
-    \item RA (Read Atomicity) 获取客户端上一次提交的时间 $client\_last\_commit$。
-    \item 将事务状态 $tx\_status$ 设为 "Active"。
-\end{itemize}
+$StartTx(t)$ 形式化描述了事务获取读取视图（Read View）的过程。该动作首先根据事务的隔离级别 $Workload[t].level$ 为 $tx\_snapshot[t]$ 赋值，再将事务状态 $tx\_status$ 更新为 ``Active''，从而使事务进入可执行状态。不同隔离级别对应不同的快照来源：SI（Snapshot Isolation）直接读取当前全局提交时钟 $shard\_ct$，RA（Read Atomicity）则继承客户端最近一次提交时间 $client\_last\_commit$。更一般地说，PC、SI 和 SER 从全局提交时钟获取一致快照，CC 与 PSI 继承会话依赖，而 RA 仅依赖客户端最近一次提交时间。这样的差异并不只是实现细节上的区分，而是将“事务从哪里获得可见历史”这一语义前提显式嵌入到状态更新之中。事务在开始阶段绑定的快照，实际上决定了后续读操作能够访问的版本边界，也决定了不同隔离级别在可见性语义上的根本差异。这样一来，第三章给出的语义规则就被映射为可执行的状态更新条件，也为后续验证 $\text{VIS}$ 构造的正确性奠定了基础。
 
-上述定义直接体现了不同隔离级别在快照来源上的差异：PC、SI 和 SER 从全局提交时钟获取一致快照，CC 与 PSI 继承会话依赖，而 RA 仅依赖客户端最近一次提交时间。这种划分将第三章中的语义规则映射为可执行的状态更新条件，也是后续验证 $\text{VIS}$ 构造是否正确的重要基础。
+\TopicTitle{B. 执行操作 ($ExecuteOp(t)$)}
 
-\textbf{B. 执行操作 ($ExecuteOp(t)$)}
+$ExecuteOp(t)$ 给出了读写操作的具体语义，并依据 $Workload$ 中预定义的操作类型进行分支。对于读操作，模型首先检查本地写缓冲 $tx\_buffer[t][op.key]$，从而保证事务内部满足 Read-Your-Own-Writes 语义；若本地不存在对应写入，则调用辅助算子 $MaxVersion(store[op.key], tx\_snapshot[t])$，从全局存储的版本历史中选取提交时间戳不超过事务快照的最新版本，并将读取结果追加到 $op\_seq$ 以供后续验证。对于写操作，模型并不立即修改全局 $store$，而是先将结果写入 $tx\_buffer$，同时将该写操作记录到 $op\_seq$ 中。这里需要强调的是，读操作和写操作在模型中承担的并不是对称职责：前者负责在“局部写集”和“快照可见版本”之间解析事务当前可读到的值，后者则负责积累尚未提交的局部更新，为提交阶段的原子写入预先组织好输入。这样的定义保留了两个最关键的语义点：一是事务内部的本地优先读取，二是基于快照上界的版本选择。由此，版本可见性被归约为一个可由 TLC 直接枚举和检查的选择过程，同时也使本地缓冲与全局版本历史之间的分工更加清晰。
 
-该动作给出了读写操作的具体语义，并根据 $Workload$ 中预定义的操作类型进行分支：
+\TopicTitle{C. 提交事务 ($CommitTx(t)$)}
 
-\begin{enumerate}
-    \item \textbf{读操作 ($op.type = "R"$):}
-          \begin{itemize}
-              \item \textbf{本地优先读取:} 首先检查 $tx\_buffer[t][op.key]$（即写后读 Read-Your-Writes 语义）。
-              \item \textbf{快照读取:} 如果本地没有，则调用辅助算子\\ $MaxVersion(store[op.key], tx\_snapshot[t])$。这意味着它会在全局存储的版本历史中，找到提交时间戳小于等于事务快照的最新版本。
-              \item \textbf{记录历史:} 将读取结果追加到 $op\_seq$，用于验证。
-          \end{itemize}
-    \item \textbf{写操作 ($op.type = "W"$):}
-          \begin{itemize}
-              \item \textbf{写缓冲:} 并不会立即修改全局 $store$，而是更新 $tx\_buffer$。
-              \item \textbf{记录历史:} 将写操作追加到 $op\_seq$。
-          \end{itemize}
-\end{enumerate}
-
-该定义保留了两个最关键的语义点。其一，读操作优先检查本地写缓冲，以保证事务内部满足 Read-Your-Own-Writes；其二，若本地不存在对应写入，则利用 \texttt{MaxVersion} 从满足快照上界的版本集合中选取最新版本。由此，版本可见性被归约为一个可由 TLC 直接枚举和检查的选择过程。
-
-\textbf{C. 提交事务 ($CommitTx(t)$)}
-
-该动作形式化描述了提交协议，其中包括并发控制与原子性要求：
-
-\begin{enumerate}
-    \item \textbf{冲突检测 ($HasConflict$):}
-          \begin{itemize}
-              \item 定义了谓词 $IsConcurrent(t\_other)$ 来识别并发事务。
-              \item 检查是否存在其他并发已提交的事务，其写入集（Writes）与当前事务的检查集（Checkset/ReadSet）有冲突。这对应了乐观并发控制（OCC）的验证阶段。
-          \end{itemize}
-    \item \textbf{状态更新:}
-          \begin{itemize}
-              \item \textbf{Abort:} 如果有冲突，状态变为 "Aborted"。
-              \item \textbf{Commit:}
-                    \begin{itemize}
-                        \item 递增全局时间戳 $shard\_ct$。
-                        \item \textbf{原子写入:} 将 $tx\_buffer$ 中的数据合并到全局 $store$ 中，生成带有新时间戳的新版本。
-                        \item 更新客户端依赖 $client\_dep$。
-                    \end{itemize}
-          \end{itemize}
-\end{enumerate}
-
-在提交阶段，模型通过 \texttt{HasConflict} 谓词统一表达 PSI、SI 与 SER 等隔离级别所需的并发校验，并在校验通过后以单个状态跃迁完成提交时间分配与新版本写入。由于 \TLAPlus 以状态转移为核心，上述定义能够将“冲突检测”与“原子提交”纳入同一条可验证路径，从而避免在正文中展开与证明主线关系不大的工程性细节。
+$CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制与原子性要求。模型首先通过 $HasConflict$ 执行冲突检测，并借助谓词 $IsConcurrent(t\_other)$ 识别与当前事务并发的已提交事务；若存在其他事务的写入集与当前事务的检查集（Checkset/ReadSet）发生交叉，则说明乐观并发控制（OCC）的验证失败，此时事务状态被更新为 ``Aborted''。若冲突检测通过，模型便进入提交路径：一方面递增全局时间戳 $shard\_ct$，另一方面将 $tx\_buffer$ 中的数据以原子方式合并到全局 $store$，生成带有新时间戳的版本，并同步更新客户端依赖 $client\_dep$。这一设计的关键之处在于，它将“是否允许事务提交”和“提交后如何改变全局状态”放在同一个动作中统一处理，从而避免把语义上应当同时成立的步骤拆散为多个松散的状态变化。在这一阶段，模型通过 \texttt{HasConflict} 谓词统一表达 PSI、SI 与 SER 等隔离级别所需的并发校验，并以单个状态跃迁完成提交时间分配与新版本写入。由于 \TLAPlus 以状态转移为核心，上述定义能够将“冲突检测”与“原子提交”纳入同一条可验证路径，从而避免在正文中展开与证明主线关系不大的工程性细节，也使提交阶段的形式化表达更接近实际系统中的整体提交语义。
 
 \subsection{抽象执行关系与公理约束}
 
@@ -100,14 +56,16 @@
 
 这里的核心思想是将事务历史中的可见性关系与仲裁关系明确写成可检验的形式化对象，使前文给出的一致性公理不再停留于抽象的数学关系层面，而能够与模型检查中的状态约束形成一一对应。
 
-在定义抽象执行 $\mathcal{X}$ 之后，只需进一步对公式~\ref{eq:consistency} 中的公理进行形式化表达，即可得到一致性公理的具体定义。图~\ref{fig:axioms} 展示了这些公理的形式化表达；在此基础上，便可进一步定义不同隔离级别对应的约束。
+在定义抽象执行 $\mathcal{X}$ 之后，还需要进一步对公式~\ref{eq:consistency} 中的公理进行形式化表达，才能将前文给出的数学定义真正落实为 TLC 可检查的逻辑约束。换言之，若说 $\text{VIS}$ 与 $\text{AR}$ 给出了事务历史的结构，那么这些公理所描述的就是该结构必须满足的合法性条件。图~\ref{fig:axioms} 展示了这些公理的形式化表达；在此基础上，便可进一步定义不同隔离级别对应的约束，并把“抽象一致性要求”转化为“模型检查中的可判定性质”。
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/axioms_cropped.pdf}
-    \caption{公理的形式化表达}
+\begin{center}
+    \includegraphics[width=0.82\textwidth]{figures/axioms_cropped.pdf}
+    \captionof{figure}{公理的形式化表达}
     \label{fig:axioms}
-\end{figure}
+\end{center}
+
+
+图~\ref{fig:axioms} 中各项公理并不是彼此孤立的局部条件，而是与前述的 $\text{VIS}$ 和 $\text{AR}$ 关系共同构成完整的抽象执行约束。也正因为如此，模型验证并不是单纯检查某个局部谓词是否成立，而是检查整个执行历史是否同时满足可见性关系、仲裁顺序以及一致性公理之间的联合约束。
 
 不同于面向具体业务逻辑的程序语言，\TLAPlus 更关注状态转移结果本身。运行 \TLAPlus 代码时，TLC 模型检查器会穷举所有可能的状态转移路径，并检查这些路径是否满足预先定义的安全属性。通过配置不同的安全属性，便可以验证系统在不同隔离级别下是否满足相应约束，从而验证模型设计的正确性。
 
@@ -120,6 +78,8 @@
 该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
 
 该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不SmallBank 负载测试用例同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
+
+
 
 \begin{figure}[htbp]
     \centering
