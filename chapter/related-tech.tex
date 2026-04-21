@@ -2,7 +2,9 @@
 
 本章围绕分布式数据库中的事务一致性与隔离语义，对后文所需的核心概念、形式化工具与判定基础进行重新整理。与其先给出抽象定义，不如先从几个容易理解的案例出发：当并发事务分别在不同节点、不同时间观察同一组数据时，究竟会出现什么异常；而数据库通过提升隔离级别，又是在禁止哪些异常、保留哪些并发能力。围绕这一问题，本章依次完成三项工作：首先用案例引入数据库异常与隔离级别；其次给出一致性建模、异常和隔离级别的形式化表达；最后介绍本文后续验证所依赖的 \TLAPlus 与 TLC，并说明如何基于这些工具判定一个执行是否满足给定隔离级别。
 
-\section{异常}
+
+\section{一致性建模}
+
 理解事务语义，最自然的入口不是先记忆抽象定义，而是先观察“错误结果是怎样发生的”。数据库异常本质上描述了并发事务之间可见性关系和提交顺序的不一致：某个事务看到了本不该看到的数据，或没有看到它本应看到的数据，又或者多个事务各自得到“局部合理、整体错误”的结果。也正因为这些异常真实存在，数据库系统才需要通过一致性公理和隔离级别去限制它们。
 
 为了便于说明，下面给出一个典型案例。
@@ -18,125 +20,7 @@
 
 若系统按串行顺序执行，则 $txn_3$ 读到评论时，也一定能读到对应的帖子。然而在分布式环境中，$txn_1$ 的更新可能先传播到执行 $txn_2$ 的节点，却尚未传播到执行 $txn_3$ 的节点，于是出现 $v=\text{null}, w=\text{comment}$ 的结果。这个结果并不违背单次读写语法，却违背了“评论依赖帖子”的因果关系。由此可以看出，仅保证单事务内部的读写正确还不够；系统还需要约束跨事务的可见性传播。较弱的隔离级别往往允许这类异常，而更强的隔离级别会显式禁止它。
 
-由上述案例可以看出，数据库异常并不是彼此孤立的“反例集合”，而是理解事务一致性问题的切入点。为了在后文中更精确地讨论这些异常，下面基于 $(\text{VIS}, \text{AR})$ 框架，对几类典型异常进行进一步刻画。
-
-\subsection{因果悖逆 (Causality Violation)}
-因果一致性要求：若事务观察到某项更新，则也必须观察到该更新的因果前驱。如图~\ref{fig:anomaly-causality} 所示，\Txc[3] 观察到了 \Txc[2] 的评论，但没有观察到评论所依赖的 \Txc[1] 的帖子。这正对应前文“帖子与评论”案例中提到的异常。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        % 事务框
-        \node[txn] (t1) {\Txc[1]: write(x, post) $\xrightarrow{po}$ write(y, empty)};
-        \node[txn, below=1.2cm of t1] (t2) {\Txc[2]: read(x, post) $\xrightarrow{po}$ write(y, comment)};
-        \node[txn, below=1.2cm of t2] (t3) {\Txc[3]: read(x, empty) $\xrightarrow{po}$ read(y, comment)};
-
-        % 关系线
-        % VIS (右侧) - 增大弧度，使用 east 锚点避免遮挡
-        \draw[vis] (t1.east) to [bend left=60] node[right, blue] {VIS} (t2.east);
-        \draw[vis] (t2.east) to [bend left=60] node[right, blue] {VIS} (t3.east);
-
-        % AR (中间及左侧) - 补全标签
-        \draw[ar] (t1) -- node[left, red] {AR} (t2);
-        \draw[ar] (t2) -- node[left, red] {AR} (t3);
-        \draw[ar] (t1.west) to [bend right=60] node[left, red] {AR} (t3.west);
-    \end{tikzpicture}
-    \caption{因果关系违背示例}
-    \label{fig:anomaly-causality}
-\end{figure}
-
-\subsection{破碎读 (Fractured Reads)}
-破碎读表示一个事务只看到了另一事务更新集合中的一部分，而没有看到同一事务的其余写入。如图~\ref{fig:anomaly-fractured} 所示，\Txc[2] 读到了 Alice 关注 Bob，却没有读到 Bob 关注 Alice，说明 \Txc[1] 的一组相关写入没有以“整体”方式对外可见。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        \node[txn] (t1) {\Txc[1]: write($x_A$, Bob) $\xrightarrow{po}$ write($x_B$, Alice)};
-        \node[txn, right=2.0cm of t1] (t2) {\Txc[2]: read($x_A$, Bob) $\xrightarrow{po}$ read($x_B$, empty)};
-
-        \draw[vis] (t1) -- node[above, blue] {VIS} (t2);
-    \end{tikzpicture}
-    \caption{破碎读示例}
-    \label{fig:anomaly-fractured}
-\end{figure}
-
-\subsection{脏读 (Dirty Read)}
-脏读指事务读到了另一个事务尚未提交的中间状态。如图~\ref{fig:anomaly-dirtyread} 所示，\Txc[2] 在 \Txc[1] 提交前就读取了其写入结果。这种异常破坏了“只有提交结果才能对外生效”的事务语义。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        % T1
-        \node (t1_op1) {write(x, 10)};
-        \node[right=1.2cm of t1_op1] (t1_op2) {$\dots$};
-        \draw[->] (t1_op1) -- node[above, font=\footnotesize] {$po$} (t1_op2);
-
-        \node[left=0.2cm of t1_op1] (l1) {\Txc[1]:};
-        % 手动绘制虚线框表示事务范围，体现"打破框体"
-        \draw[dashed, gray] ($(l1.north west)+(-0.1,0.25)$) rectangle ($(t1_op2.south east)+(0.2,-0.25)$);
-
-        % T2
-        \node[below=1.5cm of t1_op1] (t2_op1) {read(x, 10)};
-        \node[left=0.2cm of t2_op1] (l2) {\Txc[2]:};
-        \draw[dashed, gray] ($(l2.north west)+(-0.1,0.25)$) rectangle ($(t2_op1.south east)+(0.2,-0.25)$);
-
-        % VIS
-        \draw[vis] (t1_op1) -- node[right, blue] {VIS} (t2_op1);
-    \end{tikzpicture}
-    \caption{脏读示例}
-    \label{fig:anomaly-dirtyread}
-\end{figure}
-
-\subsection{更新丢失 (Lost Update)}
-更新丢失描述的是两个事务都基于同一个旧值做出修改，但最终只有其中一个更新在结果中保留下来。如图~\ref{fig:anomaly-lostupdate} 所示，这类异常的根源不在于读到了错误数据，而在于两个写事务之间缺少必要的冲突协调。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        \node[txn] (t1) {\Txc[1]: read(acct, 0) $\xrightarrow{po}$ write(acct, 50)};
-        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct, 0) $\xrightarrow{po}$ write(acct, 25)};
-        \node[txn, right=2.0cm of t1, yshift=-0.4cm] (t3) {\Txc[3]: read(acct, 25)};
-
-        \draw[ar] (t1) -- node[left, red] {AR} (t2);
-        \draw[vis] (t2) to [bend right=30] node[below, blue] {VIS} (t3);
-        \draw[vis] (t1) to [bend left=40] node[above, blue] {VIS} (t3);
-    \end{tikzpicture}
-    \caption{更新丢失示例}
-    \label{fig:anomaly-lostupdate}
-\end{figure}
-
-\subsection{长分叉异常 (Long Fork)}
-长分叉指不同事务观察到了彼此不兼容的历史前缀。如图~\ref{fig:anomaly-longfork} 所示，\Txc[3] 认为 \Txc[1] 在 \Txc[2] 之前，而 \Txc[4] 则观察到相反的顺序。这说明系统没有为事务提供统一的历史前缀视图。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        \node[txn] (t1) {\Txc[1]: write(x, post1)};
-        \node[txn, below=1cm of t1] (t2) {\Txc[2]: write(y, post2)};
-        \node[txn, right=1.5cm of t1] (t3) {\Txc[3]: read(x, post1) $\xrightarrow{po}$ read(y, empty)};
-        \node[txn, right=1.5cm of t2] (t4) {\Txc[4]: read(x, empty) $\xrightarrow{po}$ read(y, post2)};
-
-        \draw[vis] (t1) -- node[above, blue] {VIS} (t3);
-        \draw[vis] (t2) -- node[above, blue] {VIS} (t4);
-    \end{tikzpicture}
-    \caption{长分叉异常示例}
-    \label{fig:anomaly-longfork}
-\end{figure}
-
-\subsection{写偏斜 (Write Skew)}
-写偏斜是快照类隔离级别中最典型、也最容易被忽视的异常。如图~\ref{fig:anomaly-writeskew} 所示，两个事务读取重叠数据，却分别更新不相交的数据项；由于二者都基于同一快照做出局部正确的判断，最终却可能共同破坏全局约束。这正对应前文“两个账户同时扣款”的案例。
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}
-        \node[txn] (t1) {\Txc[1]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct1, -40)};
-        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct2, -40)};
-    \end{tikzpicture}
-    \caption{写偏斜示例}
-    \label{fig:anomaly-writeskew}
-\end{figure}
-
-\section{一致性建模}
+由上述案例可以看出，数据库异常并不是彼此孤立的“反例集合”，而是理解事务一致性问题的切入点。
 
 \subsection{一致性建模的必要性}
 上述案例说明，分布式数据库中的问题并不仅仅来自“多个事务同时运行”，更来自“不同节点在不同时间看到不同版本”。在单机环境中，我们更容易把事务理解为围绕一个共享内存状态展开；而在分布式系统中，数据通常分散在多个分片、副本和节点上，事务的读写效果需要经过网络传播、日志复制和提交协议，才会逐步对其他事务可见。因此，“系统此刻的状态是什么”并不是一个天然唯一的答案，不同事务观察到的状态也未必一致。
@@ -188,7 +72,7 @@
 \end{equation}
 其中，$\operatorname{RSet}(T)$ 为事务 $T$ 的读集合，$\operatorname{WSet}(T)$ 为事务 $T$ 的写集合。当两个事务的写集合交集非空，即 $\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$ 时，称它们发生写冲突，记为 $T_1 \bowtie T_2$。
 
-\paragraph*{VIS 和 AR 关系}
+\TopicTitle{VIS 和 AR 关系}
 \label{sec:visandar}
 仅用事务集合和程序顺序，还不足以描述并发事务的语义边界。真正决定隔离级别差异的，是事务之间“谁能看到谁”和“谁在逻辑上先于谁”。因此，本文在事务集合 $\mathcal{T}$ 上引入两个核心关系：可见性关系 $\text{VIS}$ 和仲裁关系 $\text{AR}$。
 
@@ -213,6 +97,126 @@
     \mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR}),
 \]
 或者简写为 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。后续所谓“某个历史满足某种隔离级别”，本质上就是在问：是否存在一组满足对应约束的 $\text{VIS}$ 与 $\text{AR}$，使得该历史能够被解释为一个合法的抽象执行。
+
+\section{异常}
+为了在后文中更精确地讨论这些异常，下面基于 $(\text{VIS}, \text{AR})$ 框架，对几类典型异常进行进一步刻画。
+
+\TopicTitle{因果悖逆 (Causality Violation)}
+因果一致性要求：若事务观察到某项更新，则也必须观察到该更新的因果前驱。如图~\ref{fig:anomaly-causality} 所示，\Txc[3] 观察到了 \Txc[2] 的评论，但没有观察到评论所依赖的 \Txc[1] 的帖子。这正对应前文“帖子与评论”案例中提到的异常。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        % 事务框
+        \node[txn] (t1) {\Txc[1]: write(x, post) $\xrightarrow{po}$ write(y, empty)};
+        \node[txn, below=1.2cm of t1] (t2) {\Txc[2]: read(x, post) $\xrightarrow{po}$ write(y, comment)};
+        \node[txn, below=1.2cm of t2] (t3) {\Txc[3]: read(x, empty) $\xrightarrow{po}$ read(y, comment)};
+
+        % 关系线
+        % VIS (右侧) - 增大弧度，使用 east 锚点避免遮挡
+        \draw[vis] (t1.east) to [bend left=60] node[right, blue] {VIS} (t2.east);
+        \draw[vis] (t2.east) to [bend left=60] node[right, blue] {VIS} (t3.east);
+
+        % AR (中间及左侧) - 补全标签
+        \draw[ar] (t1) -- node[left, red] {AR} (t2);
+        \draw[ar] (t2) -- node[left, red] {AR} (t3);
+        \draw[ar] (t1.west) to [bend right=60] node[left, red] {AR} (t3.west);
+    \end{tikzpicture}
+    \caption{因果关系违背示例}
+    \label{fig:anomaly-causality}
+\end{figure}
+
+\TopicTitle{破碎读 (Fractured Reads)}
+破碎读表示一个事务只看到了另一事务更新集合中的一部分，而没有看到同一事务的其余写入。如图~\ref{fig:anomaly-fractured} 所示，\Txc[2] 读到了 Alice 关注 Bob，却没有读到 Bob 关注 Alice，说明 \Txc[1] 的一组相关写入没有以“整体”方式对外可见。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: write($x_A$, Bob) $\xrightarrow{po}$ write($x_B$, Alice)};
+        \node[txn, right=2.0cm of t1] (t2) {\Txc[2]: read($x_A$, Bob) $\xrightarrow{po}$ read($x_B$, empty)};
+
+        \draw[vis] (t1) -- node[above, blue] {VIS} (t2);
+    \end{tikzpicture}
+    \caption{破碎读示例}
+    \label{fig:anomaly-fractured}
+\end{figure}
+
+\TopicTitle{脏读 (Dirty Read)}
+脏读指事务读到了另一个事务尚未提交的中间状态。如图~\ref{fig:anomaly-dirtyread} 所示，\Txc[2] 在 \Txc[1] 提交前就读取了其写入结果。这种异常破坏了“只有提交结果才能对外生效”的事务语义。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        % T1
+        \node (t1_op1) {write(x, 10)};
+        \node[right=1.2cm of t1_op1] (t1_op2) {$\dots$};
+        \draw[->] (t1_op1) -- node[above, font=\footnotesize] {$po$} (t1_op2);
+
+        \node[left=0.2cm of t1_op1] (l1) {\Txc[1]:};
+        % 手动绘制虚线框表示事务范围，体现"打破框体"
+        \draw[dashed, gray] ($(l1.north west)+(-0.1,0.25)$) rectangle ($(t1_op2.south east)+(0.2,-0.25)$);
+
+        % T2
+        \node[below=1.5cm of t1_op1] (t2_op1) {read(x, 10)};
+        \node[left=0.2cm of t2_op1] (l2) {\Txc[2]:};
+        \draw[dashed, gray] ($(l2.north west)+(-0.1,0.25)$) rectangle ($(t2_op1.south east)+(0.2,-0.25)$);
+
+        % VIS
+        \draw[vis] (t1_op1) -- node[right, blue] {VIS} (t2_op1);
+    \end{tikzpicture}
+    \caption{脏读示例}
+    \label{fig:anomaly-dirtyread}
+\end{figure}
+
+\TopicTitle{更新丢失 (Lost Update)}
+更新丢失描述的是两个事务都基于同一个旧值做出修改，但最终只有其中一个更新在结果中保留下来。如图~\ref{fig:anomaly-lostupdate} 所示，这类异常的根源不在于读到了错误数据，而在于两个写事务之间缺少必要的冲突协调。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: read(acct, 0) $\xrightarrow{po}$ write(acct, 50)};
+        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct, 0) $\xrightarrow{po}$ write(acct, 25)};
+        \node[txn, right=2.0cm of t1, yshift=-0.4cm] (t3) {\Txc[3]: read(acct, 25)};
+
+        \draw[ar] (t1) -- node[left, red] {AR} (t2);
+        \draw[vis] (t2) to [bend right=30] node[below, blue] {VIS} (t3);
+        \draw[vis] (t1) to [bend left=40] node[above, blue] {VIS} (t3);
+    \end{tikzpicture}
+    \caption{更新丢失示例}
+    \label{fig:anomaly-lostupdate}
+\end{figure}
+
+\TopicTitle{长分叉异常 (Long Fork)}
+长分叉指不同事务观察到了彼此不兼容的历史前缀。如图~\ref{fig:anomaly-longfork} 所示，\Txc[3] 认为 \Txc[1] 在 \Txc[2] 之前，而 \Txc[4] 则观察到相反的顺序。这说明系统没有为事务提供统一的历史前缀视图。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: write(x, post1)};
+        \node[txn, below=1cm of t1] (t2) {\Txc[2]: write(y, post2)};
+        \node[txn, right=1.5cm of t1] (t3) {\Txc[3]: read(x, post1) $\xrightarrow{po}$ read(y, empty)};
+        \node[txn, right=1.5cm of t2] (t4) {\Txc[4]: read(x, empty) $\xrightarrow{po}$ read(y, post2)};
+
+        \draw[vis] (t1) -- node[above, blue] {VIS} (t3);
+        \draw[vis] (t2) -- node[above, blue] {VIS} (t4);
+    \end{tikzpicture}
+    \caption{长分叉异常示例}
+    \label{fig:anomaly-longfork}
+\end{figure}
+
+\TopicTitle{写偏斜 (Write Skew)}
+写偏斜是快照类隔离级别中最典型、也最容易被忽视的异常。如图~\ref{fig:anomaly-writeskew} 所示，两个事务读取重叠数据，却分别更新不相交的数据项；由于二者都基于同一快照做出局部正确的判断，最终却可能共同破坏全局约束。这正对应前文“两个账户同时扣款”的案例。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \node[txn] (t1) {\Txc[1]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct1, -40)};
+        \node[txn, below=0.8cm of t1] (t2) {\Txc[2]: read(acct1, 60) $\xrightarrow{po}$ read(acct2, 60) $\xrightarrow{po}$ write(acct2, -40)};
+    \end{tikzpicture}
+    \caption{写偏斜示例}
+    \label{fig:anomaly-writeskew}
+\end{figure}
+
 
 \section{一致性公理和隔离级别}
 
@@ -331,7 +335,7 @@ TLC 则是 \TLAPlus 的显式状态模型检查器。给定一个有限范围内
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/client_server.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/client_server.pdf}
     \caption{Client\_Server 规约}
     \label{fig:client_server}
 \end{figure}

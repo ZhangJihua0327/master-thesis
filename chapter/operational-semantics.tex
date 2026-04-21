@@ -13,7 +13,7 @@
 
 形式化地说，对一个抽象执行
 \[
-    \mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR}),
+  \mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR}),
 \]
 其中 $\text{level}(T)$ 不再对所有事务取同一个值，而是允许不同事务分别标注为 RA、CC、PSI、PC、SI 或 SER。若对任意事务 $T \in \mathcal{T}$，其隔离级别 $\text{level}(T)$ 所要求的全部公理均被满足，则称 $\mathcal{X}$ 在该混合隔离级别配置下成立。这里的关键不是把不同级别简单并列摆放，而是要求存在同一组 $\text{VIS}$ 与 $\text{AR}$，能够同时解释所有事务所观察到的历史。
 
@@ -22,86 +22,86 @@
 因此，混合隔离级别的核心问题并不是“每个事务各自满足什么”，而是“这些事务能否在同一个全局历史解释下同时满足各自约束”。一个事务单独看可能满足自身级别，但只要它所依赖的可见历史与其他事务要求的约束发生冲突，整个执行仍然可能不成立。对本文而言，这一判断不再停留在理论定义层面，而需要继续向下落实为系统中的状态组织、时间戳分配、读写规则与提交认证机制。
 
 \begin{figure}[htbp]
-    \centering
-    \tikzset{
-    txbox/.style={
-            draw,
-            rounded corners=4pt,
-            align=left,
-            font=\small\ttfamily,
-            inner sep=6pt,
-            minimum width=2cm
-        },
-    vis/.style={
-    -{Stealth[scale=1.1]},
-    thick,
-    orange!70!black
+  \centering
+  \tikzset{
+  txbox/.style={
+      draw,
+      rounded corners=4pt,
+      align=left,
+      font=\small\ttfamily,
+      inner sep=6pt,
+      minimum width=2cm
     },
-    vis_thick/.style={
-    -{Stealth[scale=1.4]},
-    line width=2pt,
-    orange!70!black
+  vis/.style={
+  -{Stealth[scale=1.1]},
+  thick,
+  orange!70!black
+  },
+  vis_thick/.style={
+  -{Stealth[scale=1.4]},
+  line width=2pt,
+  orange!70!black
+  },
+  vis_label/.style={
+      orange!70!black,
+      font=\footnotesize\bfseries
     },
-    vis_label/.style={
-            orange!70!black,
-            font=\footnotesize\bfseries
-        },
-    }
+  }
 
-    \scalebox{0.72}{%
-        \begin{tikzpicture}[node distance=1.6cm and 1.1cm]
-            \begin{scope}[local bounding box=suba]
-                \node (T1a) [txbox] at (0,3.5) {$T_1[\text{CC}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-                \node (T2a) [txbox] at (0,0) {$T_2[\text{PC}]$\\read($a,1$)\\read($b,2$)\\read($c,2$)};
-                \node (T3a) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,3$)\\read($c,2$)\\write($c,3$)};
-                \node (T4a) [txbox] at (3.5,0.5) {$T_4[\text{SI}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+  \scalebox{0.72}{%
+    \begin{tikzpicture}[node distance=1.6cm and 1.1cm]
+      \begin{scope}[local bounding box=suba]
+        \node (T1a) [txbox] at (0,3.5) {$T_1[\text{CC}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+        \node (T2a) [txbox] at (0,0) {$T_2[\text{PC}]$\\read($a,1$)\\read($b,2$)\\read($c,2$)};
+        \node (T3a) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,3$)\\read($c,2$)\\write($c,3$)};
+        \node (T4a) [txbox] at (3.5,0.5) {$T_4[\text{SI}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-                \draw[vis] (T1a) -- (T3a) node[midway, above, vis_label] {VIS};
-                \draw[vis] (T1a) -- (T2a) node[midway, left, vis_label] {VIS};
-                \draw[vis] (T1a) -- (T4a) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-                \draw[vis] (T2a) -- (T4a) node[midway, above, vis_label] {VIS};
-                \draw[vis] (T2a) -- (T3a) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
-                \draw[vis] (T4a) -- (T3a) node[midway, right, vis_label] {VIS};
-            \end{scope}
-            \node[below=0.3cm of suba, font=\bfseries\large] {(a) $\mathcal{X}_1$ 是一致的};
+        \draw[vis] (T1a) -- (T3a) node[midway, above, vis_label] {VIS};
+        \draw[vis] (T1a) -- (T2a) node[midway, left, vis_label] {VIS};
+        \draw[vis] (T1a) -- (T4a) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+        \draw[vis] (T2a) -- (T4a) node[midway, above, vis_label] {VIS};
+        \draw[vis] (T2a) -- (T3a) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+        \draw[vis] (T4a) -- (T3a) node[midway, right, vis_label] {VIS};
+      \end{scope}
+      \node[below=0.3cm of suba, font=\bfseries\large] {(a) $\mathcal{X}_1$ 是一致的};
 
-            \begin{scope}[local bounding box=subb, xshift=7.0cm]
-                \node (T1b) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-                \node (T2b) [txbox] at (0,0) {$T_2[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)};
-                \node (T3b) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,2$)\\write($c,3$)};
-                \node (T4b) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+      \begin{scope}[local bounding box=subb, xshift=7.0cm]
+        \node (T1b) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+        \node (T2b) [txbox] at (0,0) {$T_2[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)};
+        \node (T3b) [txbox] at (3.5,4) {$T_3[\text{SI}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,2$)\\write($c,3$)};
+        \node (T4b) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-                \draw[vis] (T1b) -- (T3b) node[midway, above, vis_label] {VIS};
-                \draw[vis] (T1b) -- (T2b) node[midway, left, vis_label] {VIS};
-                \draw[vis] (T1b) -- (T4b) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-                \draw[vis] (T4b) -- (T2b) node[midway, above, vis_label] {VIS};
-                \draw[vis_thick] (T2b) -- (T3b) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
-                \draw[vis] (T4b) -- (T3b) node[midway, right, vis_label] {$\overline{\text{VIS}}$};
-            \end{scope}
-            \node[below=0.3cm of subb, font=\bfseries\large] {(b) $\mathcal{X}_2$ 是一致的};
+        \draw[vis] (T1b) -- (T3b) node[midway, above, vis_label] {VIS};
+        \draw[vis] (T1b) -- (T2b) node[midway, left, vis_label] {VIS};
+        \draw[vis] (T1b) -- (T4b) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+        \draw[vis] (T4b) -- (T2b) node[midway, above, vis_label] {VIS};
+        \draw[vis_thick] (T2b) -- (T3b) node[midway, below, vis_label, pos=0.3, rotate=40] {VIS};
+        \draw[vis] (T4b) -- (T3b) node[midway, right, vis_label] {$\overline{\text{VIS}}$};
+      \end{scope}
+      \node[below=0.3cm of subb, font=\bfseries\large] {(b) $\mathcal{X}_2$ 是一致的};
 
-            \begin{scope}[local bounding box=subc, xshift=14.0cm]
-                \node (T1c) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
-                \node (T2c) [txbox] at (0,0) {$T_2[\text{CC}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,\textcolor{red}{3}$)};
-                \node (T3c) [txbox] at (3.5,4) {$T_3[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)\\write($c,3$)};
-                \node (T4c) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
+      \begin{scope}[local bounding box=subc, xshift=14.0cm]
+        \node (T1c) [txbox] at (0,3.5) {$T_1[\text{SER}]$\\read($a,1$)\\read($b,1$)\\read($c,1$)\\write($b,2$)\\write($c,2$)};
+        \node (T2c) [txbox] at (0,0) {$T_2[\text{CC}]$\\read($a,1$)\\read($b,\textcolor{red}{2}$)\\read($c,\textcolor{red}{3}$)};
+        \node (T3c) [txbox] at (3.5,4) {$T_3[\text{SER}]$\\read($a,1$)\\read($b,\textcolor{red}{3}$)\\read($c,2$)\\write($c,3$)};
+        \node (T4c) [txbox] at (3.5,0.5) {$T_4[\text{SER}]$\\read($a,1$)\\read($b,2$)\\write($b,3$)};
 
-                \draw[vis] (T1c) -- (T3c) node[midway, above, vis_label] {VIS};
-                \draw[vis] (T1c) -- (T2c) node[midway, left, vis_label] {VIS};
-                \draw[vis] (T1c) -- (T4c) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
-                \draw[vis] (T4c) -- (T2c) node[midway, above, vis_label] {$\overline{\text{VIS}}$};
-                \draw[vis_thick] (T3c.south west) -- (T1c.south east) node[midway, above, vis_label, sloped] {VIS};
-                \draw[vis] (T4c) -- (T3c) node[midway, right, vis_label] {VIS};
-            \end{scope}
-            \node[below=0.3cm of subc, font=\bfseries\large] {(c) $\mathcal{X}_3$ 不是一致的};
-        \end{tikzpicture}%
-    }
+        \draw[vis] (T1c) -- (T3c) node[midway, above, vis_label] {VIS};
+        \draw[vis] (T1c) -- (T2c) node[midway, left, vis_label] {VIS};
+        \draw[vis] (T1c) -- (T4c) node[midway, above, vis_label, pos=0.6, rotate=-35] {VIS};
+        \draw[vis] (T4c) -- (T2c) node[midway, above, vis_label] {$\overline{\text{VIS}}$};
+        \draw[vis_thick] (T3c.south west) -- (T1c.south east) node[midway, above, vis_label, sloped] {VIS};
+        \draw[vis] (T4c) -- (T3c) node[midway, right, vis_label] {VIS};
+      \end{scope}
+      \node[below=0.3cm of subc, font=\bfseries\large] {(c) $\mathcal{X}_3$ 不是一致的};
+    \end{tikzpicture}%
+  }
 
-    \caption{混合隔离级别下抽象执行判定示例}
-    \label{fig:mixed-isolation-consistency}
+  \caption{混合隔离级别下抽象执行判定示例}
+  \label{fig:mixed-isolation-consistency}
 \end{figure}
 
-\paragraph*{混合隔离级别下的抽象执行判定}
+\TopicTitle{混合隔离级别下的抽象执行判定}
 图~\ref{fig:mixed-isolation-consistency} 给出了三个混合隔离级别的抽象执行示例。子图 (a) 中，$\mathcal{X}_1$ 同时包含 CC、PC 与 SI 三类事务，但它们观察到的历史可以由同一组 $\text{VIS}$ 与 $\text{AR}$ 关系统一解释，因此该执行是成立的。子图 (b) 中，$\mathcal{X}_2$ 同时包含 SER 与 SI 两类事务，虽然隔离要求不同，但仍未出现彼此冲突的可见性约束，因此该执行同样成立。
 
 子图 (c) 展示了更关键的反例：$\mathcal{X}_3$ 同时包含 SER 与 CC 事务，其中 CC 事务 $T_2$ 读到了 $b=2$ 和 $c=3$，这意味着它的可见历史无法与 SER 事务要求的全局可比较顺序同时成立。也就是说，单独看 $T_2$，它似乎没有超出 CC 的允许范围；但把它放入整个混合执行中，就会破坏其他事务所需的更强约束，因此 $\mathcal{X}_3$ 不是一致的。
@@ -124,7 +124,7 @@
 
 从体系结构与语义分工的角度看，客户端、路由节点和分片节点分别承担了三个不同层次的职责。客户端负责保持会话连续性和事务亲和性，使同一事务的上下文不会因入口漂移而被破坏；路由节点负责维护事务的全局控制信息，并把一次逻辑事务组织成若干面向具体分片的局部操作；分片节点则真正决定某个读是否可见、某个写是否能够被发布以及某次提交是否需要被中止。这样的分工使得系统既能够在全局层面统一处理时间戳、参与分片集合和提交路径，又能够在局部层面执行与数据项和版本链紧密相关的并发控制逻辑。对于混合隔离级别场景而言，这一点尤为重要，因为不同隔离级别的差异并不主要体现在客户端接口上，而是体现在事务在路由层如何获得快照、在分片层如何解释可见版本、以及在提交阶段如何接受不同强度的认证。
 
-\paragraph*{事务状态与关键元数据}
+\TopicTitle{事务状态与关键元数据}
 为了把上述组件行为统一为可推理的操作语义，系统还需要为事务维护一组稳定的关键元数据。首先是\textbf{开始时间戳} $sts$，它决定了事务读取历史时所依据的初始快照边界；其次是\textbf{提交时间戳} $cts$，它在事务成功提交后用于确定该事务在全局仲裁序中的位置。对于因果相关的隔离级别，客户端还会维护\textbf{依赖时间戳} $dep$，用来刻画会话内已经建立的因果先后关系；对于 SER 事务，系统还需要维护\textbf{检查集}（checkset），以记录提交前必须重新验证的读写对象集合。
 
 除时间相关元数据外，事务在执行过程中还会逐步形成若干集合结构。其一是\textbf{参与分片集合}，由路由节点维护，用于记录当前事务已经访问过哪些分片，并据此决定最终采用单分片提交还是跨分片两阶段提交；其二是\textbf{读集合}与\textbf{写集合}，由分片节点维护，用于分别记录事务已经读取过哪些键以及尚未发布但准备提交的更新内容；其三是\textbf{准备状态}，用于描述事务在两阶段提交中是否已经通过局部验证并获得预分配时间戳。对操作语义而言，这些元数据并非附属实现细节，而是后续判定 $\text{VIS}$、$\text{AR}$ 以及各类一致性公理是否成立的直接依据。
@@ -138,63 +138,63 @@
 如果把上述跨分片控制路径进一步写成协议骨架，则可得到算法~\ref{algo:router-commit}。它保留了本章最关键的控制点：事务启动时建立全局上下文、提交时依据参与分片数在 QuickCommit 与 2PC 之间切换，以及中止时统一清理全局事务状态。
 
 \begin{algorithm}[htbp]
-    \newcommand{\txninfo}{$\text{txnInfo}$}
-    \newcommand{\hlc}{$\text{hlc}$}
-    \caption{路由服务器协议：开始、提交与回滚}
-    \label{algo:router-commit}
-    \begin{algorithmic}[1]
-        \Require 事务全局信息 \txninfo。
+  \newcommand{\txninfo}{$\text{txnInfo}$}
+  \newcommand{\hlc}{$\text{hlc}$}
+  \caption{路由服务器协议：开始、提交与回滚}
+  \label{algo:router-commit}
+  \begin{algorithmic}[1]
+    \Require 事务全局信息 \txninfo。
 
-        \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
-        \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
-        \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
-        \State \Return $\textsc{Success}$
-        \EndProcedure
+    \Procedure{StartTxn}{$\text{txn\_id}, \text{isolation\_level}$}
+    \State $\text{start\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{分配事务开始时间戳}
+    \State $\text{txnInfo}[\text{txn\_id}] \gets \{\text{start\_ts}, \text{isolation\_level}, \text{shards}: \emptyset\}$
+    \State \Return $\textsc{Success}$
+    \EndProcedure
 
-        \Procedure{Commit}{$\text{txn\_id}$}
-        \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{NoTransaction}$
-        \EndIf
-        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
-        \If{$|\text{shards}| = 1$}
-        \State $\text{result} \gets \text{shard}.\text{quickCommit}(\text{txn\_id})$ \Comment{单分片快速提交}
-        \Else
-        \State $\text{result} \gets \text{TwoPhaseCommit}(\text{txn\_id}, \text{shards})$
-        \EndIf
-        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$ \Comment{清理事务信息}
-        \State \Return $\text{result}$
-        \EndProcedure
+    \Procedure{Commit}{$\text{txn\_id}$}
+    \If{$\lnot \text{txnInfo}.\text{contains}(\text{txn\_id})$}
+    \State \Return $\textsc{NoTransaction}$
+    \EndIf
+    \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+    \If{$|\text{shards}| = 1$}
+    \State $\text{result} \gets \text{shard}.\text{quickCommit}(\text{txn\_id})$ \Comment{单分片快速提交}
+    \Else
+    \State $\text{result} \gets \text{TwoPhaseCommit}(\text{txn\_id}, \text{shards})$
+    \EndIf
+    \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$ \Comment{清理事务信息}
+    \State \Return $\text{result}$
+    \EndProcedure
 
-        \Procedure{TwoPhaseCommit}{$\text{txn\_id}, \text{shards}$}
-        \Comment{跨分片两阶段提交}
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{准备阶段}
-        \If{$\text{shard}.\text{prepare}(\text{txn\_id}) \neq \textsc{Success}$}
-        \For{$\text{s} \in \text{shards}$}
-        \State $\text{s}.\text{abort}(\text{txn\_id})$ \Comment{回滚所有分片}
-        \EndFor
-        \State \Return $\textsc{Conflict}$
-        \EndIf
-        \EndFor
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{提交阶段}
-        \State $\text{shard}.\text{commit}(\text{txn\_id})$
-        \EndFor
-        \State \Return $\textsc{Success}$
-        \EndProcedure
+    \Procedure{TwoPhaseCommit}{$\text{txn\_id}, \text{shards}$}
+    \Comment{跨分片两阶段提交}
+    \For{$\text{shard} \in \text{shards}$}
+    \Comment{准备阶段}
+    \If{$\text{shard}.\text{prepare}(\text{txn\_id}) \neq \textsc{Success}$}
+    \For{$\text{s} \in \text{shards}$}
+    \State $\text{s}.\text{abort}(\text{txn\_id})$ \Comment{回滚所有分片}
+    \EndFor
+    \State \Return $\textsc{Conflict}$
+    \EndIf
+    \EndFor
+    \For{$\text{shard} \in \text{shards}$}
+    \Comment{提交阶段}
+    \State $\text{shard}.\text{commit}(\text{txn\_id})$
+    \EndFor
+    \State \Return $\textsc{Success}$
+    \EndProcedure
 
-        \Procedure{Abort}{$\text{txn\_id}$}
-        \If{$\text{txnInfo}.\text{contains}(\text{txn\_id})$}
-        \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
-        \For{$\text{shard} \in \text{shards}$}
-        \Comment{通知所有分片中止}
-        \State $\text{shard}.\text{abort}(\text{txn\_id})$
-        \EndFor
-        \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$
-        \EndIf
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
+    \Procedure{Abort}{$\text{txn\_id}$}
+    \If{$\text{txnInfo}.\text{contains}(\text{txn\_id})$}
+    \State $\text{shards} \gets \text{txnInfo}[\text{txn\_id}].\text{shards}$
+    \For{$\text{shard} \in \text{shards}$}
+    \Comment{通知所有分片中止}
+    \State $\text{shard}.\text{abort}(\text{txn\_id})$
+    \EndFor
+    \State $\text{txnInfo}.\text{remove}(\text{txn\_id})$
+    \EndIf
+    \State \Return $\textsc{Success}$
+    \EndProcedure
+  \end{algorithmic}
 \end{algorithm}
 
 针对单分片事务这一常见场景，本文引入了 QuickCommit 优化。其基本思想是：若事务自始至终只访问一个分片，则可以将“准备”和“提交”折叠为一次局部决策，在同一个分片上完成时间戳分配、冲突验证和写集发布。这样做不会改变语义判定条件，因为事务仍需接受与常规提交路径一致的可见性与冲突检查；它所节省的只是跨节点协调所引入的额外网络往返和中间状态维护开销。因此，QuickCommit 可以被理解为一种在不削弱语义约束前提下对提交流程进行的工程化优化，而不是对隔离语义本身的放宽。
@@ -202,37 +202,37 @@
 为了更清楚地说明这种折叠优化没有改变验证条件，算法~\ref{algo:quick-commit}给出了单分片快速提交的局部流程。可以看到，它仍然保留了基于读集合的冲突检测与基于提交时间戳的版本发布，只是将原本分离的 Prepare 与 Commit 两步合并为一次本地决策。
 
 \begin{algorithm}[htbp]
-    \newcommand{\buff}{$\text{buff}$}
-    \newcommand{\storage}{$\text{storage}$}
-    \newcommand{\hlc}{$\text{hlc}$}
-    \caption{QuickCommit 快速提交优化}
-    \label{algo:quick-commit}
-    \begin{algorithmic}[1]
-        \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
+  \newcommand{\buff}{$\text{buff}$}
+  \newcommand{\storage}{$\text{storage}$}
+  \newcommand{\hlc}{$\text{hlc}$}
+  \caption{QuickCommit 快速提交优化}
+  \label{algo:quick-commit}
+  \begin{algorithmic}[1]
+    \Require 事务缓存信息 \buff，MVCC 存储引擎 \storage，混合逻辑时钟 \hlc。
 
-        \Procedure{QuickCommit}{$\text{txn\_id}$}
-        \Comment{分片服务器快速提交}
-        \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
-        \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
-        \EndIf
-        \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{获取提交时间戳}
-        \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
-        \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
-        \Comment{冲突检测}
-        \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
-        \State \Call{Abort}{$\text{txn\_id}$}
-        \State \Return $\textsc{Conflict}$
-        \EndIf
-        \EndFor
-        \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
-        \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
-        \Comment{持久化写集}
-        \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
-        \EndFor
-        \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
-        \State \Return $\textsc{Success}$
-        \EndProcedure
-    \end{algorithmic}
+    \Procedure{QuickCommit}{$\text{txn\_id}$}
+    \Comment{分片服务器快速提交}
+    \If{$\lnot \text{buff}.\text{contains}(\text{txn\_id})$}
+    \State \Return $\textsc{Success}$ \Comment{无操作则直接成功}
+    \EndIf
+    \State $\text{commit\_ts} \gets \text{hlc}.\text{Now}()$ \Comment{获取提交时间戳}
+    \State $\text{readSet} \gets \text{buff}[\text{txn\_id}].\text{readSet}$
+    \For{$(\text{key}, \_, \text{read\_ts}) \in \text{readSet}$}
+    \Comment{冲突检测}
+    \If{$\text{storage}.\text{hasNewerVersion}(\text{key}, \text{read\_ts}, \text{commit\_ts})$}
+    \State \Call{Abort}{$\text{txn\_id}$}
+    \State \Return $\textsc{Conflict}$
+    \EndIf
+    \EndFor
+    \State $\text{writeSet} \gets \text{buff}[\text{txn\_id}].\text{writeSet}$
+    \For{$(\text{key}, \text{value}) \in \text{writeSet}$}
+    \Comment{持久化写集}
+    \State $\text{storage}.\text{write}(\text{key}, \text{value}, \text{commit\_ts})$
+    \EndFor
+    \State $\text{buff}.\text{remove}(\text{txn\_id})$ \Comment{清理事务缓存}
+    \State \Return $\textsc{Success}$
+    \EndProcedure
+  \end{algorithmic}
 \end{algorithm}
 
 需要强调的是，本节虽然减少了逐接口展开的伪代码描述，但并不意味着系统行为被“抽象掉”了。相反，上述叙述把注意力从实现细节转移到更适合论文表达的语义要点上：事务何时获得快照、读取时依据什么规则选择版本、提交时依据什么条件决定成功或中止，以及这些条件如何随隔离级别增强而逐步收紧。对于学位论文而言，这种表述方式更有利于将操作语义与前文的一致性公理以及后文的形式化验证一一对应起来。
@@ -248,41 +248,41 @@
 
 一个混合逻辑时钟时间戳通常表示为一个二元组 $\left \langle pt, lc \right \rangle$，其中 $pt$ 是物理时间戳，$lc$ 是逻辑计数器，有:
 \begin{equation}
-    \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
+  \left \langle pt_1, lc_1 \right \rangle < \left \langle pt_2, lc_2 \right \rangle \iff (pt_1 < pt_2) \lor (pt_1 = pt_2 \land lc_1 < lc_2)
 \end{equation}
 它向外提供两个典型接口 \lstinline|Now| 和 \lstinline|Update|，如算法~\ref{algo:hlc}所示：
 
 \begin{algorithm}[htbp]
-    \caption{混合逻辑时钟管理}
-    \label{algo:hlc}
-    \begin{algorithmic}[1]
-        \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
-        \Procedure{Now}{$\text{pt}$}
-        \Comment{生成本地时间戳}
-        \If{$\text{pt} > \text{wall}$}
-        \State $\text{wall} \gets \text{pt}$
-        \State $\text{logical} \gets 0$
-        \Else
-        \State $\text{logical} \gets \text{logical} + 1$
-        \EndIf
-        \State \Return $(\text{wall}, \text{logical})$
-        \EndProcedure
+  \caption{混合逻辑时钟管理}
+  \label{algo:hlc}
+  \begin{algorithmic}[1]
+    \Require 全局变量 $(\text{wall}, \text{logical})$ \Comment{本地时钟状态}
+    \Procedure{Now}{$\text{pt}$}
+    \Comment{生成本地时间戳}
+    \If{$\text{pt} > \text{wall}$}
+    \State $\text{wall} \gets \text{pt}$
+    \State $\text{logical} \gets 0$
+    \Else
+    \State $\text{logical} \gets \text{logical} + 1$
+    \EndIf
+    \State \Return $(\text{wall}, \text{logical})$
+    \EndProcedure
 
-        \Procedure{Update}{$\text{msg}, \text{pt}$}
-        \Comment{同步远程时间戳}
-        \State $\text{old\_wall} \gets \text{wall}$
-        \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
-        \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
-        \ElsIf{$\text{wall} = \text{old\_wall}$}
-        \State $\text{logical} \gets \text{logical} + 1$
-        \ElsIf{$\text{wall} = \text{msg.wall}$}
-        \State $\text{logical} \gets \text{msg.logical} + 1$
-        \Else
-        \State $\text{logical} \gets 0$
-        \EndIf
-        \EndProcedure
-    \end{algorithmic}
+    \Procedure{Update}{$\text{msg}, \text{pt}$}
+    \Comment{同步远程时间戳}
+    \State $\text{old\_wall} \gets \text{wall}$
+    \State $\text{wall} \gets \max(\text{old\_wall}, \text{msg.wall}, \text{pt})$
+    \If{$\text{wall} = \text{old\_wall} \land \text{wall} = \text{msg.wall}$}
+    \State $\text{logical} \gets \max(\text{logical}, \text{msg.logical}) + 1$
+    \ElsIf{$\text{wall} = \text{old\_wall}$}
+    \State $\text{logical} \gets \text{logical} + 1$
+    \ElsIf{$\text{wall} = \text{msg.wall}$}
+    \State $\text{logical} \gets \text{msg.logical} + 1$
+    \Else
+    \State $\text{logical} \gets 0$
+    \EndIf
+    \EndProcedure
+  \end{algorithmic}
 \end{algorithm}
 
 \lstinline|Now()|会读取当前系统时间。如果系统时间大于上次的时间戳，则更新物理时间并将逻辑计数器重置为 0；如果系统时间等于或小于上次时间戳，则递增逻辑计数器，用于给本地事务调用；\lstinline|Update|将本地时钟与远程时间戳同步。它会取本地时间、远程时间和当前物理时间三者中的最大值，并相应地调整逻辑计数器。这是保证因果关系（Happens-before）的关键，当接收到带有远程 HLC 时间戳的消息时调用。HLC 的这两个接口，在本文设计分布式数据库混合隔离级别下的事务操作语义时至关重要。
@@ -292,32 +292,32 @@
 在上一章，我们提到了各个隔离级别在需要满足的公理，以集合的视角看，它们存在着包含关系，如表~\ref{tab:isolation_levels_axioms}所示。对于不同隔离级别的事务，我们需要在系统中配置不同的组件以实现相应的公理组合，从而满足隔离级别的语义要求。更高一致性的隔离级别是低一致性隔离级别的子集，在实现阶段，可以通过对操作语义的某些过程中添加一些新的限制以实现新的公理，从而满足更高隔离级别的要求。
 
 \begin{table}[htbp]
-    \centering
-    \renewcommand{\arraystretch}{1.5}
-    \caption{隔离级别及其公理组合}
-    \label{tab:isolation_levels_axioms}
-    \begin{tabular}{|l|l|l|}
-        \hline
-        \textbf{隔离级别}               & \textbf{强制满足的公理组合}                                   & \textbf{核心语义说明}        \\
-        \hline
-        \textbf{RA (Read Atomic)}   & $\text{Int} \wedge \text{Ext} \wedge \text{Session}$ & 保证原子可见性，防止断裂读。         \\
-        \hline
-        \textbf{CC (Causal)}        & $\text{RA} \wedge \text{TransVis}$                   & 保证因果一致性。               \\
-        \hline
-        \textbf{PC (Prefix)}        & $\text{RA} \wedge \text{Prefix}$                     & 保证观察到的是全局序的一致前缀。       \\
-        \hline
-        \textbf{PSI (Parallel SI)}  & $\text{CC} \wedge \text{NoConflict}$                 & 因果一致性 + 禁止丢失更新。        \\
-        \hline
-        \textbf{SI (Snapshot)}      & $\text{PC} \wedge \text{NoConflict}$                 & 经典快照隔离：一致性快照 + 禁止丢失更新。 \\
-        \hline
-        \textbf{SER (Serializable)} & $\text{SI} \wedge \text{TotalVis}$                   & 可串行化：所有前驱必须可见。         \\
-        \hline
-    \end{tabular}
+  \centering
+  \renewcommand{\arraystretch}{1.5}
+  \caption{隔离级别及其公理组合}
+  \label{tab:isolation_levels_axioms}
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{隔离级别}               & \textbf{强制满足的公理组合}                                   & \textbf{核心语义说明}        \\
+    \hline
+    \textbf{RA (Read Atomic)}   & $\text{Int} \wedge \text{Ext} \wedge \text{Session}$ & 保证原子可见性，防止断裂读。         \\
+    \hline
+    \textbf{CC (Causal)}        & $\text{RA} \wedge \text{TransVis}$                   & 保证因果一致性。               \\
+    \hline
+    \textbf{PC (Prefix)}        & $\text{RA} \wedge \text{Prefix}$                     & 保证观察到的是全局序的一致前缀。       \\
+    \hline
+    \textbf{PSI (Parallel SI)}  & $\text{CC} \wedge \text{NoConflict}$                 & 因果一致性 + 禁止丢失更新。        \\
+    \hline
+    \textbf{SI (Snapshot)}      & $\text{PC} \wedge \text{NoConflict}$                 & 经典快照隔离：一致性快照 + 禁止丢失更新。 \\
+    \hline
+    \textbf{SER (Serializable)} & $\text{SI} \wedge \text{TotalVis}$                   & 可串行化：所有前驱必须可见。         \\
+    \hline
+  \end{tabular}
 \end{table}
 
 实现各个隔离级别，本质上是以统一事务流程为骨架，在不同阶段施加不同强度的约束。所有事务都共享相同的基本执行框架：启动时确定快照时间，执行期间维护局部读写信息，提交时完成验证与写集发布；而隔离级别之间的差异，则体现在快照如何选择、执行期间需要追踪哪些依赖、读请求是否需要等待、以及提交阶段需要检查哪些冲突。
 
-\paragraph*{各隔离级别的语义定位}
+\TopicTitle{各隔离级别的语义定位}
 为了避免不同隔离级别仅以表格形式出现而缺乏纵向展开，下面对 CC、PC、PSI、SI 和 SER 在本文系统中的语义定位分别作简要说明。
 
 \textbf{CC（Causal Consistency）} 关注的是因果相关事务之间的先后关系不被破坏。对 CC 事务而言，系统并不要求所有事务共享同一个全局快照，而是要求当前事务至少能够观察到其因果依赖链上的所有前驱。因此，CC 的关键不在于读取某个“统一时刻”的数据库状态，而在于通过依赖时间戳把先前会话中已经建立的因果顺序持续传递给后继事务。相较于更强的前缀型语义，CC 允许更高的并发自由度，但也意味着不同事务观察到的全局历史不必具有统一前缀结构。
@@ -330,18 +330,18 @@
 
 \textbf{SER（Serializable）} 是本文讨论的最强隔离级别。它不仅要求事务读取某个自洽快照，也不仅要求并发写冲突被禁止，还要求事务的整个执行结果能够被解释为某个串行顺序中的一次合法执行。正因如此，SER 不能仅依赖写集认证，而必须把读集合也纳入提交前验证。系统需要进一步判断：事务在执行期间所依据的读结果，是否会因为并发事务在其后提交而失去串行化解释。SER 因而对应着最高的验证强度，也对应着最大的控制开销；但作为回报，它能够排除写偏斜等更弱隔离级别仍可能容忍的异常。
 
-\paragraph*{统一事务执行流程}
+\TopicTitle{统一事务执行流程}
 对任意事务 $T$，本文采用如下统一的操作语义框架：
 \begin{enumerate}
-    \item \textbf{启动}：路由节点根据事务隔离级别为其分配初始上下文，包括快照时间戳 $sts$、隔离级别标记以及空的参与分片集合。
-    \item \textbf{读}：事务首先检查本地写缓冲区；若命中，则直接返回本事务尚未提交的最新值；否则根据 $sts$ 和当前隔离级别对应的可见性规则，从分片上的 MVCC 版本链中选择可见版本，并将读信息记录到本地读集合或检查集中。
-    \item \textbf{写}：事务把写入暂存到局部写缓冲区，而不是立即发布到共享存储；因此，执行阶段形成的是“暂存的候选更新”，而非已提交历史的一部分。
-    \item \textbf{提交}：系统在准备阶段检查当前事务是否仍与其快照和依赖信息相容。验证通过后，事务获得提交时间戳 $cts$ 并发布写集；验证失败则中止。提交成功后，$cts$ 参与定义抽象执行中的仲裁顺序，而事务的读结果与依赖关系共同决定其可见性关系。
+  \item \textbf{启动}：路由节点根据事务隔离级别为其分配初始上下文，包括快照时间戳 $sts$、隔离级别标记以及空的参与分片集合。
+  \item \textbf{读}：事务首先检查本地写缓冲区；若命中，则直接返回本事务尚未提交的最新值；否则根据 $sts$ 和当前隔离级别对应的可见性规则，从分片上的 MVCC 版本链中选择可见版本，并将读信息记录到本地读集合或检查集中。
+  \item \textbf{写}：事务把写入暂存到局部写缓冲区，而不是立即发布到共享存储；因此，执行阶段形成的是“暂存的候选更新”，而非已提交历史的一部分。
+  \item \textbf{提交}：系统在准备阶段检查当前事务是否仍与其快照和依赖信息相容。验证通过后，事务获得提交时间戳 $cts$ 并发布写集；验证失败则中止。提交成功后，$cts$ 参与定义抽象执行中的仲裁顺序，而事务的读结果与依赖关系共同决定其可见性关系。
 \end{enumerate}
 
 在这一框架下，事务内部一致性（Int）由“先查本地写集，再查共享版本”的读取规则保证，因此事务始终能够观察到自己的写入；外部一致性（Ext）则由快照读取规则保证，即事务只能读到不晚于其快照时间并满足相应隔离约束的已提交版本。基于这两个基础性质，系统再进一步叠加因果依赖、前缀顺序、写冲突禁止以及全前驱可见等更强约束，从而得到更高强度的隔离级别。
 
-\paragraph*{公理到机制的映射}
+\TopicTitle{公理到机制的映射}
 在上述统一流程基础上，我们继续讨论 Session、TransVis、Prefix、NoConflict 和 TotalVis 等公理如何落入具体机制。
 
 对于 Session 和 TransVis 公理，其核心在于维护因果一致性。系统通过依赖追踪（Dependency Tracking）机制来实现这一目标。具体而言，客户端会维护一个依赖时间戳 $dep$，该时间戳是混合逻辑时钟（HLC）的一个实例。每当客户端成功提交一个事务或者读取到数据时，都会使用由于该操作产生的提交时间戳 $commit\_ts$ 来更新本地的依赖时间戳，即 $dep \leftarrow \max(dep, commit\_ts)$。当一个新的因果一致性（CC）或并行快照隔离（PSI）级别的事务 $T$启动时，系统将其快照时间戳 $T.sts$ 设置为当前的 $dep$。这一机制确保了当前事务的快照时间必定大于所有与其存在因果依赖关系的事务的提交时间，从而严格保证了因果相关的事务对当前事务可见。
@@ -358,9 +358,9 @@
 
 第三类方案是\textbf{基于混合逻辑时钟与读检查集的分布式验证机制}。这一方案保留了 MVCC 与时间戳驱动的整体框架，同时把 SER 所需的额外约束集中到“读集合的持续追踪与提交前认证”上。相比前两类方案，它不要求所有事务都转化为悲观锁协议，也不需要把全部可串行化判断集中到单一点完成，更适合本文采用的分片式分布式架构。因此，本文最终采用这一方案作为 SER 事务的实现基础。具体而言，该机制包含以下三个关键环节：
 \begin{itemize}
-    \item \textbf{混合逻辑时钟（HLC）与仲裁顺序}：系统使用 HLC 为事务分配单调递增的时间戳，从而为所有事务提供了全局单调的仲裁顺序（Arbitration 关系，即 AR 关系），这为全局可见性与因果定序奠定了坚实的基础。
-    \item \textbf{快照读与检查集（Checkset）追踪}：SER 事务在开启时会获取当前的集群全局 HLC 时间作为其快照时间（$sts$）。与弱隔离级别通常只跟踪写操作不同，SER 事务在执行过程中，会将其读取的所有键一并加入检查集中进行持续跟踪。
-    \item \textbf{提交认证与冲突检测}：在两阶段提交的准备阶段（Prepare），分片服务器会执行严格的读集认证与冲突检测。服务器会检查是否存在已提交的并发事务 $T'$，使得其提交时间晚于当前事务的快照时间（即 $cts(T') > sts$），并且该事务 $T'$ 修改的数据与当前事务的检查集（同时包含读键和写键）产生了交集。如果检测到此类冲突，当前事务将被强制中止（Abort）。
+  \item \textbf{混合逻辑时钟（HLC）与仲裁顺序}：系统使用 HLC 为事务分配单调递增的时间戳，从而为所有事务提供了全局单调的仲裁顺序（Arbitration 关系，即 AR 关系），这为全局可见性与因果定序奠定了坚实的基础。
+  \item \textbf{快照读与检查集（Checkset）追踪}：SER 事务在开启时会获取当前的集群全局 HLC 时间作为其快照时间（$sts$）。与弱隔离级别通常只跟踪写操作不同，SER 事务在执行过程中，会将其读取的所有键一并加入检查集中进行持续跟踪。
+  \item \textbf{提交认证与冲突检测}：在两阶段提交的准备阶段（Prepare），分片服务器会执行严格的读集认证与冲突检测。服务器会检查是否存在已提交的并发事务 $T'$，使得其提交时间晚于当前事务的快照时间（即 $cts(T') > sts$），并且该事务 $T'$ 修改的数据与当前事务的检查集（同时包含读键和写键）产生了交集。如果检测到此类冲突，当前事务将被强制中止（Abort）。
 \end{itemize}
 
 这一检查集机制确保了 SER 事务不会在保留旧快照结果的同时忽略并发前驱的影响。在形式化语义模型中，SER 要求事务的可见性关系能够覆盖其应当观察到的全部 AR 前驱；而在系统实现中，这一要求被落实为“若存在晚于 $sts$ 提交、且与当前事务检查集发生交集的并发事务，则当前事务不得成功提交”。因此，SER 相比 SI 的额外代价，正是对读集合的持续维护和更严格的提交前认证；而它所获得的收益，则是能够排除写偏斜等仅靠写集认证无法禁止的异常。
@@ -370,47 +370,47 @@
 基于上述形式语义分析，本系统在各隔离级别的实现过程中在不同的系统层面采用了对应的定制化机制。表~\ref{tab:isolation_customization}总结了 CC、PC、PSI、SI 和 SER 这五个主要隔离级别的相对于RA的核心定制点。
 
 \begin{table}[htbp]
-    \centering
-    \small
-    \setlength{\tabcolsep}{3pt}
-    \renewcommand{\arraystretch}{1.15}
-    \caption{隔离级别实现的核心定制点}
-    \label{tab:isolation_customization}
-    \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.55cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
-        \hline
-        \textbf{隔离级别} & \textbf{客户端定制}                                                  & \textbf{路由层定制} & \textbf{分片层定制} \\
-        \hline
-        \textbf{CC}
-                      & 维护依赖时间戳 $dep \gets \max(dep, cts)$；事务开始时设置 $sts \gets dep$
-                      & 从客户端读取 $dep$ 作为事务快照时间；分配HLC时间戳
-                      & MVCC多版本读取；检查读-写依赖；保证因果顺序
-        \\
-        \hline
-        \textbf{PC}
-                      & 普通时间戳维护；不需要特殊依赖追踪
-                      & 调用 $Now()$ 获取全局HLC时间作为快照时间 $sts$
-                      & 等待机制防止读操作跳过处于Prepare的事务；对齐提交顺序
-        \\
-        \hline
-        \textbf{PSI}
-                      & 同CC的依赖时间戳追踪；维护 $dep$
-                      & 同CC的机制；传递 $dep$ 给分片层
-                      & 因果一致性验证 + 写集冲突检测（Certification）；防止丢失更新
-        \\
-        \hline
-        \textbf{SI}
-                      & 普通时间戳；不需要依赖追踪
-                      & 同PC机制；获取全局HLC时间
-                      & 一致性快照验证 + 写集冲突检测；NoConflict检查；防止丢失更新
-        \\
-        \hline
-        \textbf{SER}
-                      & 快照时间戳维护
-                      & 分配HLC时间戳作为快照 $sts$；为事务建立全局定序
-                      & 检查集追踪（读键+写键）；严格读集认证；检查条件 $cts(T') > sts$ 且 $T'$ 与checkset有交集时中止
-        \\
-        \hline
-    \end{tabularx}
+  \centering
+  \small
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{1.15}
+  \caption{隔离级别实现的核心定制点}
+  \label{tab:isolation_customization}
+  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.55cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+    \hline
+    \textbf{隔离级别} & \textbf{客户端定制}                                                  & \textbf{路由层定制} & \textbf{分片层定制} \\
+    \hline
+    \textbf{CC}
+                  & 维护依赖时间戳 $dep \gets \max(dep, cts)$；事务开始时设置 $sts \gets dep$
+                  & 从客户端读取 $dep$ 作为事务快照时间；分配HLC时间戳
+                  & MVCC多版本读取；检查读-写依赖；保证因果顺序
+    \\
+    \hline
+    \textbf{PC}
+                  & 普通时间戳维护；不需要特殊依赖追踪
+                  & 调用 $Now()$ 获取全局HLC时间作为快照时间 $sts$
+                  & 等待机制防止读操作跳过处于Prepare的事务；对齐提交顺序
+    \\
+    \hline
+    \textbf{PSI}
+                  & 同CC的依赖时间戳追踪；维护 $dep$
+                  & 同CC的机制；传递 $dep$ 给分片层
+                  & 因果一致性验证 + 写集冲突检测（Certification）；防止丢失更新
+    \\
+    \hline
+    \textbf{SI}
+                  & 普通时间戳；不需要依赖追踪
+                  & 同PC机制；获取全局HLC时间
+                  & 一致性快照验证 + 写集冲突检测；NoConflict检查；防止丢失更新
+    \\
+    \hline
+    \textbf{SER}
+                  & 快照时间戳维护
+                  & 分配HLC时间戳作为快照 $sts$；为事务建立全局定序
+                  & 检查集追踪（读键+写键）；严格读集认证；检查条件 $cts(T') > sts$ 且 $T'$ 与checkset有交集时中止
+    \\
+    \hline
+  \end{tabularx}
 \end{table}
 
 为了帮助读者更直观地理解这些定制点，可以把不同隔离级别下的事务执行差异概括为对同一条事务路径逐步增加约束。对 CC 而言，系统重点保证因果相关的先行事务不会被遗漏，因此关键在于客户端维护依赖时间戳并把它传播到后继事务；对 PC 而言，系统不追踪因果依赖，而是要求每次读取都落在某个全局一致前缀上，因此核心机制转化为基于 HLC 的快照选取和对未决前驱事务的等待；PSI 可以看作在 CC 的基础上增加写冲突认证，SI 则是在 PC 的基础上增加同类写冲突认证，因此二者分别把“因果一致快照”和“前缀一致快照”与 NoConflict 公理结合起来；SER 则进一步要求读集合在提交时仍与全局顺序相容，因此系统必须把读信息纳入认证范围，形成比 SI 更严格的提交条件。
@@ -420,17 +420,17 @@
 从表~\ref{tab:isolation_customization}可以看出，实现从弱隔离级别（CC）到强隔离级别（SER）的核心策略包括：
 
 \begin{enumerate}
-    \item \textbf{依赖追踪范围扩展}：从无依赖追踪（PC、SI）到因果依赖追踪（CC、PSI）再到完整检查集追踪（SER）。依赖追踪的信息越丰富，系统能够更精确地检测冲突。
+  \item \textbf{依赖追踪范围扩展}：从无依赖追踪（PC、SI）到因果依赖追踪（CC、PSI）再到完整检查集追踪（SER）。依赖追踪的信息越丰富，系统能够更精确地检测冲突。
 
-    \item \textbf{快照时间戳来源多元化}：依赖型级别使用客户端维护的依赖时间戳，前缀型级别使用全局HLC时间，而可串行化级别需要这个时间戳建立全局的单调定序。
+  \item \textbf{快照时间戳来源多元化}：依赖型级别使用客户端维护的依赖时间戳，前缀型级别使用全局HLC时间，而可串行化级别需要这个时间戳建立全局的单调定序。
 
-    \item \textbf{冲突检测力度递进}：从基本的写冲突检测（SI、PSI）升级到完整的读写冲突交集检测（SER），并通过等待机制或中止机制来强制满足理论公理。
+  \item \textbf{冲突检测力度递进}：从基本的写冲突检测（SI、PSI）升级到完整的读写冲突交集检测（SER），并通过等待机制或中止机制来强制满足理论公理。
 
-    \item \textbf{验证位置与时机精细化}：不同级别在Prepare、Commit、或Read阶段选择不同的验证策略，形成了从乐观并发控制到悲观读验证的完整谱系。
+  \item \textbf{验证位置与时机精细化}：不同级别在Prepare、Commit、或Read阶段选择不同的验证策略，形成了从乐观并发控制到悲观读验证的完整谱系。
 \end{enumerate}
 
 \section{本章小结}
 
 本章详细阐述了面向混合隔离级别的分布式数据库系统操作语义设计。首先给出了原型系统的体系结构建模，明确客户端、路由节点、配置节点和分片节点之间的职责划分；随后介绍混合逻辑时钟在全局定序中的作用；最后围绕不同隔离级别所对应的公理组合，说明读写缓冲、依赖追踪、等待机制和冲突检测等核心语义约束如何在系统中落地。
 
-本章的探讨不仅弥合了理论与工程的鸿沟，还为后续系统原型的实现与TLA+验证奠定了基础。
+本章的探讨不仅弥合了理论与工程的鸿沟，还为后续\TLAPlus 验证与系统原型的实现奠定了基础。

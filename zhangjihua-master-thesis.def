@@ -34,8 +34,8 @@
     %
     supervisor = {葛季栋~副教授},
     supervisor*= {Ge Jidong, Associate Professor},
-    supervisor-ii = {魏恒峰~特聘副研究员},
-    supervisor-ii* = {Wei Hengfeng, Associated Researcher},
+    supervisor-ii = {魏恒峰~特任副研究员},
+    supervisor-ii* = {Wei Hengfeng, Associate Researcher},
     submit-date = {2026-03-20},
     %
     % 以下均为研究生项

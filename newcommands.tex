@@ -2,6 +2,13 @@
 
 \usepackage{xparse}
 
+% 用于替代 \TopicTitle 的轻量级正文小标题
+\NewDocumentCommand{\TopicTitle}{m}{%
+  \par\vspace{0.8\baselineskip}%
+  \noindent{\textbf{#1}}\par%
+  \vspace{0.35\baselineskip}%
+}
+
 % chapter2
 % 全集使用 \mathcal 花体
 \newcommand{\History}[1][]{$\mathcal{H}_{#1}$}
@@ -66,3 +73,5 @@ vis/.style={-{Stealth}, thick, blue, bend left=15},
 ar/.style={-{Stealth}, thick, dashed, red},
 label_font/.style={font=\footnotesize\itshape}
 }
+
+
