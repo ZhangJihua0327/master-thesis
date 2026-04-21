@@ -50,6 +50,7 @@ def plot_chart(values: dict[str, dict[str, dict[str, float]]], deploy: str) -> P
     width = 0.24
     fig, ax = plt.subplots(figsize=(6.0, 3.8))
     max_value = max(values[benchmark][deploy][strategy] for benchmark in BENCHMARK_ORDER for strategy in STRATEGY_ORDER)
+    label_offset = max_value * 0.015
 
     for offset_index, strategy in enumerate(STRATEGY_ORDER):
         bar_positions = positions + (offset_index - 0.5) * width
@@ -66,13 +67,12 @@ def plot_chart(values: dict[str, dict[str, dict[str, float]]], deploy: str) -> P
         for bar, value in zip(bars, series):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
-                value + max_value * 0.025,
+                value + label_offset,
                 f"{value:.1f}%",
-                ha="left",
+                ha="center",
                 va="bottom",
-                rotation=28,
-                rotation_mode="anchor",
-                fontsize=10,
+                fontsize=12,
+                clip_on=False,
             )
 
     ax.set_xticks(positions)
