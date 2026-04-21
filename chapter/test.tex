@@ -56,6 +56,27 @@
 
 进一步比较两种部署方式可以发现，当节点由单可用区集中部署转为跨可用区分散部署后，三种策略的平均吞吐量均下降到原来的约 10\% 左右：SER 下降约 89.72\%，SI-SER 下降约 89.77\%，MIAED 下降约 89.73\%。这说明随着节点分散程度提高，事务提交路径被显著拉长，跨节点协调与通信等待的开销被进一步放大。不过，更重要的是，本文机制对应的 SI-SER 相对 SER 的优势在两类部署方式中均稳定存在，说明混合隔离级别执行并非只在局部场景下有效。至于 MIAED 的额外收益，则更多反映了更细粒度事务分配策略的潜在上界。
 
+为了更直观地观察混合策略相对统一强隔离基线的收益，图~\ref{fig:throughput-gain-combined} 进一步给出了各策略相对 SER 的吞吐提升百分比。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/test-result/throughput_gain_single-az.pdf}
+        \caption*{(a) 单可用区部署}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/test-result/throughput_gain_pair-az.pdf}
+        \caption*{(b) 跨可用区部署}
+    \end{minipage}
+    \caption{不同部署方式下各策略相对 SER 的吞吐提升百分比}
+    \label{fig:throughput-gain-combined}
+\end{figure}
+
+从图~\ref{fig:throughput-gain-combined} 可以更清楚地看到，SI-SER 相对 SER 的收益虽然有限，但在两种部署方式和三组数据集上都保持为正，提升区间大致稳定在 3.61\%--9.73\% 之间。这说明即便只在 SI 与 SER 两级之间进行混合执行，系统也能够较稳定地回收一部分本来被统一串行化约束压制的并发能力。相比之下，MIAED 相对 SER 的提升始终接近 2 倍，单可用区下为 196.81\%--197.94\%，跨可用区下为 194.87\%--200.18\%。该图将这种“有限但稳定的基础收益”与“更细粒度事务分配带来的额外收益上界”更直观地区分出来，也进一步支持了本文机制在不同拓扑环境下均具有稳定工程价值的结论。
+
 为了进一步观察不同负载下事务冲突对执行结果的影响，本文补充统计了 SER 与 MIAED 两组配置在两种部署方式下的事务回滚率，结果如图~\ref{fig:abort-rate-combined} 所示。
 
 \begin{figure}[htbp]

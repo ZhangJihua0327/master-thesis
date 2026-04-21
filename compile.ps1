@@ -30,13 +30,26 @@ $codeDir = "./figures/code"
 $testResultDir = "./figures/test-result"
 $plotScripts = @(
     "plot_throughput_bar.py",
-    "plot_abort_rate_bar.py"
+    "plot_abort_rate_bar.py",
+    "plot_throughput_gain_bar.py"
 )
 $thesisMain = "zhangjihua-master-thesis.tex"
 $thesisPdf = "zhangjihua-master-thesis.pdf"
 
 function Test-Tool($name) {
     return $null -ne (Get-Command -Name $name -ErrorAction SilentlyContinue)
+}
+
+function Get-PythonCommand {
+    if (Test-Tool "python") {
+        return "python"
+    }
+
+    if (Test-Tool "py") {
+        return "py"
+    }
+
+    return $null
 }
 
 function Invoke-MermaidCompilation {
@@ -161,8 +174,9 @@ function Invoke-TestResultCompilation {
 
     Write-Host "`nGenerating benchmark charts..."
 
-    if (-not (Test-Tool "python")) {
-        Write-Warning "Skip benchmark chart generation: python not found."
+    $pythonCmd = Get-PythonCommand
+    if (-not $pythonCmd) {
+        Write-Warning "Skip benchmark chart generation: neither python nor py was found."
         return
     }
 
@@ -176,7 +190,7 @@ function Invoke-TestResultCompilation {
     try {
         $env:MPLCONFIGDIR = $mplConfigDir
         foreach ($script in $availableScripts) {
-            & python $script
+            & $pythonCmd $script
 
             if ($LASTEXITCODE -ne 0) {
                 throw "Benchmark chart generation failed: $script"
