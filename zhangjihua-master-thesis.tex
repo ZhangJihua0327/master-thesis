@@ -35,7 +35,7 @@
 \raggedbottom
 
 \begin{abstract}
-      分布式数据库是现代互联网应用迈向分布式与云原生架构的重要基础设施。面对高并发与多样化业务需求，系统设计长期需要在数据一致性与执行性能之间进行权衡：单一强隔离级别能够提供严格正确性保障，但往往带来较高并发控制开销；单一弱隔离级别虽然吞吐量较高，却难以满足关键事务的严格一致性要求。
+      分布式数据库已成为现代互联网应用迈向分布式与云原生架构的重要基础设施。面对高并发和多样化业务需求，系统设计长期需要在数据一致性与执行性能之间进行权衡：单一强隔离级别能够提供严格的正确性保障，但往往带来较高的并发控制开销；单一弱隔离级别虽然吞吐量较高，却难以满足关键事务的严格一致性要求。
 
       针对上述问题，本文围绕混合隔离级别事务的统一语义建模与系统实现展开研究，设计并实现了一个基于分片（Sharding）架构、支持混合隔离级别的分布式键值数据库原型。本文提出了一种面向混合隔离级别场景的并发控制协议，使事务能够根据业务需求选择不同隔离级别，并支持跨分片事务的原子执行。
 
@@ -45,7 +45,8 @@
 \end{abstract}
 
 \begin{abstract*}
-      Distributed databases are a key infrastructure for modern internet applications evolving toward distributed and cloud-native architectures.
+      Distributed databases have become essential infrastructure for modern internet applications moving toward distributed and cloud-native architectures.
+
       Under high concurrency and diverse workloads, system design must continually balance data consistency against execution performance:
       a single strong isolation level provides strict correctness guarantees but often incurs substantial concurrency-control overhead,
       whereas a single weak isolation level may deliver higher throughput but cannot satisfy the stringent consistency requirements of critical transactions.
@@ -81,7 +82,7 @@
 \end{notation}
 
 \include{chapter/introduction}
-\include{chapter/specification}
+\include{chapter/related-tech}
 \include{chapter/operational-semantics}
 \include{chapter/tla}
 \include{chapter/implement}
