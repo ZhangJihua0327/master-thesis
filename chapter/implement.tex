@@ -62,7 +62,7 @@
 基于上述需求分析，本节将对数据库原型系统进行总体架构设计和模块设计。
 
 \subsection{总体架构设计}
-本系统采用经典的 Shared-nothing 分布式架构，参考 MongoDB 的集群模型，主要由三类组件构成：路由节点（Router）、配置节点（Config Server）和分片节点（Shard Server）。
+本系统采用经典的 Shared-nothing 分布式架构\cite{dewitt1992parallel}，参考 MongoDB 的集群模型，主要由三类组件构成：路由节点（Router）、配置节点（Config Server）和分片节点（Shard Server）。
 整体组件关系如图~\ref{fig:architecture} 所示。
 
 \begin{figure}[htbp]
