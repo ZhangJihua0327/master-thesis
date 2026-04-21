@@ -142,7 +142,7 @@
     \label{fig:global-timeline}
 \end{figure}
 
-相对地，涉及具体分片的数据操作信息则通过分片内的 \lstinline|TxBufferManager| 进行局部维护。由于未决事务的读写集极可能导致极大的内存开销，代码在此处采用了懒加载（Lazy Load）机制：只有当该分片真正执行首次 \lstinline|TxRead| 或 \lstinline|TxWrite| 时，才会实例化对应事务的局部缓存（\lstinline|TxBuffer|）。这种分阶段存储策略大幅降低了分布式协同节点的通信负担，保证了内存状态的局部聚焦性。
+相对地，涉及具体分片的数据操作信息由分片内的 \lstinline|TxBufferManager| 进行局部维护。考虑到未决事务的读写集可能带来较高的内存开销，代码在此采用了懒加载（Lazy Load）机制：只有当该分片真正执行首次 \lstinline|TxRead| 或 \lstinline|TxWrite| 时，才会实例化对应事务的局部缓存（\lstinline|TxBuffer|）。这种分阶段存储方式减少了无效状态分配，也使事务状态更多保留在实际参与执行的分片上。
 
 \subsubsection{基于MVCC引擎的多版本读写流转}
 分片底层的无锁化读并发依赖于多版本并发控制（MVCC）模型。以 \lstinline|TxRead| 为例，代码在读取数据时，严格遵循“读己之所写（Read-Your-Own-Writes）”的内部一致性：系统首先探测本地事务缓冲区的 Write 集合，命中后判断记录是否带有删除标记（Deleted）。如果本地无修改记录，读请求将穿透至底层的 \lstinline|MVCCStore| 操作对象，基于给定的 \lstinline|snapshotTime| 定位并获取小于但最接近该时钟的可用历史版本。
@@ -159,7 +159,7 @@
     \label{fig:2pc-hole}
 \end{figure}
 
-图~\ref{fig:2pc-hole}展示了本组件如何解决两阶段提交可见性漏洞的解决方式。本组件借助未决状态（Pending Status）与时间戳推进解决了该漏洞：系统在 \lstinline|Prepare| 阶段，根据混合逻辑时钟（HLC）派生出本地的预备时间 \lstinline|prepareTime|。此时并未直接覆盖老数据，而是调用 \lstinline|store.Put| 打上 Pending 标记以及临时版本号。这一预写行为充当了并发读操作的前向屏障：倘若并发读查询的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$ 并且遇到了 Pending 标位，底层将抛出 \lstinline|ErrPendingRead|。这一拦截行为促使过早发起读取操作的调用方陷入阻塞或执行安全重试。直至最终协调者下达任务并在 \lstinline|Commit| 函数内通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将版本信息实化确立，系统的时钟推进即可闭环，可见性漏洞得以彻底消除。
+图~\ref{fig:2pc-hole} 展示了本组件处理两阶段提交可见性漏洞的方式。系统借助未决状态（Pending Status）与时间戳推进来约束该阶段的可见性：在 \lstinline|Prepare| 阶段，系统根据混合逻辑时钟（HLC）派生本地的预备时间 \lstinline|prepareTime|。此时系统并不直接覆盖旧版本，而是调用 \lstinline|store.Put| 写入带有 Pending 标记的临时版本。该预写入过程为并发读操作提供了一个额外的判定条件：若并发读取请求的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$，且遇到 Pending 标记，底层将返回 \lstinline|ErrPendingRead|，调用方随后进入等待或重试。待协调者最终作出提交决定后，\lstinline|Commit| 通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将临时版本确认为正式版本。通过这一过程，预提交阶段与最终提交阶段之间的可见性得以衔接。
 
 \subsubsection{单分片快速提交(QuickCommit)优化}
 当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销\cite{fastcommit,fastcommit2}，如图~\ref{fig:quick-commit-implementation}。
@@ -170,24 +170,24 @@
     \label{fig:quick-commit-implementation}
 \end{figure}
 
-在 \lstinline|QuickCommit| 的实现逻辑中，由于剔除了 \lstinline|Prepare| 阶段，事务的操作直接收敛为单次原子变更：引擎首先基于 \lstinline|clock.Tick()| 获取即时的决议时间；随后的 CAS 校验模块针对 PSI/SI 以及 SER 隔离级别执行乐观并发验证，确保持有缓冲区数据的 \lstinline|OriginalVersion| 仍然是当前系统中的最新版本以防覆盖写入。在通过版本校验且获取必要的本地写锁之后，\lstinline|QuickCommit| 将直接跳过 Pending 预写入流程，把缓冲池内的数据带有完整的 \lstinline|commitTime| 非挂起标志（将 pending 设为 \lstinline|false|，原版本置为 \lstinline|0|）径直向 MVCC 底层固化。由于校验、写入、提交与释放锁在单一分片层级形成了一个闭环，在保障 ACID 语义不被破坏的前提下，极大提升了单分片事务的并发吞吐能力。
+在 \lstinline|QuickCommit| 的实现逻辑中，由于省略了 \lstinline|Prepare| 阶段，事务提交流程被压缩为一次单分片内的原子变更。引擎首先通过 \lstinline|clock.Tick()| 获取提交时间；随后，CAS 校验模块针对 PSI、SI 以及 SER 隔离级别执行乐观并发验证，以确认缓冲区中记录的 \lstinline|OriginalVersion| 仍为当前最新版本，避免覆盖写入。在通过版本校验并获取必要的本地写锁后，\lstinline|QuickCommit| 不再经过 Pending 预写入流程，而是将缓冲区中的数据直接以带有完整 \lstinline|commitTime| 的正式版本写入 MVCC 存储层。这样一来，校验、写入、提交与释放锁都在单一分片内完成，从而减少了单分片事务的提交路径。
 
 \subsection{混合逻辑时钟}
 在分布式事务的并发定序与多版本可见性判断中，混合逻辑时钟（HLC）扮演着时间基准的核心角色。本原型的 HLC 组件在底层实现上参考了开源社区成熟的 \lstinline|glycerine/hlc| 算法模型，通过 Go 语言构建了一个高性能、并发安全的全局时钟模块。
 
 在具体的运行层面，该时钟模块重点实现了两个用于时钟状态机推进的基石接口：
 \begin{itemize}
-    \item \textbf{本地时间获取（Now/Tick）}：当节点（路由或分片）内部独立产生分布事件（如分配事务快照时间、构建局部预备时间等）时发起调用。算法实时获取当前主机的设备物理时间，并与本地内存中维护的历史最高 HLC 时间进行比对。如果主机时钟前进（大于记录的最高物理时间），则相应推进 \lstinline|WallTime| 并将 \lstinline|Logical| 清零；倘若检测到时钟停滞乃至发生物理时钟倒退，此时物理发生时间维持为本地已有最大值不变，转而通过原子操作（Atomic）递增逻辑计数器，由此生成单调递增的合法衍生时间戳以保障内部事件的时间定序。
-    \item \textbf{远程时钟同步（Update/Receive）}：依托前文所述的高性能 RPC 框架系统，集群内任何跨节点的交互请求（包括路由于开启事务时向分片下发全局元数据、分片间协同调度数据等）都会利用底层 RPC 拦截器在报文头部（Header）自动植入请求方的当前 HLC 时间戳。当流经的目标节点（接收端）在解析应用层载荷之前，中间件会被触达并优先调用时钟同步逻辑。内部算法会同时比较“本地维护的当前 HLC”、“接收报文携带的远程 HLC”以及“本机设备此刻的真实物理时间”，取三者中的最高边界值并安全合并为本地计算域中最新的时间状态。
+    \item \textbf{本地时间获取（Now/Tick）}：当节点（路由或分片）内部产生本地事件，如分配事务快照时间或构建局部预备时间时，系统会调用该接口。算法读取当前主机的物理时间，并与本地维护的历史最高 HLC 时间进行比较。如果物理时钟前进，则推进 \lstinline|WallTime| 并将 \lstinline|Logical| 清零；如果检测到时钟停滞或物理时钟回退，则保持当前物理时间上界不变，并通过原子操作递增逻辑计数器，从而生成单调递增的时间戳。
+    \item \textbf{远程时钟同步（Update/Receive）}：在跨节点请求中，底层 RPC 拦截器会在报文头部（Header）附带发送方当前的 HLC 时间戳。接收端在解析应用层载荷之前，先调用时钟同步逻辑，对“本地维护的当前 HLC”“报文携带的远程 HLC”以及“本机当前物理时间”三者进行比较，并据此更新本地时间状态。该过程用于在节点交互过程中维持时间顺序的一致性。
 \end{itemize}
 
-基于这一高度解耦的时钟机制组件并在底层 RPC 通信切面上的无缝穿插，分布式节点的因果定序在系统网络交互的每一个端点被同步推演。这种实现以去中心化的时钟推挽方式规避了集中发号器的请求瓶颈，同样也为基于 MVCC 引擎实施快照读（如支持 SI、PSI 隔离级别的隔离域查询）和严格冲突检测（如可串行化 SER 级别的跨维度校验）构建了确切而一致的时钟边界和比较屏障。
+基于上述时钟组件及其在 RPC 通信过程中的配合，系统能够在分布式节点之间维持一致的时间比较基础。相比集中式发号方式，这种去中心化时钟机制避免了额外的中心协调开销，也为基于 MVCC 的快照读取以及 SER 级别下的冲突检测提供了统一的时间边界。
 
 \subsection{通信原理与同步机制}
 
 在分布式数据库系统中，协调者（Router）与底层的各个存储分片（Shard）之间存在着高频且密集的内部通信。为了打破网络I/O带来的延迟瓶颈，系统底层摒弃了传统的 HTTP RESTful 架构，全面采用了基于 \lstinline|Protobuf|（如 \lstinline|shardpb| 包所示）的高性能 RPC 框架作为跨节点的通信基座。
 
-使用高性能 RPC 协议具有诸多显著的架构优势：首先，\lstinline|Protobuf| 采用紧凑的二进制编码格式，其序列化与反序列化速率远超 JSON 等文本协议，极大压缩了事务在预备（Prepare）、提交（Commit）以及快速提交（QuickCommit）链路中的请求负载；其次，底层的 RPC 框架依托 HTTP/2 协议的多路复用（Multiplexing）机制，允许海量并发事务的 RPC 请求共享同一条底层 TCP 物理链路，彻底消除了频繁三次握手带来的网络开销，并有效规避了队头阻塞（Head-of-Line Blocking）问题。
+采用基于 \lstinline|Protobuf| 的 RPC 协议，主要是出于通信效率方面的考虑。一方面，\lstinline|Protobuf| 使用紧凑的二进制编码格式，相比 JSON 等文本协议可减少请求负载；另一方面，底层 RPC 框架依托 HTTP/2 的多路复用（Multiplexing）机制，使多个并发事务请求能够共享同一条底层 TCP 连接，从而降低连接建立与传输过程中的额外开销。
 
 在事务处理的数据面之外，集群控制面中全局路由表、分片拓扑状态以及隔离级别元数据的同步同样至关重要。为了使分片节点能够以极低延迟感知集群状态变更，系统在配置同步链路中抛弃了传统的客户端定时轮询（Polling）模型，转而引入了基于流式 RPC（Streaming RPC）的长连接实时主动推送机制，图~\ref{fig:config-sync}展示了其时序图。
 
@@ -198,7 +198,7 @@
     \label{fig:config-sync}
 \end{figure}
 
-长连接配置同步策略具备极为突出的优势：其一，实现了配置状态的“毫秒级”触达。当全局元数据发生变更时，Router 可以利用常驻的下行数据流通路，主动将增量或全量配置即时下推至各个 Shard 节点，彻底杜绝了轮询机制带来的时间窗口延迟以及无变更时的无效探测网络损耗。其二，该长连接通道天然兼具心跳保活（KeepAlive）的探针功能。在实时下发配置的同时，节点间的 Ping-Pong 心跳使得 Router 能够极度灵敏地捕捉到某个底层分片的宕机或网络割裂异常，进而快速在协调者端触发路由重定向与故障摘除（Failover），从架构底层夯实了分布式事务系统运行的极高可用性与状态一致性。
+长连接配置同步策略主要带来两方面作用。其一，当全局元数据发生变更时，Router 可以通过常驻的数据流通道主动下发增量或全量配置，从而减少轮询机制带来的同步延迟和无效探测开销。其二，该长连接通道同时承担心跳保活（KeepAlive）功能，节点间的 Ping-Pong 心跳有助于 Router 较快感知底层分片的宕机或网络异常，并据此执行路由重定向与故障摘除（Failover）。
 
 \subsection{用户客户端和测试客户端}
 
@@ -218,8 +218,8 @@
 
 \begin{enumerate}
     \item \textbf{事务亲和性（Transaction Affinity）}：客户端在发起 Start 请求前，从池中为其分配一个固定的 Client 实例。该事务内的全部后续操作以及最终的 Commit 或 Abort，均强制通过该 Client 收发，确保了一笔事务的所有 RPC 能够一致且完整地打到同一个 Router 上。事务终结后绑定关系解除。
-    \item \textbf{事务级负载均衡}：ClientPool 的分配调度利用原子计数器实现了轮询逻辑，以此保障在高并发创建请求打入时，能够将海量的新增事务均匀地打散分配给后端的各个 Router。例如面对 3 个 Router 和 10 个测试事务，各节点的承载比例能够稳定控制在大致 4:3:3，有效地避免了请求倾斜。
-    \item \textbf{并发安全且无排他锁}：底层复用的 gRPC \lstinline|ClientConn| 具有原生并发安全的特性且支持多路复用。因此，不同事务可以同时并发持有和使用池中的同一个 Client（路由节点通过 txID 严格区分不同事务），而无需采用低效的“借出-上锁-归还”排他模型。这种非排他设计保证了测试机的并发上限不会被客户端池数量所限，进而可提供极高的测试吞吐。
+    \item \textbf{事务级负载均衡}：ClientPool 的分配调度利用原子计数器实现轮询逻辑，使高并发创建请求能够较均匀地分配到后端 Router。例如在 3 个 Router 和 10 个测试事务的场景下，各节点的承载比例大致为 4:3:3，从而减少明显的请求倾斜。
+    \item \textbf{并发安全且无排他锁}：底层复用的 gRPC \lstinline|ClientConn| 本身支持并发安全与多路复用。因此，不同事务可以并发使用池中的同一个 Client，而不必采用“借出-上锁-归还”的排他模型。这样可以避免客户端池大小直接成为测试并发度的主要限制。
 \end{enumerate}
 
 \begin{figure}[htbp]
@@ -230,7 +230,7 @@
 \end{figure}
 
 
-图~\ref{fig:client-pool} 展示了基于 ClientPool 的机制。简而言之，基于 ClientPool 的设计兼顾了 gRPC 架构下的连接复用与极高的并发能力，有效保证分布式环境下事务路由的正确性与上下文一致性的前提。
+图~\ref{fig:client-pool} 展示了基于 ClientPool 的机制。该设计在 gRPC 连接复用的基础上兼顾了事务路由的正确性与并发测试的实际需求。
 
 测试用例通过配置文件的方式输入，测试客户端读取测试用例后，按照用例中定义的事务操作序列和隔离级别要求，自动执行。图~\ref{fig:testcase} 展示了一个测试配置文件的示例。第一行的数字指定worker的数量，worker代表着每一个独立线程，随后定义每个worker要执行的事务的顺序和事务内部的操作细节。测试客户端会根据配置文件中的定义，自动创建相应数量的worker。每个worker会按照配置文件中定义的事务操作序列，依次执行事务的开启、读写操作以及提交或中止等步骤。在执行过程中，测试客户端会记录每个操作的结果和性能指标，以便后续分析和验证。
 
@@ -249,7 +249,7 @@
 本项目的一个核心论证目标在于“探究混合隔离级别相比单一隔离级别在执行性能上的优势”。为了使这一命题可被量化，可观测性层面进行了针对性的精细粒度设计：
 系统中每一阶段的生命周期事件（包括跨分片的 \lstinline|Prepare| 和 \lstinline|Commit|，以及单分片优化的 \lstinline|QuickCommit|）均会显式记录其绑定的隔离级别（\lstinline|IsolationLevel|）元数据以及对应的操作耗时（RRT, Round-Trip Time）。不仅如此，系统还通过 \lstinline|LockManager| 精确记录了高并发场景下悲观锁（尤其是 SER 隔离级别引发的共享读锁与排他写锁）排队阶段的跨事务真实锁等待耗时（Lock Wait Time）；同时在乐观并发控制（如 SI 级别）通过版本比对的 CAS 执行域内，也对因写写冲突导致回滚（Abort Rate）和触发由于遇到 Pending 标志而被异常拦截的读取（\lstinline|ErrPendingRead| 拦截率）进行了频率统计。
 
-通过对上述多源探针数据的采集与聚合并引入可视化监控大盘，系统能够精确重现各种并发负载下的微观执行轨迹。实测大盘直观地证实了论点：当业务流量引入混合隔离负载——即将金融级核心链路配置为严格可串行化（SER），而将后台批处理与只读分析放宽至快照隔离（SI）或前缀一致性（PC）时，依靠底层 MVCC 引擎非阻塞的快照历史版本读取机制，可以有效规避 SER 隔离级别因强制加锁而带来的锁争用与队伍积压。客观的基准测试监控数据切实验证了，混合隔离架构不仅以极细粒度地保障了核心业务的事务串行安全性，更凭借低级别隔离的并发读取打破了全库极严管治的“性能护城河”，显著缩小了读写排队开销，使得整体分布式集群系统吞吐率（TPS）和请求长尾延迟（P99 Latency）获得了实质性的优化与飞跃。
+通过对上述多源探针数据的采集、聚合与可视化，系统能够较细致地呈现不同并发负载下的执行过程。这些监控数据表明，在混合隔离负载下，将核心事务保持为 SER，而将后台批处理或只读分析事务放宽至 SI 或 PC 后，系统可以利用 MVCC 的历史版本读取机制减少部分由强隔离带来的锁争用与排队开销。结合基准测试结果可以看出，混合隔离配置在当前原型系统中与更高吞吐量和较低排队开销相对应。
 
 \section{本章小结}
 
