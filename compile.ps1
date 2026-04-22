@@ -31,7 +31,8 @@ $testResultDir = "./figures/test-result"
 $plotScripts = @(
     "plot_throughput_bar.py",
     "plot_abort_rate_bar.py",
-    "plot_throughput_gain_bar.py"
+    "plot_throughput_gain_bar.py",
+    "plot_stress_test.py"
 )
 $thesisMain = "zhangjihua-master-thesis.tex"
 $thesisPdf = "zhangjihua-master-thesis.pdf"

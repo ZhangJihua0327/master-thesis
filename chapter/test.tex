@@ -25,6 +25,15 @@
     \end{tabular}
 \end{table}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/test-result/stress_test_resource_latency.pdf}
+    \caption{系统资源水位与响应延迟变化图}
+    \label{fig:stress-test}
+\end{figure}
+
+图~\ref{fig:stress-test}展示了选取在SER隔离级别下执行TPCC负载，系统资源的水位图和事务延迟情况，可以看到在测试过程中系统资源使用率保持在合理范围内，且事务响应延迟稳定，即使触发GC，延迟也在预期水平。这表明测试环境能够承载后续的隔离级别性能对比实验。
+
 \section{测试负载与评价指标}
 为了覆盖不同类型的事务访问模式，实验选取了 Courseware、SmallBank 和 TPCC 三个数据集，分别对应课程管理、银行转账和订单处理等场景。三组负载在读写比例、热点分布和事务冲突特征上存在差异，因此适合用来观察混合隔离级别机制在不同业务模式下的表现。
 
