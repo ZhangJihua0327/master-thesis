@@ -221,7 +221,7 @@
 % \njusetformat{footer}{}
 
 % 在盲审模式下隐藏学校信息
-% \njusetup{anonymous-mode/no-nju}
+\njusetup{anonymous-mode/no-nju}
 
 % 一些灵活调整
 % \njusetname{type}{本科毕业设计}                 % 我做的是毕业设计
