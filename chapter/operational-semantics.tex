@@ -367,51 +367,65 @@
 
 从比较的角度看，上述三类方案分别代表了“集中验证”“悲观锁控制”和“分布式读集认证”三种不同的实现思路。前两者在理论上都能支持 SER，但要么对集中控制依赖较强，要么会明显压缩系统并发度；而第三种方案能够更自然地与本文已经采用的 HLC、MVCC、两阶段提交和分片执行框架耦合起来。因此，把三种方案并列展开，不仅有助于说明 SER 语义本身的实现难点，也能够更清楚地解释本文为什么最终选择基于 HLC 与检查集的方案作为操作语义的落地路径。
 
-基于上述形式语义分析，本系统在各隔离级别的实现过程中在不同的系统层面采用了对应的定制化机制。表~\ref{tab:isolation_customization}总结了 CC、PC、PSI、SI 和 SER 这五个主要隔离级别的相对于RA的核心定制点。
+基于上述形式语义分析，本系统在各隔离级别的实现过程中在不同阶段采用了对应的定制化机制。为避免只从模块划分角度说明实现方式，表~\ref{tab:isolation_customization}进一步按照事务生命周期展开，将各隔离级别与验证时机、读写可见性、依赖追踪、冲突检测范围以及提交约束之间的对应关系进行细化。这样可以直接看出：不同隔离级别并不是在同一位置简单打开或关闭某个功能开关，而是在事务开始、读写执行、Prepare 验证和最终提交等阶段分别施加不同强度的语义约束。
 
 \begin{table}[htbp]
   \centering
-  \small
-  \setlength{\tabcolsep}{3pt}
-  \renewcommand{\arraystretch}{1.15}
-  \caption{隔离级别实现的核心定制点}
+  \scriptsize
+  \setlength{\tabcolsep}{2pt}
+  \renewcommand{\arraystretch}{1.28}
+  \caption{隔离级别与操作语义机制的对应关系}
   \label{tab:isolation_customization}
-  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.55cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+  \begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.15cm}|>{\raggedright\arraybackslash}p{2.05cm}|>{\raggedright\arraybackslash}p{2.55cm}|>{\raggedright\arraybackslash}p{2.65cm}|>{\raggedright\arraybackslash}X|}
     \hline
-    \textbf{隔离级别} & \textbf{客户端定制}                                                  & \textbf{路由层定制} & \textbf{分片层定制} \\
+    \textbf{级别} & \textbf{验证时机} & \textbf{读写可见性规则} & \textbf{依赖追踪与冲突检测范围} & \textbf{提交约束及对应公理} \\
+    \hline
+    \textbf{RA}
+                  & 读阶段执行基本版本选择；提交阶段只需保证写集原子发布
+                  & 读操作先访问本事务写缓冲，未命中时读取已提交版本；禁止读取未提交或半提交状态
+                  & 不维护跨事务依赖；仅维护事务本地读写缓冲与会话内最近提交位置
+                  & 提交时原子写入写集并更新会话状态，对应 Int、Ext 与 Session，是更高级别的公共基础
+    \\
     \hline
     \textbf{CC}
-                  & 维护依赖时间戳 $dep \gets \max(dep, cts)$；事务开始时设置 $sts \gets dep$
-                  & 从客户端读取 $dep$ 作为事务快照时间；分配HLC时间戳
-                  & MVCC多版本读取；检查读-写依赖；保证因果顺序
+                  & 事务开始阶段绑定 $sts \gets dep$；读阶段按依赖边界选择版本；提交后更新客户端依赖
+                  & 事务至少应看到本会话及已观察事务的后继版本；读取结果不得遗漏因果前驱
+                  & 客户端维护依赖时间戳 $dep \gets \max(dep, cts)$；系统追踪会话依赖和读到版本的提交时间
+                  & 提交成功后以 $cts$ 推进客户端依赖，保证后续事务继承因果历史，对应 Session 与 TransVis
     \\
     \hline
     \textbf{PC}
-                  & 普通时间戳维护；不需要特殊依赖追踪
-                  & 调用 $Now()$ 获取全局HLC时间作为快照时间 $sts$
-                  & 等待机制防止读操作跳过处于Prepare的事务；对齐提交顺序
+                  & 事务开始阶段由路由层获取全局 HLC 作为 $sts$；读阶段检查未决前驱
+                  & 所有读结果必须落在同一全局提交顺序前缀内；不能读到跳过较早提交事务的后缀版本
+                  & 不维护客户端因果依赖；依赖全局 HLC、MVCC 版本链和 Prepare 等待机制识别未决前驱
+                  & 若存在 $prepare\_time \le sts$ 的未决写入，则读操作等待其提交或中止，对应 Prefix
     \\
     \hline
     \textbf{PSI}
-                  & 同CC的依赖时间戳追踪；维护 $dep$
-                  & 同CC的机制；传递 $dep$ 给分片层
-                  & 因果一致性验证 + 写集冲突检测（Certification）；防止丢失更新
+                  & 事务开始阶段继承 $dep$；Prepare 阶段执行写集认证；提交后更新依赖
+                  & 读可见性继承 CC 的因果边界，同一事务内部保持读己之写和已提交版本读取
+                  & 在 CC 依赖追踪基础上增加写集冲突检测；检查并发事务是否修改同一写键
+                  & 若存在并发事务与当前事务写集相交，则当前事务中止；对应 TransVis 与 NoConflict，防止丢失更新
     \\
     \hline
     \textbf{SI}
-                  & 普通时间戳；不需要依赖追踪
-                  & 同PC机制；获取全局HLC时间
-                  & 一致性快照验证 + 写集冲突检测；NoConflict检查；防止丢失更新
+                  & 事务开始阶段获取全局一致快照 $sts$；Prepare 阶段执行写集认证
+                  & 所有读操作基于同一前缀快照；事务内部写缓冲优先于历史版本
+                  & 不追踪客户端因果依赖；维护写集并检查快照之后是否存在并发写入同一键
+                  & 写写冲突认证失败则中止；对应 Prefix 与 NoConflict，保证一致快照并避免丢失更新
     \\
     \hline
     \textbf{SER}
-                  & 快照时间戳维护
-                  & 分配HLC时间戳作为快照 $sts$；为事务建立全局定序
-                  & 检查集追踪（读键+写键）；严格读集认证；检查条件 $cts(T') > sts$ 且 $T'$ 与checkset有交集时中止
+                  & 事务开始阶段获取全局快照；读写阶段持续维护 checkset；Prepare 阶段执行读写集联合认证
+                  & 读结果不仅要来自一致快照，还必须在最终全局仲裁顺序下仍然有效
+                  & checkset 同时包含读键和写键；检测 $cts(T') > sts$ 且 $WSet(T') \cap checkset(T) \neq \emptyset$ 的并发前驱
+                  & 发生读写或写写交集则中止；成功事务可解释为全局串行顺序的一部分，对应 TotalVis 与 NoConflict
     \\
     \hline
   \end{tabularx}
 \end{table}
+
+从表~\ref{tab:isolation_customization}可以看出，各隔离级别与公理之间的映射可以沿着三条主线理解。第一条主线是\textbf{快照来源}：RA 只要求读到已提交版本并保持事务内部一致性；CC 和 PSI 使用客户端依赖时间戳刻画因果边界；PC、SI 和 SER 则使用全局 HLC 快照刻画前缀边界。第二条主线是\textbf{认证范围}：CC 与 PC 主要约束读可见性，PSI 和 SI 在此基础上引入写集认证以排除丢失更新，SER 进一步把读集也纳入 checkset，从而排除写偏斜等仅靠写集认证无法发现的异常。第三条主线是\textbf{验证时机}：可见性约束主要在事务开始和读阶段落实，NoConflict 主要在 Prepare 阶段落实，而 TotalVis 则要求提交前对读写集合进行更严格的全局相容性检查。
 
 为了帮助读者更直观地理解这些定制点，可以把不同隔离级别下的事务执行差异概括为对同一条事务路径逐步增加约束。对 CC 而言，系统重点保证因果相关的先行事务不会被遗漏，因此关键在于客户端维护依赖时间戳并把它传播到后继事务；对 PC 而言，系统不追踪因果依赖，而是要求每次读取都落在某个全局一致前缀上，因此核心机制转化为基于 HLC 的快照选取和对未决前驱事务的等待；PSI 可以看作在 CC 的基础上增加写冲突认证，SI 则是在 PC 的基础上增加同类写冲突认证，因此二者分别把“因果一致快照”和“前缀一致快照”与 NoConflict 公理结合起来；SER 则进一步要求读集合在提交时仍与全局顺序相容，因此系统必须把读信息纳入认证范围，形成比 SI 更严格的提交条件。
 

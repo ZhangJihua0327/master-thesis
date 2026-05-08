@@ -71,13 +71,33 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
 
 \section{模型检查实验与结果}
 
-测试用例只需通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入负载，验证引擎即可启动运行。在验证过程中，TLC 模型检查器会探索所有通过 \texttt{Next} 产生的合法状态转移路径。TLC 的穷举能力使网络延迟、乱序提交与快照交错等情形均能够被覆盖。一旦在某个微观并发场景下发现生成的执行图违反 \texttt{OperationalSafety == IsConsistentExecution} 断言，模型检查器就会立即停止，并输出精确的反例路径追踪报告（Error Trace File），以协助开发者定位并修复并发漏洞。
+测试用例通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入负载，验证引擎即可启动运行。本文用于验证的负载来自 Courseware、SmallBank 和 TPCC 三类基准场景中已经分配隔离级别的工作负载，每组负载包含事务类型、事务所属隔离级别、读写操作序列以及访问键集合等信息。模型检查时，这些负载被转换为 \TLAPlus 模块中的常量，使 TLC 能够按照操作语义枚举不同事务操作之间的交错执行路径。
 
-本文在实验阶段采用 SmallBank 负载对混合隔离级别模型进行实例化，原始测试用例见附录~\ref{appendix:tla-smallbank}。通过注入该负载，TLC 模型检查器可以检验系统在该场景下是否满足所定义的安全属性，并据此发现潜在的并发问题。模型检查结果显示，在当前 SmallBank 负载与参数设置下，系统满足预先定义的安全属性，且未发现违反一致性要求的执行路径。这表明该操作语义在该负载下与目标隔离级别约束是一致的。
+验证的核心判定目标是操作语义生成的运行历史（History）是否一致。在验证过程中，TLC 模型检查器会探索所有通过 \texttt{Next} 产生的合法状态转移路径，并记录事务开始、读、写、提交和中止等操作组成的 \texttt{op\_seq}。随后，模型根据该运行历史构造抽象执行关系，包括事务可见性关系 $\mathrm{VIS}$ 与仲裁顺序 $\mathrm{AR}$，并检查安全断言 \texttt{OperationalSafety == IsConsistentExecution}。若 History 中所有事务在其对应隔离级别下均满足第二章定义的公理约束，则该 History 被判定为一致；反之，只要存在某个事务违反其隔离级别约束，TLC 即会停止搜索并输出反例路径追踪报告（Error Trace File），用于定位导致不一致的具体操作交错。
 
-该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
+为了明确模型检查实验的配置与论证范围，本文采用表~\ref{tab:tla_verification_config} 对验证输入、判定方式和边界条件进行归纳。
 
-该测试用例给出了一个最小但具有代表性的混合隔离级别验证场景。图中定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
+\begin{table}[htbp]
+    \centering
+    \caption{TLA+ 模型检查实验配置与验证边界}
+    \label{tab:tla_verification_config}
+    \small
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        配置项 & 说明 \\
+        \midrule
+        工作负载来源 & Courseware、SmallBank 和 TPCC 三类已分配隔离级别的验证负载。 \\
+        负载内容 & 每组负载描述事务类型、事务隔离级别、读写操作序列以及访问键集合。 \\
+        验证对象 & 由操作语义状态转移生成的运行 History，而不是单个静态事务模板。 \\
+        一致性判定 & 根据 History 构造 $\mathrm{VIS}$ 与 $\mathrm{AR}$，并检查其中所有事务是否满足其隔离级别对应的公理约束。 \\
+        安全断言 & \texttt{OperationalSafety == IsConsistentExecution}。 \\
+        搜索深度 & TLC 有界搜索深度设置为 20，用于覆盖该深度范围内的事务操作交错和状态转移路径。 \\
+        论证边界 & 模型检查结果说明在给定负载与搜索深度内未发现违反隔离级别公理的运行 History；该结论属于有界模型检查结果，不等同于对任意规模负载和无限长执行历史的完全证明。 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+本文在正文中以 SmallBank 负载作为代表性验证示例，原始测试用例见附录~\ref{appendix:tla-smallbank}。该测试用例定义了两个并发事务，其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
 
 
 
