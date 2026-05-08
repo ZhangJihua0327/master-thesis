@@ -349,3 +349,6 @@ figures/tla-src-code/cut/*.dvi
 figures/tla-src-code/cut/*.log
 figures/tla-src-code/cut/*.pdf
 figures/tla-src-code/cut/*.tex
+
+
+.codex-work/*
