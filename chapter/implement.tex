@@ -4,9 +4,34 @@
 \section{原型系统概述}
 前文提出的事务操作语义与并发控制机制，最终需要落到可运行的系统中才能检验其可行性。基于这一点，本文实现了一个分布式键值数据库原型。该原型由路由节点、配置节点和分片节点组成，支持多版本并发控制、跨分片事务协调以及多种隔离级别的混合执行。它并不以产品化为目标，而是作为研究载体，用于验证核心机制能否落地实现，并为后续实验提供可重复的运行环境。
 
-具体来说，该原型主要承担三项工作：验证第三章提出的系统操作语义能否转化为可执行机制，检验第四章中的形式化约束能否与关键模块设计保持一致，以及通过实验比较不同隔离级别配置下的吞吐量与延迟表现。基于这一定位，本章先说明系统需求与实现边界，再展开架构设计和关键模块实现。
+具体来说，该原型主要承担三项工作：验证第三章提出的系统操作语义能否转化为可执行机制，检验第四章中的形式化约束能否与关键模块设计保持一致，以及通过实验比较不同隔离级别配置下的吞吐量与回滚率表现。基于这一定位，本章先说明系统需求与实现边界，再展开架构设计和关键模块实现。
 
 需要说明的是，第二章和第三章中的 RA、CC、PC、PSI、SI 和 SER 构成本文统一公理化模型下的理论范围，而本章原型系统选择实现 PC、PSI、SI 和 SER 四种隔离级别，主要是出于工程验证目标与系统机制覆盖范围的考虑。RA 是公理体系中的基础级别，其核心约束主要由事务内部读写规则、已提交版本读取和会话顺序维护保证，在本文原型的 MVCC 与事务缓冲机制中已作为更高隔离级别的公共基础被隐含满足，因此未作为独立可配置级别展开实验。同时，RA 和 CC 均属于约束相对较少的弱隔离级别，能够提供的异常排除能力有限，在现实数据库系统中作为独立事务隔离选项的应用场景相对较少。特别是在本文关注的混合隔离场景下，若将大量事务下放到 RA 或单独的 CC，虽然可能进一步降低协调开销，但其语义保障过弱，难以代表工程系统中常见的正确性与性能折中。CC 强调因果依赖传播，而 PSI 已在 CC 的基础上进一步加入写冲突约束，能够同时覆盖依赖传播机制与冲突认证机制的组合效果；本文实验重点又在于比较前缀快照、写冲突认证以及可串行化检查等机制对系统性能的影响。因此，工程实现中的四种级别并不是对理论模型范围的收缩，而是在六类理论级别中选取更能体现系统协调代价差异、业务语义保障强度和实验对比价值的代表性子集。
+
+表~\ref{tab:prototype-implementation-overview} 概括了原型系统的主要实现模块及其与前文语义设计之间的对应关系。该表并不以代码行数作为工作量证明，而是展示各模块承担的状态、接口和协议职责，便于读者判断第三章中的操作语义如何落到具体系统路径中。
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.25}
+    \caption{原型系统实现模块概览}
+    \label{tab:prototype-implementation-overview}
+    \begin{tabularx}{\textwidth}{p{2.2cm} p{3.0cm} p{3.2cm} X}
+        \toprule
+        模块 & 主要职责 & 关键状态或接口 & 与语义设计的对应关系 \\
+        \midrule
+        Router & 接收客户端请求、维护事务上下文、协调跨分片提交 & 事务 ID、隔离级别、参与分片集合、Start/Commit/Abort 请求 & 对应全局事务生命周期管理和 2PC 协调者角色 \\
+        Shard & 执行分片内读写、维护事务缓冲和版本链 & TxBuffer、ReadSet、WriteSet、CheckSet、Prepare/Commit/Abort & 对应分片参与者状态机、MVCC 版本可见性和提交认证 \\
+        Config & 维护分片拓扑与路由元数据，并向节点同步配置 & 分片表、路由表、节点状态、流式配置同步 & 对应系统拓扑和分片路由前提，不直接改变隔离级别语义 \\
+        HLC & 为快照读取、预提交和提交版本提供时间戳 & Now/Tick、Update/Receive、WallTime、Logical & 对应 $\text{VIS}$ 与 $\text{AR}$ 在工程实现中的时间边界 \\
+        MVCC Store & 管理键值数据的多版本读写与 Pending 版本确认 & Version Chain、snapshotTime、commitTime、Pending 标记 & 对应快照读取、事务内部一致性和跨分片提交可见性约束 \\
+        ClientPool & 为压力测试维持事务亲和性和并发连接复用 & 事务到 Client 的绑定关系、轮询分配器 & 保证同一事务上下文不因路由漂移而被破坏 \\
+        Test Client & 根据负载配置生成事务并采集吞吐、回滚等指标 & worker 配置、事务模板、执行结果与指标日志 & 为第六章实验提供可重复的负载入口 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+从实现边界看，当前原型真实实现了事务路由、分片执行、MVCC 版本管理、HLC 时间戳维护、跨分片 2PC、单分片 QuickCommit、ClientPool 测试客户端以及可观测性埋点；同时也保留了一些研究型简化：存储层以全内存结构为主，持久化和日志恢复仅以抽象方式处理，复制容错、在线重配置和生产级权限控制不作为本文实验对象。这些边界与第七章的未来工作相对应，也限定了第六章实验结论的适用范围。
 
 \section{需求分析}
 该原型的设计目标比较明确：在保证目标事务语义的前提下，观察混合隔离级别执行相较于统一隔离级别方案是否具有性能优势。围绕这一目标，下面从功能需求和非功能需求两个方面说明系统需要具备的能力。
@@ -164,7 +189,7 @@
 图~\ref{fig:2pc-hole} 展示了本组件处理两阶段提交可见性漏洞的方式。系统借助未决状态（Pending Status）与时间戳推进来约束该阶段的可见性：在 \lstinline|Prepare| 阶段，系统根据混合逻辑时钟（HLC）派生本地的预备时间 \lstinline|prepareTime|。此时系统并不直接覆盖旧版本，而是调用 \lstinline|store.Put| 写入带有 Pending 标记的临时版本。该预写入过程为并发读操作提供了一个额外的判定条件：若并发读取请求的时间戳满足 $\lstinline|snapshotTime| \ge \lstinline|prepareTime|$，且遇到 Pending 标记，底层将返回 \lstinline|ErrPendingRead|，调用方随后进入等待或重试。待协调者最终作出提交决定后，\lstinline|Commit| 通过 \lstinline|store.ConfirmPending(txId, commitTime)| 将临时版本确认为正式版本。通过这一过程，预提交阶段与最终提交阶段之间的可见性得以衔接。
 
 \subsubsection{单分片快速提交(QuickCommit)优化}
-当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销\cite{fastcommit,fastcommit2}，如图~\ref{fig:quick-commit-implementation}。
+当系统规划器判定当前事务的作用域仅局限于某单一分片时，该组件会触发 \lstinline|QuickCommit| 的快速提交路径，以规避2PC的网络协商与多次RPC的延迟开销\cite{thomson2012calvin,fastcommit2}，如图~\ref{fig:quick-commit-implementation}。
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/mmd/quick-commit.pdf}

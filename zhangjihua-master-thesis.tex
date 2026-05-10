@@ -39,9 +39,9 @@
 
       针对上述问题，本文围绕混合隔离级别事务的统一语义建模与系统实现展开研究，设计并实现了一个基于分片（Sharding）架构、支持混合隔离级别的分布式键值数据库原型。本文提出了一种面向混合隔离级别场景的并发控制协议，使事务能够根据业务需求选择不同隔离级别，并支持跨分片事务的原子执行。
 
-      为保证协议在混合场景下的正确性，本文使用 \TLAPlus 对系统操作语义进行形式化建模，并通过模型检查验证关键安全属性；在此基础上，进一步构建了一个分布式数据库验证平台，实现了分布式事务调度、多版本并发控制（MVCC）存储引擎以及网络通信模块，用于模拟分布式环境下的事务处理流程。
+      为保证协议在混合场景下的正确性，本文使用 \TLAPlus 对系统操作语义进行形式化建模，并通过模型检查验证关键安全属性；随后构建了一个分布式数据库验证平台，实现了分布式事务调度、多版本并发控制（MVCC）存储引擎以及网络通信模块，用于模拟分布式环境下的事务处理流程。
 
-      基准测试结果表明，本文设计的混合隔离级别机制能够正确执行混合事务逻辑；相较于统一采用强隔离级别的基线配置，该机制在保证目标语义成立的前提下能够稳定提升系统吞吐量并改善平均延迟。上述结果说明，本文提出的机制具备较好的工程可行性，并为在分布式数据库中兼顾正确性与性能提供了一种可行路径。
+      基准测试结果表明，本文设计的混合隔离级别机制能够正确执行混合事务逻辑；相较于统一采用强隔离级别的基线配置，该机制在本文测试的三类负载和两种部署方式下均提高了系统吞吐量。这些结果支持本文的基本判断：在事务语义可区分的场景中，按事务需求选择隔离级别可以减少一部分不必要的同步开销，并给出一种从语义约束到事务执行路径的实现方式。
 \end{abstract}
 
 \begin{abstract*}
@@ -58,8 +58,8 @@
       To ensure correctness in mixed-isolation settings, we model the system semantics using \TLAPlus and verify key safety properties through model checking.
       Based on the verified model, we further build a distributed database validation platform that implements distributed transaction scheduling, a multi-version concurrency control (MVCC) storage engine, and network communication modules for realistic simulation of distributed transaction processing.
 
-      Benchmark results show that the proposed mechanism executes mixed transaction logic correctly and, compared with a baseline configuration that uniformly adopts a strong isolation level, can consistently improve system throughput and reduce average latency while preserving the required semantic guarantees.
-      These results demonstrate the engineering feasibility of the proposed mechanism and suggest a practical way to better balance correctness and performance in distributed database systems.
+      Benchmark results show that the proposed mechanism executes mixed transaction logic correctly and, compared with a baseline configuration that uniformly adopts a strong isolation level, improves system throughput under the workloads and deployment settings evaluated in this thesis while preserving the required semantic guarantees.
+      These results suggest that selecting isolation levels according to transaction requirements can reduce part of the synchronization overhead and provide an implementation path from semantic constraints to transaction execution.
 \end{abstract*}
 
 \tableofcontents
