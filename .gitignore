@@ -352,3 +352,12 @@ figures/tla-src-code/cut/*.tex
 
 
 .codex-work/*
+
+# macOS metadata
+.DS_Store
+
+# Claude Code local session state
+.claude/
+
+# Auto-generated experience index
+experience/
