@@ -1,0 +1,190 @@
+{
+  "Agrawal2016": {
+    "title": "The Evolution of Cloud Computing",
+    "year": 2017,
+    "pdf_url": "",
+    "paperId": "8d402b850172169bae761847e2a98ecb7b43c4c9"
+  },
+  "Bailis2014": {
+    "title": "Probabilistic Bounded Staleness ({PBS",
+    "pdf_url": null
+  },
+  "Brewer2000": {
+    "title": "Towards robust distributed systems",
+    "pdf_url": null
+  },
+  "Carlson2013": {
+    "title": "{Redis",
+    "pdf_url": null
+  },
+  "Cattell2011": {
+    "title": "Scalable {SQL",
+    "pdf_url": null
+  },
+  "DeCandia2007": {
+    "title": "{Dynamo",
+    "pdf_url": null
+  },
+  "Gilbert2002": {
+    "title": "Brewer's conjecture and the feasibility of consistent, available, partition-tolerant web services",
+    "pdf_url": null
+  },
+  "Gray1993": {
+    "title": "Transaction processing: concepts and techniques",
+    "pdf_url": null
+  },
+  "Haerder1983": {
+    "title": "Principles of transaction-oriented database recovery",
+    "pdf_url": null
+  },
+  "Lakshman2010": {
+    "title": "{Cassandra",
+    "pdf_url": null
+  },
+  "Lampson1976": {
+    "title": "Crash recovery in a distributed data storage system",
+    "pdf_url": null
+  },
+  "Ozsu2011": {
+    "title": "Principles of distributed database systems",
+    "pdf_url": null
+  },
+  "Pavlo2011": {
+    "title": "What's really new with {NewSQL",
+    "pdf_url": null
+  },
+  "Perkins2011": {
+    "title": "Dynamic Transaction Routing in Distributed Database Systems",
+    "year": 1988,
+    "pdf_url": "",
+    "paperId": "f87c5b9539f63027debb5a0f21e5cda40d3623f5"
+  },
+  "Schultz2015": {
+    "title": "Design and Modular Verification of Distributed Transactions in MongoDB",
+    "pdf_url": null
+  },
+  "Stonebraker2010": {
+    "title": "{SQL",
+    "pdf_url": null
+  },
+  "Terry2013": {
+    "title": "Consistency-based service level agreements for cloud storage",
+    "pdf_url": null
+  },
+  "Vogels2009": {
+    "title": "Eventually consistent",
+    "pdf_url": null
+  },
+  "akkoorath2016cure": {
+    "title": "Cure: Strong Semantics Meets High Availability and Low Latency",
+    "pdf_url": null
+  },
+  "bailis2013highly": {
+    "title": "Highly available transactions: Virtues and limitations",
+    "pdf_url": null
+  },
+  "bailis2016ramp": {
+    "title": "Scalable Atomic Visibility with {RAMP",
+    "pdf_url": null
+  },
+  "berenson1995critique": {
+    "title": "A Critique of {ANSI",
+    "pdf_url": null
+  },
+  "bouajjani2025complexity": {
+    "title": "On the Complexity of Checking Mixed Isolation Levels for SQL Transactions",
+    "pdf_url": null
+  },
+  "burckhardt2015global": {
+    "title": "Global sequence protocol: A robust abstraction for replicated shared state",
+    "pdf_url": null
+  },
+  "cerone2015framework": {
+    "title": "A framework for transactional consistency models with atomic visibility",
+    "pdf_url": null
+  },
+  "corbett2013spanner": {
+    "title": "Spanner: Google’s globally distributed database",
+    "pdf_url": null
+  },
+  "crooks2017seeing": {
+    "title": "Seeing is believing: A client-centric specification of database isolation",
+    "pdf_url": null
+  },
+  "dewitt1992parallel": {
+    "title": "Parallel database systems: The future of high performance database systems",
+    "pdf_url": null
+  },
+  "dragoni2017microservices": {
+    "title": "Microservices: yesterday, today, and tomorrow",
+    "pdf_url": null
+  },
+  "eswaran1976notions": {
+    "title": "The notions of consistency and predicate locks in a database system",
+    "year": 1976,
+    "pdf_url": "https://dl.acm.org/doi/pdf/10.1145/360363.360369",
+    "paperId": "0b9182d502e62fb7e1ebd7e01de7523005d35677"
+  },
+  "fastcommit2": {
+    "title": "Coordination avoidance in database systems",
+    "pdf_url": null
+  },
+  "harding2017evaluation": {
+    "title": "An evaluation of distributed concurrency control",
+    "pdf_url": null
+  },
+  "hawblitzel2015ironfleet": {
+    "title": "IronFleet: proving practical distributed systems correct",
+    "pdf_url": null
+  },
+  "kulkarni2014logical": {
+    "title": "Logical Physical Clocks",
+    "year": 2014,
+    "pdf_url": "",
+    "paperId": "c82e5f800eb3a6fca0eda4aae39cdccf8aafd388"
+  },
+  "newcombe2015amazon": {
+    "title": "How Amazon web services uses formal methods",
+    "pdf_url": null
+  },
+  "papadimitriou1979serializability": {
+    "title": "The serializability of concurrent database updates",
+    "year": 1979,
+    "pdf_url": "https://dl.acm.org/doi/pdf/10.1145/322154.322158",
+    "paperId": "e7ab23d011e5183db78cfea48e303210f6e57e2e"
+  },
+  "peng2010large": {
+    "title": "Large-scale incremental processing using distributed transactions and notifications",
+    "pdf_url": null
+  },
+  "rethinkmvcc": {
+    "title": "Rethinking serializable multiversion concurrency control",
+    "pdf_url": null
+  },
+  "skeen1983formal": {
+    "title": "A formal model of crash recovery in a distributed system",
+    "pdf_url": null
+  },
+  "sovran2011walter": {
+    "title": "Transactional Storage for Geo-replicated Systems",
+    "pdf_url": null
+  },
+  "sql-for-Ai": {
+    "title": "迎接人工智能挑战: 构建下一代数据库系统",
+    "pdf_url": null
+  },
+  "stonebraker1986case": {
+    "title": "The Case for Shared Nothing",
+    "year": 1985,
+    "pdf_url": "",
+    "paperId": "a05d78d262792b22a66b7b15b2330e380318c830"
+  },
+  "taft2020cockroachdb": {
+    "title": "Cockroachdb: The resilient geo-distributed sql database",
+    "pdf_url": null
+  },
+  "thomson2012calvin": {
+    "title": "Calvin: Fast distributed transactions for partitioned database systems",
+    "pdf_url": null
+  }
+}
