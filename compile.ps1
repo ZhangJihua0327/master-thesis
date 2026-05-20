@@ -148,6 +148,12 @@ function Invoke-CodeFigureCompilation {
             )
 
             & xelatex @latexArgs | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "Code figure compilation failed on first pass: $texFile"
+            }
+
+            # minted v3 writes highlighting data on the first pass and consumes it on the next.
+            & xelatex @latexArgs | Out-Null
 
             if ($LASTEXITCODE -eq 0 -and (Test-Path -Path "$baseName.pdf")) {
                 Write-Host "Success: $pdfFile"

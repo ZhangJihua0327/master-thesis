@@ -82,16 +82,23 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
     \caption{TLA+ 模型检查实验配置与验证边界}
     \label{tab:tla_verification_config}
     \small
+    \renewcommand{\arraystretch}{1.28}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
         配置项 & 说明 \\
         \midrule
         工作负载来源 & Courseware、SmallBank 和 TPCC 三类已分配隔离级别的验证负载。 \\
+        \midrule
         负载内容 & 每组负载描述事务类型、事务隔离级别、读写操作序列以及访问键集合。 \\
+        \midrule
         验证对象 & 由操作语义状态转移生成的运行 History，而不是单个静态事务模板。 \\
+        \midrule
         一致性判定 & 根据 History 构造 $\mathrm{VIS}$ 与 $\mathrm{AR}$，并检查其中所有事务是否满足其隔离级别对应的公理约束。 \\
+        \midrule
         安全断言 & \texttt{OperationalSafety == IsConsistentExecution}。 \\
+        \midrule
         搜索深度 & TLC 有界搜索深度设置为 20，用于覆盖该深度范围内的事务操作交错和状态转移路径。 \\
+        \midrule
         论证边界 & 模型检查结果说明在给定负载与搜索深度内未发现违反隔离级别公理的运行 History；该结论属于有界模型检查结果，不等同于对任意规模负载和无限长执行历史的完全证明。 \\
         \bottomrule
     \end{tabularx}
