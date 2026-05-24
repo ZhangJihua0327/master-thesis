@@ -36,7 +36,7 @@
     supervisor*= {Ge Jidong, Associate Professor},
     supervisor-ii = {魏恒峰~特任副研究员},
     supervisor-ii* = {Wei Hengfeng, Associate Researcher},
-    submit-date = {2026-03-20},
+    submit-date = {2026-05-20},
     %
     % 以下均为研究生项
     %
@@ -48,13 +48,13 @@
     field* = {Software Engineering},
     % 研究领域
     %
-    chairman = {某某某~教授},
+    chairman = {潘敏学~教授},
     % 答辩委员会主席
     % 推荐使用波浪号(~)分隔姓名和职称
     %
     reviewer = {
-        某某某~教授,
-        某某某~教授
+        房春荣~准聘副教授,
+        匡宏宇~准聘副教授
     },
     %
     % 答辩委员会成员
@@ -69,7 +69,7 @@
     secret-level = {公开},
     % 密级
     %
-    defend-date = {2026-05-20},
+    defend-date = {2026-05-22},
     % 答辩日期
     % 格式为 yyyy-mm-dd
     % 不填就是编译当天日期
