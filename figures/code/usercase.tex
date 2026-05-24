@@ -1,0 +1,84 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{ctex}
+\usetikzlibrary{arrows.meta,backgrounds,calc,fit,positioning,shapes.geometric}
+
+\begin{document}
+\begin{tikzpicture}[
+    font=\sffamily\small,
+    >=Latex,
+    actor/.style={line width=0.8pt},
+    usecase/.style={
+        ellipse,
+        draw=#1,
+        fill=#1!7,
+        line width=1pt,
+        minimum width=2.75cm,
+        minimum height=0.72cm,
+        align=center
+    },
+    assoc/.style={line width=0.72pt},
+    include/.style={->, dashed, line width=0.65pt}
+]
+
+\newcommand{\stickactor}[3]{%
+    \begin{scope}[shift={(#1,#2)}]
+        \draw[actor] (0,0.55) circle (0.18);
+        \draw[actor] (0,0.37) -- (0,-0.42);
+        \draw[actor] (-0.55,0.12) -- (0.55,0.12);
+        \draw[actor] (0,-0.42) -- (-0.40,-0.95);
+        \draw[actor] (0,-0.42) -- (0.40,-0.95);
+        \node[align=center, text width=2.3cm] at (0,-1.45) {#3};
+    \end{scope}
+}
+
+% Actors outside the system boundary.
+\stickactor{0}{2.0}{用户\\(User)}
+\stickactor{0}{-2.85}{数据库管理员\\(DBA)}
+
+% Use cases.
+\node[usecase=purple] (begin) at (3.55,3.15) {开启事务 (Begin)};
+\node[usecase=purple] (isolation) at (7.15,3.15) {选择隔离级别};
+\node[usecase=purple] (commit) at (7.15,2.15) {提交 (Commit)};
+\node[usecase=purple] (abort) at (7.15,1.15) {中止 (Abort)};
+
+\node[usecase=blue] (read) at (3.55,1.75) {读取 (Read)};
+\node[usecase=blue] (write) at (3.55,0.75) {写入 (Write)};
+\node[usecase=blue] (delete) at (3.55,-0.25) {删除 (Delete)};
+
+\node[usecase=green!60!black] (conn) at (3.55,-2.05) {连接持续时间};
+\node[usecase=green!60!black] (lb) at (3.55,-2.85) {负载均衡策略};
+\node[usecase=green!60!black] (timeout) at (3.55,-3.65) {最长事务时间};
+\node[usecase=green!60!black] (retry) at (3.55,-4.45) {重试策略};
+
+\node[usecase=orange] (validate) at (7.15,0.00) {校验事务状态};
+\node[usecase=blue] (status) at (3.55,-1.25) {查看集群状态};
+
+% System boundary stays behind use cases.
+\begin{pgfonlayer}{background}
+    \draw[line width=1.1pt] (1.45,-4.9) rectangle (9.35,4.15);
+\end{pgfonlayer}
+\node[anchor=north east, font=\sffamily\small, fill=white, inner sep=1pt] at (9.2,4.0) {系统边界};
+
+% Actor associations.
+\draw[assoc] (0.75,2.45) -- (begin.west);
+\draw[assoc] (0.75,2.05) -- (read.west);
+\draw[assoc] (0.75,1.65) -- (write.west);
+\draw[assoc] (0.75,1.25) -- (delete.west);
+\draw[assoc] (0.75,0.85) -- (status.west);
+
+\draw[assoc] (0.75,-2.20) -- (conn.west);
+\draw[assoc] (0.75,-2.65) -- (lb.west);
+\draw[assoc] (0.75,-3.10) -- (timeout.west);
+\draw[assoc] (0.75,-3.55) -- (retry.west);
+\draw[assoc] (0.75,-1.75) -- (status.west);
+
+% Use-case dependencies.
+\draw[include] (begin.east) -- (isolation.west);
+\draw[include] (commit.south) -- (validate.north);
+\draw[include] (abort.south) -- (validate.north);
+\draw[include] (read.east) to[out=0,in=165] (validate.west);
+\draw[include] (write.east) -- (validate.west);
+\draw[include] (delete.east) to[out=0,in=195] (validate.west);
+
+\end{tikzpicture}
+\end{document}
