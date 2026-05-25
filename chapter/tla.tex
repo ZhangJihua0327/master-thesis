@@ -104,15 +104,15 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
         \toprule
         负载名称 & \makecell[l]{类别 \\ 设计目的} & 生成状态 & 去重状态 & 用时 \\
         \midrule
-        SmallBank   & \makecell[l]{业务基准 \\ PSI 与 SER 混合的账户转账}             & 68       & 42       & 0.31\,s \\
-        Courseware  & \makecell[l]{业务基准 \\ 两 SER 事务争抢同一选课槽位}           & 51       & 34       & 0.27\,s \\
-        TPCC        & \makecell[l]{业务基准 \\ PSI 下单事务，涉及库存、订单、余额三键} & 74       & 43       & 0.37\,s \\
-        LostUpdate  & \makecell[l]{异常探针 \\ 两 PSI 事务的并发读改写}                & 43       & 26       & 0.24\,s \\
-        WriteSkew   & \makecell[l]{异常探针 \\ 经典写偏差，验证 SER 读集追踪}          & 73       & 47       & 0.39\,s \\
-        ReadSkew    & \makecell[l]{异常探针 \\ G-single，CC 读取被原子写覆盖}         & 47       & 30       & 0.34\,s \\
-        LongFork    & \makecell[l]{异常探针 \\ 双 PSI 写者加双 PSI 读者对称分叉}      & 1\,481   & 566      & 0.32\,s \\
-        CausalChain & \makecell[l]{异常探针 \\ 同会话写依赖，跨会话 TransVis 验证}    & 317      & 160      & 0.30\,s \\
-        Counter     & \makecell[l]{异常探针 \\ 两 RA 写者并行加单 CC 读者}            & 160      & 78       & 0.27\,s \\
+        SmallBank   & \makecell[l]{业务基准 \\ PSI 与 SER 混合的账户转账}             & 68       & 42       & 0.31\,s \\[4pt]
+        Courseware  & \makecell[l]{业务基准 \\ 两 SER 事务争抢同一选课槽位}           & 51       & 34       & 0.27\,s \\[4pt]
+        TPCC        & \makecell[l]{业务基准 \\ PSI 下单事务，涉及库存、订单、余额三键} & 74       & 43       & 0.37\,s \\[4pt]
+        LostUpdate  & \makecell[l]{异常探针 \\ 两 PSI 事务的并发读改写}                & 43       & 26       & 0.24\,s \\[4pt]
+        WriteSkew   & \makecell[l]{异常探针 \\ 经典写偏差，验证 SER 读集追踪}          & 73       & 47       & 0.39\,s \\[4pt]
+        ReadSkew    & \makecell[l]{异常探针 \\ G-single，CC 读取被原子写覆盖}         & 47       & 30       & 0.34\,s \\[4pt]
+        LongFork    & \makecell[l]{异常探针 \\ 双 PSI 写者加双 PSI 读者对称分叉}      & 1\,481   & 566      & 0.32\,s \\[4pt]
+        CausalChain & \makecell[l]{异常探针 \\ 同会话写依赖，跨会话 TransVis 验证}    & 317      & 160      & 0.30\,s \\[4pt]
+        Counter     & \makecell[l]{异常探针 \\ 两 RA 写者并行加单 CC 读者}            & 160      & 78       & 0.27\,s \\[4pt]
         MixedLevels & \makecell[l]{综合 \\ RA/CC/PC/PSI/SI/SER 六级别同时共存}       & 694\,726 & 278\,839 & 17.4\,s \\
         \bottomrule
     \end{tabular}
