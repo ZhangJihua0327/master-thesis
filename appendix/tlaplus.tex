@@ -1,6 +1,37 @@
 \chapter{\TLAPlus 模型检查补充材料}
 \label{appendix:tla-material}
 
+\section{完整工作负载清单}
+\label{appendix:tla-workloads}
+
+验证仓库 \texttt{mil-tla-verify} 共附带 10 个工作负载，全部放在 \texttt{workload/} 子目录下，分为业务基准与异常探针两类。业务基准取 SmallBank、Courseware 与 TPC-C 三个经典事务处理场景；异常探针针对丢失更新（Lost Update）、写偏差（G2 Write Skew）、读偏差（G-single Read Skew）、长分叉（Long Fork）与会话因果链（Causal Chain）等典型并发异常，各构造一组最小化负载，用于在不同隔离级别组合下显式触发或排除对应异常。表~\ref{tab:tla-workloads-summary} 列出各负载的名称、类别、设计目的，以及 TLC 在统一环境（macOS arm64，10 工作线程，3.6\,GB JVM 堆）下穷尽枚举得到的状态空间规模与运行用时。所有负载在 \texttt{OperationalSafety == IsConsistentExecution} 断言下均未发现反例。
+
+\begin{table}[htbp]
+    \centering
+    \caption{\texttt{mil-tla-verify} 仓库工作负载清单（共 10 个）}
+    \label{tab:tla-workloads-summary}
+    \small
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{llrrr}
+        \toprule
+        负载名称 & 类别 / 设计目的 & 生成状态 & 去重状态 & 用时 \\
+        \midrule
+        SmallBank   & 业务基准 / PSI 与 SER 混合的账户转账           & 68      & 42      & 0.31\,s \\
+        Courseware  & 业务基准 / 两 SER 事务争抢同一选课槽位           & 51      & 34      & 0.27\,s \\
+        TPCC        & 业务基准 / PSI 下单事务，涉及库存、订单、余额三键 & 74      & 43      & 0.37\,s \\
+        LostUpdate  & 异常探针 / 两 PSI 事务的并发读改写            & 43      & 26      & 0.24\,s \\
+        WriteSkew   & 异常探针 / 经典写偏差，验证 SER 读集追踪      & 73      & 47      & 0.39\,s \\
+        ReadSkew    & 异常探针 / G-single，CC 读取被原子写覆盖   & 47      & 30      & 0.34\,s \\
+        LongFork    & 异常探针 / 双 PSI 写者加双 PSI 读者对称分叉   & 1\,481  & 566     & 0.32\,s \\
+        CausalChain & 异常探针 / 同会话写依赖，跨会话 TransVis 验证   & 317     & 160     & 0.30\,s \\
+        Counter     & 异常探针 / 两 RA 写者并行加单 CC 读者           & 160     & 78      & 0.27\,s \\
+        MixedLevels & 综合 / RA/CC/PC/PSI/SI/SER 六级别同时共存       & 694\,726 & 278\,839 & 17.4\,s \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+表中各负载的规模差异源自设计取舍。异常探针把事务数与操作数压到触发对应异常所需的最小水平，状态空间普遍在数百到千余之间，亚秒内即可枚举完毕；业务基准在保留场景特征的前提下同样保持小规模；MixedLevels 让六个隔离级别同时各跑一个事务，状态空间扩大到二十多万去重态，单机用时进入秒级。10 个负载合在一起覆盖了本文定义的六个隔离级别以及它们之间常见的交错执行情况，全部跑出零反例。
+
 \section{SmallBank 负载测试用例}
 \label{appendix:tla-smallbank}
 
