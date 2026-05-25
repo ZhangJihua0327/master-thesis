@@ -89,7 +89,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
 \section{验证工作负载与测试用例}
 \label{sec:tla-workloads}
 
-测试用例通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入到 \texttt{MixedIsolation} 模型，验证引擎即可启动运行。本文共准备 10 个工作负载，全部放在验证仓库 \texttt{mil-tla-verify} 的 \texttt{workload/} 子目录下，按用途分为业务基准与异常探针两类。业务基准沿用 SmallBank、Courseware 与 TPC-C 三个经典事务处理场景，并为每个事务分配隔离级别；异常探针针对丢失更新（Lost Update）、写偏差（G2 Write Skew）、读偏差（G-single Read Skew）、长分叉（Long Fork）与会话因果链（Causal Chain）等典型并发异常，各构造一组最小化负载，用于在不同隔离级别组合下显式触发或排除对应异常。每组负载的数据结构相同：事务类型、所属隔离级别、读写操作序列、访问键集合，从而保证 TLC 按操作语义枚举事务交错执行时输入条件统一。
+测试用例通过 \texttt{INSTANCE MixedIsolation WITH ...} 语法注入到 \texttt{MixedIsolation} 模型，验证引擎即可启动运行。本文共准备 10 个工作负载，全部放在验证仓库 \texttt{mil-tla-verify} 的 \texttt{workload/} 子目录下，按用途分为三类：业务基准 3 个（SmallBank、Courseware、TPC-C），沿用经典事务处理场景，并为每个事务分配隔离级别；异常探针 6 个，针对丢失更新（Lost Update）、写偏差（G2 Write Skew）、读偏差（G-single Read Skew）、长分叉（Long Fork）、会话因果链（Causal Chain）与并发计数（Counter）等典型并发异常，各构造一组最小化负载，用于在不同隔离级别组合下显式触发或排除对应异常；综合用例 1 个（MixedLevels），让 RA、CC、PC、PSI、SI、SER 六个隔离级别同时各跑一个事务，用于检验级别交错下的整体一致性。每组负载的数据结构相同：事务类型、所属隔离级别、读写操作序列、访问键集合，从而保证 TLC 按操作语义枚举事务交错执行时输入条件统一。
 
 表~\ref{tab:tla-workloads-summary} 列出 10 个工作负载的名称、类别、设计目的，以及 TLC 在统一环境（macOS arm64，10 工作线程，3.6\,GB JVM 堆）下穷尽枚举得到的状态空间规模与运行用时。
 
@@ -98,35 +98,29 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
     \caption{\texttt{mil-tla-verify} 仓库工作负载清单（共 10 个）}
     \label{tab:tla-workloads-summary}
     \small
-    \renewcommand{\arraystretch}{1.25}
+    \renewcommand{\arraystretch}{1.15}
+    \setlength{\tabcolsep}{6pt}
     \begin{tabular}{llrrr}
         \toprule
-        负载名称 & 类别 / 设计目的 & 生成状态 & 去重状态 & 用时 \\
+        负载名称 & \makecell[l]{类别 \\ 设计目的} & 生成状态 & 去重状态 & 用时 \\
         \midrule
-        SmallBank   & 业务基准 / PSI 与 SER 混合的账户转账           & 68      & 42      & 0.31\,s \\
-        Courseware  & 业务基准 / 两 SER 事务争抢同一选课槽位           & 51      & 34      & 0.27\,s \\
-        TPCC        & 业务基准 / PSI 下单事务，涉及库存、订单、余额三键 & 74      & 43      & 0.37\,s \\
-        LostUpdate  & 异常探针 / 两 PSI 事务的并发读改写            & 43      & 26      & 0.24\,s \\
-        WriteSkew   & 异常探针 / 经典写偏差，验证 SER 读集追踪      & 73      & 47      & 0.39\,s \\
-        ReadSkew    & 异常探针 / G-single，CC 读取被原子写覆盖   & 47      & 30      & 0.34\,s \\
-        LongFork    & 异常探针 / 双 PSI 写者加双 PSI 读者对称分叉   & 1\,481  & 566     & 0.32\,s \\
-        CausalChain & 异常探针 / 同会话写依赖，跨会话 TransVis 验证   & 317     & 160     & 0.30\,s \\
-        Counter     & 异常探针 / 两 RA 写者并行加单 CC 读者           & 160     & 78      & 0.27\,s \\
-        MixedLevels & 综合 / RA/CC/PC/PSI/SI/SER 六级别同时共存       & 694\,726 & 278\,839 & 17.4\,s \\
+        SmallBank   & \makecell[l]{业务基准 \\ PSI 与 SER 混合的账户转账}             & 68       & 42       & 0.31\,s \\
+        Courseware  & \makecell[l]{业务基准 \\ 两 SER 事务争抢同一选课槽位}           & 51       & 34       & 0.27\,s \\
+        TPCC        & \makecell[l]{业务基准 \\ PSI 下单事务，涉及库存、订单、余额三键} & 74       & 43       & 0.37\,s \\
+        LostUpdate  & \makecell[l]{异常探针 \\ 两 PSI 事务的并发读改写}                & 43       & 26       & 0.24\,s \\
+        WriteSkew   & \makecell[l]{异常探针 \\ 经典写偏差，验证 SER 读集追踪}          & 73       & 47       & 0.39\,s \\
+        ReadSkew    & \makecell[l]{异常探针 \\ G-single，CC 读取被原子写覆盖}         & 47       & 30       & 0.34\,s \\
+        LongFork    & \makecell[l]{异常探针 \\ 双 PSI 写者加双 PSI 读者对称分叉}      & 1\,481   & 566      & 0.32\,s \\
+        CausalChain & \makecell[l]{异常探针 \\ 同会话写依赖，跨会话 TransVis 验证}    & 317      & 160      & 0.30\,s \\
+        Counter     & \makecell[l]{异常探针 \\ 两 RA 写者并行加单 CC 读者}            & 160      & 78       & 0.27\,s \\
+        MixedLevels & \makecell[l]{综合 \\ RA/CC/PC/PSI/SI/SER 六级别同时共存}       & 694\,726 & 278\,839 & 17.4\,s \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 各工作负载的规模差异源自设计取舍。异常探针把事务数与操作数压到触发对应异常所需的最小水平，状态空间普遍在数百到千余之间，亚秒内即可枚举完毕；业务基准在保留场景特征的前提下同样保持小规模；MixedLevels 让六个隔离级别同时各跑一个事务，状态空间扩大到二十多万去重态，单机用时进入秒级。10 个负载合起来覆盖了第二章定义的六个隔离级别以及它们之间常见的交错执行情况，下一节的模型检查实验即基于这一负载集合展开。
 
-本文在后续实验中以 SmallBank 作为代表性示例。该工作负载的完整 \TLAPlus 测试用例展示于图~\ref{fig:tla-smallbank}：其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/tla/Benchmark_SmallBank-crop.pdf}
-    \caption{SmallBank 负载测试用例的 \TLAPlus 形式化表达}
-    \label{fig:tla-smallbank}
-\end{figure}
+本文在后续实验中以 SmallBank 作为代表性示例，其完整 \TLAPlus 测试用例见附录~\ref{appendix:tla-smallbank}。该用例定义了两个并发事务：其中事务 $T_1$ 以 PSI 隔离级别读取 \texttt{checking} 与 \texttt{savings} 两个账户并更新储蓄账户余额，事务 $T_2$ 则以 SER 隔离级别对相同数据项执行读取与写入操作。这样一组负载既保留了 SmallBank 场景中典型的账户读写依赖，又能够显式触发跨事务可见性、检查集冲突以及不同隔离级别交织执行下的一致性约束，因此适合作为 TLC 模型检查的实例化输入。
 
 \section{模型检查实验与结果}
 
@@ -144,7 +138,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
         \toprule
         配置项 & 说明 \\
         \midrule
-        工作负载来源 & 业务基准（SmallBank、Courseware、TPC-C）与异常探针（丢失更新、写偏差等共 7 个最小化用例）合计 10 个负载，完整清单见表~\ref{tab:tla-workloads-summary}。 \\
+        工作负载来源 & 业务基准 3 个（SmallBank、Courseware、TPC-C）、异常探针 6 个（丢失更新、写偏差等最小化用例）与综合用例 1 个（MixedLevels），合计 10 个负载，完整清单见表~\ref{tab:tla-workloads-summary}。 \\
         \midrule
         负载内容 & 每组负载描述事务类型、事务隔离级别、读写操作序列以及访问键集合。 \\
         \midrule
