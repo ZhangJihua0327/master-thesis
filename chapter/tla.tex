@@ -26,19 +26,19 @@
     \renewcommand{\arraystretch}{1.1}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
-        变量 & 索引 $\to$ 值与含义 \\
+        变量                            & 索引 $\to$ 值与含义                                                                      \\
         \midrule
-        \texttt{store}                & $Keys \to$ 版本集合，每个版本含 $\langle val, cts, writer \rangle$ \\
-        \texttt{tx\_buffer}           & $(AllTxns, Keys) \to$ 该事务尚未提交的写入序列 \\
-        \texttt{tx\_snapshot}         & $AllTxns \to$ $StartTx$ 阶段绑定的快照时间戳 \\
-        \texttt{tx\_checkset}         & $AllTxns \to$ 提交时需校验是否被并发写入的键集合 \\
-        \texttt{op\_seq}              & $TxnIds \to$ 按顺序记录的读写动作序列，公理判定的直接输入 \\
+        \texttt{store}                & $Keys \to$ 版本集合，每个版本含 $\langle val, cts, writer \rangle$                           \\
+        \texttt{tx\_buffer}           & $(AllTxns, Keys) \to$ 该事务尚未提交的写入序列                                                 \\
+        \texttt{tx\_snapshot}         & $AllTxns \to$ $StartTx$ 阶段绑定的快照时间戳                                                 \\
+        \texttt{tx\_checkset}         & $AllTxns \to$ 提交时需校验是否被并发写入的键集合                                                    \\
+        \texttt{op\_seq}              & $TxnIds \to$ 按顺序记录的读写动作序列，公理判定的直接输入                                                \\
         \texttt{tx\_status}           & $AllTxns \to \{\text{Inactive}, \text{Active}, \text{Committed}, \text{Aborted}\}$ \\
-        \texttt{tx\_commit\_time}     & $AllTxns \to$ 提交成功时由全局时钟分配的时间戳 \\
-        \texttt{shard\_ct}            & 全局提交计数器，提交后单调递增，作为新版本时间戳来源 \\
-        \texttt{client\_dep}          & $Sessions \to$ 会话观察到的最大提交时间戳，供 CC、PSI 生成快照 \\
-        \texttt{client\_last\_commit} & $Sessions \to$ 会话最近提交时间戳，专供 RA 生成快照 \\
-        \texttt{pc}                   & $TxnIds \to$ 已执行到操作序列的步数 \\
+        \texttt{tx\_commit\_time}     & $AllTxns \to$ 提交成功时由全局时钟分配的时间戳                                                     \\
+        \texttt{shard\_ct}            & 全局提交计数器，提交后单调递增，作为新版本时间戳来源                                                         \\
+        \texttt{client\_dep}          & $Sessions \to$ 会话观察到的最大提交时间戳，供 CC、PSI 生成快照                                         \\
+        \texttt{client\_last\_commit} & $Sessions \to$ 会话最近提交时间戳，专供 RA 生成快照                                                \\
+        \texttt{pc}                   & $TxnIds \to$ 已执行到操作序列的步数                                                           \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -102,7 +102,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
     \setlength{\tabcolsep}{6pt}
     \begin{tabular}{llrrr}
         \toprule
-        负载名称 & \makecell[l]{类别 \\ 设计目的} & 生成状态 & 去重状态 & 用时 \\
+        负载名称        & \makecell[l]{类别   \\ 设计目的} & 生成状态 & 去重状态 & 用时 \\
         \midrule
         SmallBank   & \makecell[l]{业务基准 \\ PSI 与 SER 混合的账户转账}             & 68       & 42       & 0.31\,s \\[8pt]
         Courseware  & \makecell[l]{业务基准 \\ 两 SER 事务争抢同一选课槽位}           & 51       & 34       & 0.27\,s \\[8pt]
@@ -113,7 +113,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
         LongFork    & \makecell[l]{异常探针 \\ 双 PSI 写者加双 PSI 读者对称分叉}      & 1\,481   & 566      & 0.32\,s \\[8pt]
         CausalChain & \makecell[l]{异常探针 \\ 同会话写依赖，跨会话 TransVis 验证}    & 317      & 160      & 0.30\,s \\[8pt]
         Counter     & \makecell[l]{异常探针 \\ 两 RA 写者并行加单 CC 读者}            & 160      & 78       & 0.27\,s \\[8pt]
-        MixedLevels & \makecell[l]{综合 \\ RA/CC/PC/PSI/SI/SER 六级别同时共存}       & 694\,726 & 278\,839 & 17.4\,s \\
+        MixedLevels & \makecell[l]{综合   \\ RA/CC/PC/PSI/SI/SER 六级别同时共存}       & 694\,726 & 278\,839 & 17.4\,s \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -136,21 +136,21 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
     \renewcommand{\arraystretch}{1.28}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
-        配置项 & 说明 \\
+        配置项    & 说明                                                                                                                                    \\
         \midrule
         工作负载来源 & 业务基准 3 个（SmallBank、Courseware、TPC-C）、异常探针 6 个（丢失更新、写偏差等最小化用例）与综合用例 1 个（MixedLevels），合计 10 个负载，完整清单见表~\ref{tab:tla-workloads-summary}。 \\
         \midrule
-        负载内容 & 每组负载描述事务类型、事务隔离级别、读写操作序列以及访问键集合。 \\
+        负载内容   & 每组负载描述事务类型、事务隔离级别、读写操作序列以及访问键集合。                                                                                                      \\
         \midrule
-        验证对象 & 由操作语义状态转移生成的运行 History，而不是单个静态事务模板。 \\
+        验证对象   & 由操作语义状态转移生成的运行 History，而不是单个静态事务模板。                                                                                                   \\
         \midrule
-        一致性判定 & 根据 History 构造 $\mathrm{VIS}$ 与 $\mathrm{AR}$，并检查其中所有事务是否满足其隔离级别对应的公理约束。 \\
+        一致性判定  & 根据 History 构造 $\mathrm{VIS}$ 与 $\mathrm{AR}$，并检查其中所有事务是否满足其隔离级别对应的公理约束。                                                               \\
         \midrule
-        安全断言 & \texttt{OperationalSafety == IsConsistentExecution}。 \\
+        安全断言   & \texttt{OperationalSafety == IsConsistentExecution}。                                                                                  \\
         \midrule
-        搜索范围 & 每个负载的事务数与读写操作数都压到能触发对应异常或覆盖对应业务语义的最小值，状态空间在此范围内被 TLC 穷尽枚举（实际规模见表~\ref{tab:tla-workloads-summary}）。 \\
+        搜索范围   & 每个负载的事务数与读写操作数都压到能触发对应异常或覆盖对应业务语义的最小值，状态空间在此范围内被 TLC 穷尽枚举（实际规模见表~\ref{tab:tla-workloads-summary}）。                                    \\
         \midrule
-        论证边界 & 模型检查结果说明在给定负载与搜索深度内未发现违反隔离级别公理的运行 History；该结论属于有界模型检查结果，不等同于对任意规模负载和无限长执行历史的完全证明。 \\
+        论证边界   & 模型检查结果说明在给定负载与搜索深度内未发现违反隔离级别公理的运行 History；该结论属于有界模型检查结果，不等同于对任意规模负载和无限长执行历史的完全证明。                                                     \\
         \bottomrule
     \end{tabularx}
 \end{table}
