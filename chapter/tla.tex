@@ -22,28 +22,28 @@
     \centering
     \caption{\texttt{MixedIsolation} 模块状态变量一览}
     \label{tab:tla-state-vars}
-    \small
-    \renewcommand{\arraystretch}{1.25}
+    \footnotesize
+    \renewcommand{\arraystretch}{1.1}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
-        变量 & 含义与索引结构 \\
+        变量 & 索引 $\to$ 值与含义 \\
         \midrule
-        \texttt{store}                & 全局键值存储：以 $Keys$ 为索引，值为该键的版本集合；每个版本是一条记录 $\langle val, cts, writer \rangle$，分别表示取值、提交时间戳与写入者 \\
-        \texttt{tx\_buffer}           & 事务私有写缓冲：以 $(AllTxns, Keys)$ 为索引，值为该事务对该键尚未提交的写入序列 \\
-        \texttt{tx\_snapshot}         & 事务读取快照：以 $AllTxns$ 为索引，值为该事务在 $StartTx$ 阶段绑定的快照时间戳 \\
-        \texttt{tx\_checkset}         & 事务检查集：以 $AllTxns$ 为索引，值为在提交时需要校验是否被并发写入的键集合，由隔离级别决定其填充时机（如 SER 在读时纳入，PSI/SI 在写时纳入） \\
-        \texttt{op\_seq}              & 操作历史：以 $TxnIds$ 为索引，值为按顺序记录的读写动作序列，是后续公理判定的直接输入 \\
-        \texttt{tx\_status}           & 事务生命周期标记：以 $AllTxns$ 为索引，值取自 \{Inactive, Active, Committed, Aborted\} \\
-        \texttt{tx\_commit\_time}     & 事务提交时间戳：以 $AllTxns$ 为索引，在 $CommitTx$ 成功路径中由全局时钟统一分配 \\
-        \texttt{shard\_ct}            & 全局提交计数器：每次事务成功提交后单调递增，作为新版本时间戳的来源 \\
-        \texttt{client\_dep}          & 会话依赖时间戳：以 $Sessions$ 为索引，记录该会话曾观察到的最大提交时间戳，供 CC、PSI 等级别在快照生成时使用 \\
-        \texttt{client\_last\_commit} & 会话最近提交时间戳：以 $Sessions$ 为索引，专供 RA 级别的快照来源 \\
-        \texttt{pc}                   & 操作程序计数器：以 $TxnIds$ 为索引，跟踪事务当前已执行到操作序列的第几步 \\
+        \texttt{store}                & $Keys \to$ 版本集合，每个版本含 $\langle val, cts, writer \rangle$ \\
+        \texttt{tx\_buffer}           & $(AllTxns, Keys) \to$ 该事务尚未提交的写入序列 \\
+        \texttt{tx\_snapshot}         & $AllTxns \to$ $StartTx$ 阶段绑定的快照时间戳 \\
+        \texttt{tx\_checkset}         & $AllTxns \to$ 提交时需校验是否被并发写入的键集合 \\
+        \texttt{op\_seq}              & $TxnIds \to$ 按顺序记录的读写动作序列，公理判定的直接输入 \\
+        \texttt{tx\_status}           & $AllTxns \to \{\text{Inactive}, \text{Active}, \text{Committed}, \text{Aborted}\}$ \\
+        \texttt{tx\_commit\_time}     & $AllTxns \to$ 提交成功时由全局时钟分配的时间戳 \\
+        \texttt{shard\_ct}            & 全局提交计数器，提交后单调递增，作为新版本时间戳来源 \\
+        \texttt{client\_dep}          & $Sessions \to$ 会话观察到的最大提交时间戳，供 CC、PSI 生成快照 \\
+        \texttt{client\_last\_commit} & $Sessions \to$ 会话最近提交时间戳，专供 RA 生成快照 \\
+        \texttt{pc}                   & $TxnIds \to$ 已执行到操作序列的步数 \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-$Init$ 中各变量按类型初始化为空映射、空集合或零值。\texttt{store} 是个例外：每个键都预置一条由 $InitTx$ 写入、时间戳为 $0$ 的 $InitVal$ 版本，使任何读操作都能拿到一个最早版本，不会出现空读。事务级与会话级变量则在第一次事务动作之前保持空状态。这一组变量不依赖任何业务字段，已经能够承载事务生命周期中的全部可观测行为；后续三类动作只需在它们之上做一阶变换。
+$Init$ 中各变量按类型初始化为空映射、空集合或零值。\texttt{store} 是个例外：每个键都预置一条由 $InitTx$ 写入、时间戳为 $0$ 的 $InitVal$ 版本，使任何读操作都能拿到一个最早版本，不会出现空读。\texttt{tx\_checkset} 的填充时机由隔离级别决定：SER 在读取时纳入读集，PSI/SI 在写入时纳入写集，这一差异是 $CommitTx$ 中冲突检测分支的入口。事务级与会话级变量在第一次事务动作之前保持空状态。这一组变量不依赖任何业务字段，已经能够承载事务生命周期中的全部可观测行为；后续三类动作只需在它们之上做一阶变换。
 
 \subsubsection{核心状态转换动作 (Transition Actions)}
 操作语义的核心逻辑可归纳为三个主要的 \TLAPlus 动作定义，分别对应事务开始、操作执行与事务提交三个阶段。三类动作并不是彼此孤立的局部规则，而是共同构成了事务从建立可见快照、逐步消费操作序列，到最终完成校验与提交的完整状态演化过程。按照这一顺序展开说明，不仅能够更清楚地呈现模型中的状态转移链条，也有助于解释这些动作如何共同支撑后续的一致性公理验证。

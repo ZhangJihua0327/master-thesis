@@ -44,29 +44,9 @@
 
 为了描述“事务在读取时看到的数据库状态”，本文进一步引入快照（snapshot，记为 \Snapshot）。快照可以理解为事务在某一逻辑时刻观察到的只读一致性视图，是多版本并发控制（MVCC）中的基础概念。直观地说，事务并不直接读取数据库的“当前唯一值”，而是在自己的可见范围内选择每个键的一个版本；形式化地，本文用快照函数 $S$ 将键映射到值，表示给定视图下各键的取值。
 
-基于以上对象，本文用二元组描述“集合 + 顺序”的结构。事务 \Txc 定义为 $(O, po)$，其中 $O \subseteq Op$ 为事务包含的操作集合，$po \subseteq O \times O$ 为程序顺序（program order），用于描述事务内部操作的先后关系。类似地，执行历史 \History 中还包含会话顺序 $SO$（session order），用于刻画同一会话中事务的先后次序。
+基于以上对象，本文用二元组描述``集合 + 顺序''的结构。事务 \Txc 定义为 $(O, po)$，其中 $O \subseteq Op$ 为事务包含的操作集合，$po \subseteq O \times O$ 为程序顺序（program order），用于描述事务内部操作的先后关系。类似地，执行历史 \History 由事务集合 $\mathcal{T}$、会话顺序 $SO$（session order，刻画同一会话中事务的先后次序）与隔离级别标注 $\text{level}$ 共同构成，记为 $\mathcal{H} = (\mathcal{T}, SO, \text{level})$；快照 $S$ 是从键到值的偏函数，未定义处取空值 $\bot$。
 
-以上概念的形式化定义如下：
-\begin{equation}
-    \begin{aligned}
-        \mathcal{K} & = \{ x, y, \ldots\}, \quad \mathcal{V} = \{ \bot ,1, 2, \ldots, n \}                                                                                               \\
-        Op          & = \{ \text{start}, \text{commit}, \text{abort} \} \cup \{ \text{read}(k, v), \text{write}(k, v) \mid k \in \mathcal{K}, v \in \mathcal{V} \}                       \\
-        T           & = (O, po), O \subseteq Op, \quad  po \subseteq O \times O                                                                                                          \\
-        \mathcal{H} & = (\mathcal{T}, SO, \text{level}), \quad \mathcal{T} = \{T_1, T_2, \ldots, T_n\},                                                                                  \\
-                    & \quad SO \subseteq \mathcal{T} \times \mathcal{T}, \quad level \in \{\text{SER}, \text{SI}, \text{PC}, \text{PSI}, \text{CC}, \text{RA}\}  \triangleq  \mathcal{L} \\
-        S           & : \mathcal{K} \rightharpoonup \mathcal{V},  S(k) = \bot \text{ if } k \notin \text{dom}(S)
-    \end{aligned}
-\end{equation}
-其中，$\mathcal{K}$ 表示键集合，$\mathcal{V}$ 表示值集合，$\bot$ 表示空值；$SO$ 表示会话顺序；$S$ 表示快照函数。
-
-为了后续表达异常与冲突，本文还定义事务的读集合和写集合：
-\begin{equation}
-    \begin{aligned}
-        \operatorname{RSet}(T) & = \{ k \in \mathcal{K} \mid \exists O_i = \text{read}(k, \cdot) \in T, \forall j < i, O_j \neq \text{write}(k, \cdot) \} \\
-        \operatorname{WSet}(T) & = \{ k \in \mathcal{K} \mid \exists O \in T, O = \text{write}(k, v) \}
-    \end{aligned}
-\end{equation}
-其中，$\operatorname{RSet}(T)$ 为事务 $T$ 的读集合，$\operatorname{WSet}(T)$ 为事务 $T$ 的写集合。当两个事务的写集合交集非空，即 $\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$ 时，称它们发生写冲突，记为 $T_1 \bowtie T_2$。
+为了后续表达异常与冲突，本文还需要事务的读集 $\operatorname{RSet}(T)$ 与写集 $\operatorname{WSet}(T)$：前者指事务中所有``非自写读''涉及的键（同一事务内在该读之前未对同键执行写），后者指事务写过的所有键。当 $\operatorname{WSet}(T_1) \cap \operatorname{WSet}(T_2) \neq \emptyset$ 时，称两个事务发生写冲突，记为 $T_1 \bowtie T_2$。
 
 \TopicTitle{VIS 和 AR 关系}
 \label{sec:visandar}
@@ -82,17 +62,9 @@
 \]
 其直观含义是：若 $T_2$ 能看到 $T_1$，那么在全局逻辑顺序中，$T_1$ 必然先于 $T_2$。这个约束保证了“被看见的过去”不能在全局顺序上出现在“观察者”之后，也避免了时序倒置带来的语义矛盾。可以说，$\text{VIS}$ 描述事务实际观察到的历史片段，而 $\text{AR}$ 为所有事务补全一个全局可比较的次序；不同隔离级别，正是通过对这两个关系施加不同强度的约束来定义的。
 
-此外，记 $\operatorname{VIS^{-1}}(T)$ 为对事务 $T$ 可见的所有事务集合，即
-\[
-    \operatorname{VIS^{-1}}(T) = \{ T' \in \mathcal{T} \mid T' \xrightarrow{\text{VIS}} T \}.
-\]
-类似地，$\operatorname{WriteTx}_k$ 表示对键 $k$ 有写操作的事务集合，用 $T \Vdash \operatorname{op}$ 表示事务 $T$ 包含操作 $\operatorname{op}$。
+为便于书写公理，再约定三个记号：$\operatorname{VIS^{-1}}(T) = \{T' \in \mathcal{T} \mid T' \xrightarrow{\text{VIS}} T\}$ 是对事务 $T$ 可见的所有事务集合；$\operatorname{WriteTx}_k$ 是对键 $k$ 有写操作的事务集合；$T \Vdash \operatorname{op}$ 表示事务 $T$ 包含操作 $\operatorname{op}$。
 
-在此基础上，本文将抽象执行（abstract execution）定义为
-\[
-    \mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR}),
-\]
-或者简写为 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。后续所谓“某个历史满足某种隔离级别”，本质上就是在问：是否存在一组满足对应约束的 $\text{VIS}$ 与 $\text{AR}$，使得该历史能够被解释为一个合法的抽象执行。
+在此基础上，抽象执行（abstract execution）记为 $\mathcal{X} = (\mathcal{T}, SO, \text{level}, \text{VIS}, \text{AR})$，简写为 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$。后续所谓``某个历史满足某种隔离级别''，本质上就是在问：是否存在一组满足对应约束的 $\text{VIS}$ 与 $\text{AR}$，使得该历史能够被解释为一个合法的抽象执行。
 
 \section{异常}
 为了在后文中更精确地讨论这些异常，下面基于 $(\text{VIS}, \text{AR})$ 框架，对几类典型异常进行进一步刻画。
