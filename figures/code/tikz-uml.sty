@@ -1,0 +1,89 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{tikz-uml}[2026/05/26 Local UML helpers for thesis figures]
+
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,backgrounds,calc,shapes.geometric}
+
+\pgfkeys{
+  /localtikzuml/.is family,
+  /localtikzuml,
+  name/.store in=\localtikzuml@name,
+  x/.store in=\localtikzuml@x,
+  y/.store in=\localtikzuml@y,
+  fill/.store in=\localtikzuml@fill,
+  arg1/.store in=\localtikzuml@argone,
+  arg2/.store in=\localtikzuml@argtwo,
+  geometry/.store in=\localtikzuml@geometry,
+  .unknown/.code={}
+}
+
+\newcommand{\localtikzuml@reset}{%
+  \def\localtikzuml@name{}%
+  \def\localtikzuml@x{0}%
+  \def\localtikzuml@y{0}%
+  \def\localtikzuml@fill{white}%
+  \def\localtikzuml@argone{center}%
+  \def\localtikzuml@argtwo{center}%
+  \def\localtikzuml@geometry{--}%
+}
+
+\newcommand{\localtikzuml@parse}[1]{%
+  \localtikzuml@reset
+  \pgfkeys{/localtikzuml/.cd,#1}%
+}
+
+\newcommand{\umlactor}[2][]{%
+  \localtikzuml@parse{#1}%
+  \coordinate (\localtikzuml@name) at (\localtikzuml@x,\localtikzuml@y);
+  \draw[thick] ($(\localtikzuml@name)+(0,0.42)$) circle [radius=0.18];
+  \draw[thick]
+    ($(\localtikzuml@name)+(0,0.24)$) -- ($(\localtikzuml@name)+(0,-0.30)$)
+    ($(\localtikzuml@name)+(-0.35,0.02)$) -- ($(\localtikzuml@name)+(0.35,0.02)$)
+    ($(\localtikzuml@name)+(0,-0.30)$) -- ($(\localtikzuml@name)+(-0.30,-0.78)$)
+    ($(\localtikzuml@name)+(0,-0.30)$) -- ($(\localtikzuml@name)+(0.30,-0.78)$);
+  \node[align=center,font=\sffamily\small] at ($(\localtikzuml@name)+(0,-1.12)$) {#2};
+}
+
+\newcommand{\umlusecase}[2][]{%
+  \localtikzuml@parse{#1}%
+  \node[
+    ellipse,
+    draw,
+    thick,
+    align=center,
+    inner xsep=8pt,
+    inner ysep=4pt,
+    minimum width=1.65cm,
+    minimum height=0.82cm,
+    fill=\localtikzuml@fill
+  ] (\localtikzuml@name) at (\localtikzuml@x,\localtikzuml@y) {#2};
+}
+
+\newenvironment{umlsystem}[2][]{%
+  \localtikzuml@parse{#1}%
+  \begin{pgfonlayer}{background}
+    \path[
+      draw,
+      thick,
+      rounded corners=2pt,
+      fill=\localtikzuml@fill
+    ] ({\localtikzuml@x+0.25},-7.45) rectangle ({\localtikzuml@x+10.65},4.65);
+    \node[anchor=north west,font=\sffamily\small] at ({\localtikzuml@x+0.4},4.52) {#2};
+  \end{pgfonlayer}
+  \begin{scope}[shift={({\localtikzuml@x},0)}]%
+}{%
+  \end{scope}%
+}
+
+\newcommand{\umlassoc}[2]{%
+  \draw[thick] (#1) -- (#2);
+}
+
+\newcommand{\umlinclude}[3][]{%
+  \localtikzuml@parse{#1}%
+  \draw[dashed,thick,-{Latex[length=2mm]}]
+    (#2.\localtikzuml@argone) \localtikzuml@geometry
+    node[midway,above,sloped,font=\scriptsize]
+    {\textless\textless include\textgreater\textgreater}
+    (#3.\localtikzuml@argtwo);
+}
