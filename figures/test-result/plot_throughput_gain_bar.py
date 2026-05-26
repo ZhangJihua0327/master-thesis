@@ -13,11 +13,11 @@ matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 matplotlib.rcParams["axes.spines.top"] = False
 matplotlib.rcParams["axes.spines.right"] = False
-matplotlib.rcParams["font.size"] = 13
-matplotlib.rcParams["axes.labelsize"] = 14
-matplotlib.rcParams["xtick.labelsize"] = 13
-matplotlib.rcParams["ytick.labelsize"] = 13
-matplotlib.rcParams["legend.fontsize"] = 12
+matplotlib.rcParams["font.size"] = 16
+matplotlib.rcParams["axes.labelsize"] = 17
+matplotlib.rcParams["xtick.labelsize"] = 16
+matplotlib.rcParams["ytick.labelsize"] = 16
+matplotlib.rcParams["legend.fontsize"] = 15
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,7 +58,7 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
     positions = np.arange(len(BENCHMARK_ORDER))
     width = 0.28
 
-    fig, ax = plt.subplots(figsize=(7.8, 4.6))
+    fig, ax = plt.subplots(figsize=(7.2, 5.2))
     max_value = max(gains[benchmark][strategy] for benchmark in BENCHMARK_ORDER for strategy in STRATEGY_ORDER)
 
     for offset_index, strategy in enumerate(STRATEGY_ORDER):
@@ -80,7 +80,7 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
                 f"{value:.1f}%",
                 ha="center",
                 va="bottom",
-                fontsize=12,
+                fontsize=14,
             )
 
     ax.axhline(0, color="black", linewidth=0.8)
@@ -90,11 +90,17 @@ def plot_chart(input_name: str, csv_path: Path) -> Path:
     ax.set_xlabel("Benchmark")
     ax.grid(axis="y", linestyle="--", linewidth=0.6, alpha=0.45)
     ax.set_axisbelow(True)
-    ax.legend(frameon=False, ncol=2, loc="upper left")
-    ax.set_ylim(0, max_value * 1.18)
+    ax.legend(
+        frameon=False,
+        ncol=2,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.03),
+        borderaxespad=0.0,
+    )
+    ax.set_ylim(0, max_value * 1.26)
 
     output_path = SCRIPT_DIR / f"throughput_gain_{input_name}.pdf"
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
     fig.savefig(output_path, format="pdf", bbox_inches="tight")
     plt.close(fig)
     return output_path

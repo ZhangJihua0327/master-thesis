@@ -13,11 +13,11 @@ matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 matplotlib.rcParams["axes.spines.top"] = False
 matplotlib.rcParams["axes.spines.right"] = False
-matplotlib.rcParams["font.size"] = 12
-matplotlib.rcParams["axes.labelsize"] = 13
-matplotlib.rcParams["xtick.labelsize"] = 12
-matplotlib.rcParams["ytick.labelsize"] = 12
-matplotlib.rcParams["legend.fontsize"] = 11
+matplotlib.rcParams["font.size"] = 15
+matplotlib.rcParams["axes.labelsize"] = 16
+matplotlib.rcParams["xtick.labelsize"] = 15
+matplotlib.rcParams["ytick.labelsize"] = 15
+matplotlib.rcParams["legend.fontsize"] = 14
 
 import matplotlib.pyplot as plt
 
@@ -48,7 +48,7 @@ def load_series(csv_path: Path) -> tuple[list[float], list[float], list[float], 
 
 
 def plot_chart(times: list[float], cpu_usage: list[float], memory_usage: list[float], tx_latency: list[float]) -> Path:
-    fig, ax_left = plt.subplots(figsize=(8.2, 4.8))
+    fig, ax_left = plt.subplots(figsize=(7.8, 5.8))
     ax_right = ax_left.twinx()
 
     line_cpu, = ax_left.plot(
@@ -90,9 +90,17 @@ def plot_chart(times: list[float], cpu_usage: list[float], memory_usage: list[fl
 
     handles = [line_cpu, line_memory, line_latency]
     labels = [handle.get_label() for handle in handles]
-    ax_left.legend(handles, labels, frameon=False, ncol=3, loc="upper left")
+    ax_left.legend(
+        handles,
+        labels,
+        frameon=False,
+        ncol=3,
+        loc="lower left",
+        bbox_to_anchor=(0.0, 1.03),
+        borderaxespad=0.0,
+    )
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
     fig.savefig(OUTPUT_PATH, format="pdf", bbox_inches="tight")
     plt.close(fig)
     return OUTPUT_PATH
