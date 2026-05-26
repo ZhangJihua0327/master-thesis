@@ -28,13 +28,13 @@
     \umlusecase[name=write,    x=1.9, y=-0.2, fill=cyan!12]{写入\\(Write)}
     \umlusecase[name=delete,   x=1.9, y=-1.7, fill=cyan!12]{删除\\(Delete)}
 
-    % --- 校验 + 提交流程（右列，commit/validate/abort 紧凑三件套） ---
-    \umlusecase[name=commit,   x=7.6, y=1.2,  fill=purple!10]{提交\\(Commit)}
-    \umlusecase[name=validate, x=7.6, y=-0.5, fill=orange!18]{校验事务\\状态}
-    \umlusecase[name=abort,    x=7.6, y=-2.2, fill=purple!10]{中止\\(Abort)}
+    % --- 校验 + 提交流程（右列，gap 拉到 2.1 让 <<include>> 标签有处放） ---
+    \umlusecase[name=commit,   x=7.6, y=1.8,  fill=purple!10]{提交\\(Commit)}
+    \umlusecase[name=validate, x=7.6, y=-0.3, fill=orange!18]{校验事务\\状态}
+    \umlusecase[name=abort,    x=7.6, y=-2.4, fill=purple!10]{中止\\(Abort)}
 
     % --- 共享：集群可观测（夹在数据操作与集群运维之间） ---
-    \umlusecase[name=status,   x=4.75,y=-3.5, fill=teal!18]{查看\\集群状态}
+    \umlusecase[name=status,   x=4.75,y=-3.8, fill=teal!18]{查看\\集群状态}
 
     % --- 集群运维 2x2（DBA） ---
     \umlusecase[name=conn,     x=1.9, y=-5.2, fill=green!14]{连接\\持续时间}
@@ -58,10 +58,20 @@
 % DBA→status 走 elbow（先上后右），\umlassoc 无选项故裸 TikZ 绘
 \draw[thick] (dba) |- (status);
 
-% ===== <<include>> 依赖（只保留语义最关键的三条，避免 validate 周围标签堆叠） =====
+% ===== <<include>> 依赖 =====
+% begin→isolation 水平，\umlinclude 默认排版即可
 \umlinclude{begin}{isolation}
-\umlinclude{commit}{validate}
-\umlinclude{abort}{validate}
+
+% commit/abort→validate 用裸 \draw 绕到 validate 东侧，label 不 sloped
+% 避免被 \umlinclude 内置的 sloped 旋转后压在 validate 椭圆上
+\draw[dashed,thick,-{Latex[length=2mm]}] (commit.east) to[bend left=20]
+    node[midway,right=1pt,font=\scriptsize]
+    {\textless\textless include\textgreater\textgreater}
+    (validate.east);
+\draw[dashed,thick,-{Latex[length=2mm]}] (abort.east) to[bend right=20]
+    node[midway,right=1pt,font=\scriptsize]
+    {\textless\textless include\textgreater\textgreater}
+    (validate.east);
 
 \end{tikzpicture}
 \end{document}
