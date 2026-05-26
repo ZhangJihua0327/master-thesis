@@ -11,6 +11,7 @@
 本章把操作语义的建模拆成``动作定义''与``公理约束''两步：前者刻画状态如何在事务生命周期中演化，后者判定演化结果是否合法。这样拆分后，动作定义不需要携带任何隔离级别相关的假设；新增或调整某一隔离级别只需要修改对应公理，无须触碰动作流程。后续两节分别围绕这两步展开。
 
 \section{公理和隔离级别约束}
+\label{sec:tla-axioms}
 
 沿用上节的状态机分层与``动作—公理''分工，本节先给出状态变量与三类核心动作的形式化定义，再把抽象执行 $\mathcal{X} = (\mathcal{H}, \text{VIS}, \text{AR})$ 中的可见性与仲裁关系落成可检查的逻辑表达，最后把一致性公理与隔离级别约束写成 TLC 可判定的断言。
 \subsection{状态变量与动作定义}
@@ -46,7 +47,7 @@
 $Init$ 中各变量按类型初始化为空映射、空集合或零值。\texttt{store} 是个例外：每个键都预置一条由 $InitTx$ 写入、时间戳为 $0$ 的 $InitVal$ 版本，使任何读操作都能拿到一个最早版本，不会出现空读。\texttt{tx\_checkset} 的填充时机由隔离级别决定：SER 在读取时纳入读集，PSI/SI 在写入时纳入写集，这一差异是 $CommitTx$ 中冲突检测分支的入口。事务级与会话级变量在第一次事务动作之前保持空状态。这一组变量不依赖任何业务字段，已经能够承载事务生命周期中的全部可观测行为；后续三类动作只需在它们之上做一阶变换。
 
 \subsubsection{核心状态转换动作 (Transition Actions)}
-操作语义的核心逻辑可归纳为三个主要的 \TLAPlus 动作定义，分别对应事务开始、操作执行与事务提交三个阶段。三类动作并不是彼此孤立的局部规则，而是共同构成了事务从建立可见快照、逐步消费操作序列，到最终完成校验与提交的完整状态演化过程。按照这一顺序展开说明，不仅能够更清楚地呈现模型中的状态转移链条，也有助于解释这些动作如何共同支撑后续的一致性公理验证。三类动作的完整 \TLAPlus 源码（经 \texttt{tla2tex} 数学体排版）见附录~\ref{appendix:tla-actions}。
+操作语义的核心逻辑可归纳为三个主要的 \TLAPlus 动作定义，分别对应事务开始、操作执行与事务提交三个阶段。三类动作并不是彼此孤立的局部规则，而是共同构成了事务从建立可见快照、逐步消费操作序列，到最终完成校验与提交的完整状态演化过程。按照这一顺序展开说明，不仅能够更清楚地呈现模型中的状态转移链条，也有助于解释这些动作如何共同支撑后续的一致性公理验证。附录~\ref{appendix:tla-actions} 列示了三类动作的 \TLAPlus 定义。
 
 \TopicTitle{A. 事务开始 ($StartTx(t)$)}
 
@@ -66,7 +67,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/VisAndAr_cropped.pdf}
+    \includegraphics[width=0.9\textwidth]{figures/tla/VisAndAr_cropped.pdf}
     \caption{关系 VIS 和 AR 的形式化表达}
     \label{fig:tla-visar-code}
 \end{figure}
@@ -76,7 +77,7 @@ $CommitTx(t)$ 则形式化描述了提交协议，其中同时包含并发控制
 在定义抽象执行 $\mathcal{X}$ 之后，还需要进一步对公式~\ref{eq:consistency} 中的公理进行形式化表达，才能将前文给出的数学定义真正落实为 TLC 可检查的逻辑约束。换言之，若说 $\text{VIS}$ 与 $\text{AR}$ 给出了事务历史的结构，那么这些公理所描述的就是该结构必须满足的合法性条件。图~\ref{fig:axioms} 展示了这些公理的形式化表达；在此基础上，便可进一步定义不同隔离级别对应的约束，并把“抽象一致性要求”转化为“模型检查中的可判定性质”。
 
 \begin{center}
-    \includegraphics[width=0.82\textwidth]{figures/axioms_cropped.pdf}
+    \includegraphics[width=0.82\textwidth]{figures/tla/axioms_cropped.pdf}
     \captionof{figure}{公理的形式化表达}
     \label{fig:axioms}
 \end{center}
