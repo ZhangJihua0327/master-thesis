@@ -20,16 +20,16 @@
     \node[opacity=0,inner sep=0] (right-pad) at (10.0, 0)   {.};
 
     % --- 事务控制 ---
-    \umlusecase[name=begin,    x=1.9, y=3.0,  fill=purple!10]{开启事务\\(Begin)}
-    \umlusecase[name=isolation,x=7.6, y=3.0,  fill=purple!10]{选择隔离\\级别}
+    \umlusecase[name=begin,    x=1.9, y=3.3,  fill=purple!10]{开启事务\\(Begin)}
+    \umlusecase[name=isolation,x=7.6, y=3.3,  fill=purple!10]{选择隔离\\级别}
 
     % --- 数据操作（左列） ---
     \umlusecase[name=read,     x=1.9, y=1.3,  fill=cyan!12]{读取\\(Read)}
     \umlusecase[name=write,    x=1.9, y=-0.2, fill=cyan!12]{写入\\(Write)}
     \umlusecase[name=delete,   x=1.9, y=-1.7, fill=cyan!12]{删除\\(Delete)}
 
-    % --- 校验 + 提交流程（右列，gap 拉到 2.1 让 <<include>> 标签有处放） ---
-    \umlusecase[name=commit,   x=7.6, y=1.8,  fill=purple!10]{提交\\(Commit)}
+    % --- 校验 + 提交流程（右列） ---
+    \umlusecase[name=commit,   x=7.6, y=1.5,  fill=purple!10]{提交\\(Commit)}
     \umlusecase[name=validate, x=7.6, y=-0.3, fill=orange!18]{校验事务\\状态}
     \umlusecase[name=abort,    x=7.6, y=-2.4, fill=purple!10]{中止\\(Abort)}
 
@@ -43,20 +43,23 @@
     \umlusecase[name=retry,    x=7.6, y=-6.7, fill=green!14]{重试策略}
 \end{umlsystem}
 
-% ===== 用户 -> 用例 =====
-\umlassoc{user}{begin}
-\umlassoc{user}{read}
-\umlassoc{user}{write}
-\umlassoc{user}{delete}
-\umlassoc{user}{status}
+% ===== 用户 -> 用例（线条起点固定在小人右臂端点 (+0.35,+0.02)） =====
+\draw[thick] ($(user)+(0.35,0.02)$) -- (begin.west);
+\draw[thick] ($(user)+(0.35,0.02)$) -- (read.west);
+\draw[thick] ($(user)+(0.35,0.02)$) -- (write.west);
+\draw[thick] ($(user)+(0.35,0.02)$) -- (delete.west);
+\draw[thick] ($(user)+(0.35,0.02)$) -- (status.west);
+% user → commit / abort：弧形绕过数据操作区，避免直线穿 read/write/delete
+\draw[thick] ($(user)+(0.35,0.02)$) to[bend left=20] (commit.west);
+\draw[thick] ($(user)+(0.35,0.02)$) to[bend left=50] (abort.west);
 
-% ===== DBA -> 用例 =====
-\umlassoc{dba}{conn}
-\umlassoc{dba}{lb}
-\umlassoc{dba}{timeout}
-\umlassoc{dba}{retry}
-% DBA→status 走 elbow（先上后右），\umlassoc 无选项故裸 TikZ 绘
-\draw[thick] (dba) |- (status);
+% ===== DBA -> 用例（线条起点固定在小人右臂端点） =====
+\draw[thick] ($(dba)+(0.35,0.02)$) -- (conn.west);
+\draw[thick] ($(dba)+(0.35,0.02)$) -- (lb.west);
+\draw[thick] ($(dba)+(0.35,0.02)$) -- (timeout.west);
+\draw[thick] ($(dba)+(0.35,0.02)$) -- (retry.west);
+% DBA → status：先上后右走 elbow
+\draw[thick] ($(dba)+(0.35,0.02)$) |- (status.west);
 
 % ===== <<include>> 依赖 =====
 % begin→isolation 水平，\umlinclude 默认排版即可
