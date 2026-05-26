@@ -117,14 +117,6 @@
   pages     = {12--27}
 }
 
-@inproceedings{Corbett2013,
-  title     = {{Spanner}: {Google}'s globally distributed database},
-  author    = {Corbett, James C and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, JJ and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and others},
-  booktitle = {Proceedings of the 10th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
-  pages     = {251--264},
-  year      = {2013}
-}
-
 @inproceedings{DeCandia2007,
   series     = {SOSP07},
   title      = {Dynamo: amazon’s highly available key-value store},
@@ -190,16 +182,6 @@
   booktitle = {Concurrency: The Works of Leslie Lamport},
   pages     = {179--196},
   numpages  = {18}
-}
-
-@article{Huang2020,
-  title   = {{TiDB}: a {Raft}-based {HTAP} database},
-  author  = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Liu, Litian and Zhou, Zhiming and Tang, Boxin and others},
-  journal = {Proceedings of the VLDB Endowment},
-  volume  = {13},
-  number  = {12},
-  pages   = {3072--3084},
-  year    = {2020}
 }
 
 @article{Lakshman2010,
@@ -305,16 +287,6 @@
   doi        = {10.1145/3003665.3003674}
 }
 
-@inproceedings{Perkins2011,
-  author     = {Perkins, Eric and Wong, Prudence W. H. and Gupta, Indranil},
-  title      = {Performance Analysis of Distributed Transactions in Partitioned Database Systems},
-  booktitle  = {2011 IEEE International Symposium on Modeling, Analysis and Simulation of Computer and Telecommunication Systems},
-  pages      = {250--259},
-  year       = {2011},
-  publisher  = {IEEE}
-}
-
-
 @article{Schultz2015,
   author     = {Schultz, William and Demirbas, Murat},
   title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
@@ -333,26 +305,6 @@
   numpages   = {14}
 }
 
-@article{Schultz2025,
-  author     = {Schultz, William and Demirbas, Murat},
-  title      = {Design and Modular Verification of Distributed Transactions in MongoDB},
-  year       = {2025},
-  issue_date = {August 2025},
-  publisher  = {VLDB Endowment},
-  volume     = {18},
-  number     = {12},
-  issn       = {2150-8097},
-  url        = {https://doi.org/10.14778/3750601.3750626},
-  doi        = {10.14778/3750601.3750626},
-  abstract   = {MongoDB's distributed multi-document transactions protocol was designed and developed incrementally, building on WiredTiger, an existing single node multi-version storage engine that provided snapshot isolated key-value storage. This layered approach required meticulous management of concurrency control and timestamping mechanisms across system layers, complicated by intricate component interactions and a large evolving codebase. In this paper, we describe our experience using modular formal specification techniques to address this challenge. Our approach formally specifies the distributed transactions protocol and its interface with the underlying storage layer, allowing us to verify high level protocol properties while also formalizing the contract between these two components. This modular approach also enables an automated, model-based verification technique for testing conformance of the WiredTiger storage implementation to this interface. We use an explicit state model checker to automatically generate test cases from our storage model, which are then executed against the storage implementation, ensuring the implementation matches the interface relied upon by the transactions protocol. Our work highlights the value of formal modeling not only for verifying high-level protocol correctness but also for precisely defining and validating interactions with lower-level system components in an automated way. Beyond verifying key isolation properties, our specification also enabled us to formally analyze permissiveness--how well the protocol maximizes concurrency within a given isolation level-a property not previously examined.},
-  journal    = {Proc. VLDB Endow.},
-  month      = aug,
-  pages      = {5045--5058},
-  numpages   = {14}
-}
-
-
-// chapter 
 @inproceedings{sovran2011walter,
   series     = {SOSP ’11},
   title      = {Transactional storage for geo-replicated systems},
@@ -366,36 +318,6 @@
   pages      = {385--400},
   collection = {SOSP ’11}
 }
-
-@article{spanner,
-  author     = {Corbett, James C. and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, J. J. and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and Hsieh, Wilson and Kanthak, Sebastian and Kogan, Eugene and Li, Hongyi and Lloyd, Alexander and Melnik, Sergey and Mwaura, David and Nagle, David and Quinlan, Sean and Rao, Rajesh and Rolig, Lindsay and Saito, Yasushi and Szymaniak, Michal and Taylor, Christopher and Wang, Ruth and Woodford, Dale},
-  title      = {Spanner: Google’s Globally Distributed Database},
-  year       = {2013},
-  issue_date = {August 2013},
-  publisher  = {Association for Computing Machinery},
-  address    = {New York, NY, USA},
-  volume     = {31},
-  number     = {3},
-  issn       = {0734-2071},
-  url        = {https://doi.org/10.1145/2491245},
-  doi        = {10.1145/2491245},
-  abstract   = {Spanner is Google’s scalable, multiversion, globally distributed, and synchronously replicated database. It is the first system to distribute data at global scale and support externally-consistent distributed transactions. This article describes how Spanner is structured, its feature set, the rationale underlying various design decisions, and a novel time API that exposes clock uncertainty. This API and its implementation are critical to supporting external consistency and a variety of powerful features: nonblocking reads in the past, lock-free snapshot transactions, and atomic schema changes, across all of Spanner.},
-  journal    = {ACM Trans. Comput. Syst.},
-  month      = aug,
-  articleno  = {8},
-  numpages   = {22},
-  keywords   = {transactions, time management, replication, concurrency control, Distributed databases}
-}
-
-@article{sql-for-Ai,
-  author     = {Li, Feifei and Ding, Yuanyuan and Chen, Yanfeng and Zhu, Jianhua and Zhang, Yu},
-  title      = {SQL for AI: A New Database Paradigm in the Agentic AI Era},
-  journal    = {China Computer Federation},
-  year       = {2025},
-  url        = {https://cccf.hrbeu.edu.cn/cn/article/doi/10.11991/cccf.202511013},
-  doi        = {10.11991/cccf.202511013}
-}
-
 
 @article{Stonebraker2010,
   title     = {SQL databases v. NoSQL databases},
@@ -424,38 +346,6 @@
   month      = {Nov},
   pages      = {309--324},
   collection = {SOSP ’13}
-}
-
-@article{TiDB,
-  author     = {Huang, Dongxu and Liu, Qi and Cui, Qiu and Fang, Zhuhe and Ma, Xiaoyu and Xu, Fei and Shen, Li and Tang, Liu and Zhou, Yuxing and Huang, Menglong and Wei, Wan and Liu, Cong and Zhang, Jian and Li, Jianjun and Wu, Xuelian and Song, Lingyu and Sun, Ruoxi and Yu, Shuaipeng and Zhao, Lei and Cameron, Nicholas and Pei, Liquan and Tang, Xin},
-  title      = {TiDB: a Raft-based HTAP database},
-  year       = {2020},
-  issue_date = {August 2020},
-  publisher  = {VLDB Endowment},
-  volume     = {13},
-  number     = {12},
-  issn       = {2150-8097},
-  url        = {https://doi.org/10.14778/3415478.3415535},
-  doi        = {10.14778/3415478.3415535},
-  abstract   = {Hybrid Transactional and Analytical Processing (HTAP) databases require processing transactional and analytical queries in isolation to remove the interference between them. To achieve this, it is necessary to maintain different replicas of data specified for the two types of queries. However, it is challenging to provide a consistent view for distributed replicas within a storage system, where analytical requests can efficiently read consistent and fresh data from transactional workloads at scale and with high availability.To meet this challenge, we propose extending replicated state machine-based consensus algorithms to provide consistent replicas for HTAP workloads. Based on this novel idea, we present a Raft-based HTAP database: TiDB. In the database, we design a multi-Raft storage system which consists of a row store and a column store. The row store is built based on the Raft algorithm. It is scalable to materialize updates from transactional requests with high availability. In particular, it asynchronously replicates Raft logs to learners which transform row format to column format for tuples, forming a real-time updatable column store. This column store allows analytical queries to efficiently read fresh and consistent data with strong isolation from transactions on the row store. Based on this storage system, we build an SQL engine to process large-scale distributed transactions and expensive analytical queries. The SQL engine optimally accesses row-format and column-format replicas of data. We also include a powerful analysis engine, TiSpark, to help TiDB connect to the Hadoop ecosystem. Comprehensive experiments show that TiDB achieves isolated high performance under CH-benCHmark, a benchmark focusing on HTAP workloads.},
-  journal    = {Proc. VLDB Endow.},
-  month      = aug,
-  pages      = {3072--3084},
-  numpages   = {13}
-}
-
-@inproceedings{tso1,
-  author    = {Peng, Daniel and Dabek, Frank},
-  title     = {Large-scale incremental processing using distributed transactions and notifications},
-  year      = {2010},
-  publisher = {USENIX Association},
-  address   = {USA},
-  abstract  = {Updating an index of the web as documents are crawled requires continuously transforming a large repository of existing documents as new documents arrive. This task is one example of a class of data processing tasks that transform a large repository of data via small, independent mutations. These tasks lie in a gap between the capabilities of existing infrastructure. Databases do not meet the storage or throughput requirements of these tasks: Google's indexing system stores tens of petabytes of data and processes billions of updates per day on thousands of machines. MapReduce and other batch-processing systems cannot process small updates individually as they rely on creating large batches for efficiency.We have built Percolator, a system for incrementally processing updates to a large data set, and deployed it to create the Google web search index. By replacing a batch-based indexing system with an indexing system based on incremental processing using Percolator, we process the same number of documents per day, while reducing the average age of documents in Google search results by 50\%.},
-  booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
-  pages     = {251--264},
-  numpages  = {14},
-  location  = {Vancouver, BC, Canada},
-  series    = {OSDI'10}
 }
 
 @article{Vogels2009,
@@ -495,16 +385,6 @@
   collection = {SIGMOD/PODS ’12}
 }
 
-@article{diab2013oltpbench,
-  title   = {OLTPBench: An extensible testbed for benchmarking relational databases},
-  author  = {Diab, Ahmed and Pavlo, Andrew and Curino, Carlo and Zhang, Sheng},
-  journal = {Proceedings of the VLDB Endowment},
-  volume  = {7},
-  number  = {4},
-  pages   = {277--288},
-  year    = {2013}
-}
-
 @article{Lamport1994,
   author     = {Lamport, Leslie},
   title      = {The temporal logic of actions},
@@ -523,14 +403,6 @@
   pages      = {872--923},
   numpages   = {52},
   keywords   = {safety properties, liveness properties, concurrent programming}
-}
-
-@article{newcombe2014use,
-  title   = {Use of formal methods at Amazon Web Services},
-  author  = {Newcombe, Chris and Rath, Tim and Zhang, Fan and Munteanu, Bogdan and Brooker, Marc and Deardeuff, Michael},
-  journal = {See http://research. microsoft. com/en-us/um/people/lamport/tla/formal-methods-amazon. pdf},
-  pages   = {16},
-  year    = {2014}
 }
 
 @incollection{vergamini1988verification,
@@ -614,17 +486,6 @@
   doi        = {10.1109/TSE.1983.236608}
 }
 
-
-@inproceedings{kamsky2019adapting,
-  title     = {Adapting TPC-C Benchmark to Measure Performance of Multi-Document Transactions in MongoDB},
-  author    = {Kamsky, Asya},
-  booktitle = {Proceedings of the VLDB Endowment},
-  volume    = {12},
-  number    = {12},
-  pages     = {1889--1901},
-  year      = {2019},
-  doi       = {10.14778/3352262.3352278}
-}
 
 @article{oniel1996lsm,
   title     = {The log-structured merge-tree (LSM-tree)},
@@ -864,6 +725,16 @@
   year    = {2023},
   url     = {http://www.jos.org.cn/1000-9825/6460.htm},
   doi     = {10.13328/j.cnki.jos.006460},
+  langid  = {chinese}
+}
+
+@article{Chen2025NextDBMS,
+  author  = {陈志标 and 欧伟杰 and 孟凡彬 and 李伟超 and 王思涵},
+  title   = {迎接人工智能挑战：构建下一代数据库系统},
+  journal = {计算},
+  year    = {2025},
+  url     = {https://cccf.hrbeu.edu.cn/article/doi/10.11991/cccf.202511013},
+  doi     = {10.11991/cccf.202511013},
   langid  = {chinese}
 }
 
