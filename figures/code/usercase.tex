@@ -16,12 +16,12 @@
 % ===== System boundary and use cases =====
 \begin{umlsystem}[x=4,fill=blue!2]{支持混合隔离级别的分布式数据库}
     % 透明 spacer：顶部撑出系统标题的空间，右边撑出 box 宽度
-    \node[opacity=0,inner sep=0] (top-pad)   at (3.8, 4.3) {.};
-    \node[opacity=0,inner sep=0] (right-pad) at (8.2, 0)   {.};
+    \node[opacity=0,inner sep=0] (top-pad)   at (4.7, 4.3)  {.};
+    \node[opacity=0,inner sep=0] (right-pad) at (10.0, 0)   {.};
 
     % --- 事务控制 ---
     \umlusecase[name=begin,    x=1.9, y=3.0,  fill=purple!10]{开启事务\\(Begin)}
-    \umlusecase[name=isolation,x=6.2, y=3.0,  fill=purple!10]{选择隔离\\级别}
+    \umlusecase[name=isolation,x=7.6, y=3.0,  fill=purple!10]{选择隔离\\级别}
 
     % --- 数据操作（左列） ---
     \umlusecase[name=read,     x=1.9, y=1.3,  fill=cyan!12]{读取\\(Read)}
@@ -29,18 +29,18 @@
     \umlusecase[name=delete,   x=1.9, y=-1.7, fill=cyan!12]{删除\\(Delete)}
 
     % --- 校验 + 提交流程（右列） ---
-    \umlusecase[name=validate, x=6.2, y=0.4,  fill=orange!18]{校验事务\\状态}
-    \umlusecase[name=commit,   x=6.2, y=-1.3, fill=purple!10]{提交\\(Commit)}
-    \umlusecase[name=abort,    x=6.2, y=-2.8, fill=purple!10]{中止\\(Abort)}
+    \umlusecase[name=validate, x=7.6, y=0.4,  fill=orange!18]{校验事务\\状态}
+    \umlusecase[name=commit,   x=7.6, y=-1.3, fill=purple!10]{提交\\(Commit)}
+    \umlusecase[name=abort,    x=7.6, y=-2.8, fill=purple!10]{中止\\(Abort)}
 
     % --- 共享：集群可观测（夹在数据操作与集群运维之间） ---
-    \umlusecase[name=status,   x=4.05,y=-3.5, fill=teal!18]{查看\\集群状态}
+    \umlusecase[name=status,   x=4.75,y=-3.5, fill=teal!18]{查看\\集群状态}
 
     % --- 集群运维 2x2（DBA） ---
     \umlusecase[name=conn,     x=1.9, y=-5.2, fill=green!14]{连接\\持续时间}
-    \umlusecase[name=timeout,  x=6.2, y=-5.2, fill=green!14]{最长事务\\时间}
+    \umlusecase[name=timeout,  x=7.6, y=-5.2, fill=green!14]{最长事务\\时间}
     \umlusecase[name=lb,       x=1.9, y=-6.7, fill=green!14]{负载均衡\\策略}
-    \umlusecase[name=retry,    x=6.2, y=-6.7, fill=green!14]{重试策略}
+    \umlusecase[name=retry,    x=7.6, y=-6.7, fill=green!14]{重试策略}
 \end{umlsystem}
 
 % ===== 用户 -> 用例 =====
