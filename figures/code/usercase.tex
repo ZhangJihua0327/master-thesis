@@ -62,8 +62,9 @@
 \draw[thick] ($(dba)+(0.35,0.02)$) |- (status.west);
 
 % ===== <<include>> 依赖 =====
-% begin→isolation 水平，\umlinclude 默认排版即可
-\umlinclude{begin}{isolation}
+% begin→isolation 水平：起点指 begin.east、终点指 isolation.west，
+% 不让线穿过椭圆中心
+\umlinclude[arg1=east,arg2=west]{begin}{isolation}
 
 % commit/abort→validate 用裸 \draw 绕到 validate 东侧，label 不 sloped
 % 避免被 \umlinclude 内置的 sloped 旋转后压在 validate 椭圆上
