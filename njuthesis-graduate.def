@@ -381,7 +381,9 @@
   {
     \l__nju_name_secretstatus_tl \tex_par:D
     \ensuremath { \mdwhtsquare } \l__nju_name_secretfree_tl \tex_par:D
-    \ensuremath { \mdwhtsquare } \l__nju_name_secretdate_tl
+    \makebox [ 0 pt ] [l] { \ensuremath { \mdwhtsquare } }
+    \hspace  { 0.1 em } \ensuremath { \checkmark }
+    保密，保密期（ 2026年6月2日 至 2028年6月1日 ）
   }
 \__nju_declare_page:nn { cover-g-front }
   {
